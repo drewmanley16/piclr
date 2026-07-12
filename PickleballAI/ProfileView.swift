@@ -3,12 +3,14 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject private var store: AppStore
     @State private var showSettings = false
+    @State private var showAddGear = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 profileHeader
                 weeklyActivity
+                gearSection
                 measures
                 postings
             }
@@ -28,12 +30,51 @@ struct ProfileView: View {
             SettingsSheet()
                 .presentationDetents([.medium, .large])
         }
+        .sheet(isPresented: $showAddGear) {
+            AddGearSheet()
+                .presentationDetents([.medium])
+        }
+    }
+
+    private var gearSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("My Gear")
+                    .font(.headline)
+                    .foregroundStyle(Theme.textPrimary)
+                Spacer()
+                Button {
+                    showAddGear = true
+                } label: {
+                    Label("Add", systemImage: "plus")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.accent)
+                }
+            }
+
+            if store.gear.isEmpty {
+                Text("Add your paddles, shoes, and bag to build your locker.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+            } else {
+                ForEach(store.gear) { item in
+                    GearRow(item: item)
+                }
+            }
+        }
+    }
+
+    private var profile: Profile? { store.currentProfile }
+
+    private var totalHours: String {
+        let minutes = store.mySessions.reduce(0) { $0 + $1.durationMinutes }
+        return String(format: "%.1f", Double(minutes) / 60)
     }
 
     private var profileHeader: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(spacing: 16) {
-                Text("DM")
+                Text(profile?.initials ?? "PB")
                     .font(.title.weight(.bold))
                     .foregroundStyle(Theme.accent)
                     .frame(width: 72, height: 72)
@@ -41,10 +82,10 @@ struct ProfileView: View {
                     .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Drew Manley")
+                    Text(profile?.displayName ?? "—")
                         .font(.title2.weight(.bold))
                         .foregroundStyle(Theme.textPrimary)
-                    Text("@drew · Riverside Courts")
+                    Text(handleLine)
                         .font(.subheadline)
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -53,24 +94,32 @@ struct ProfileView: View {
             }
 
             HStack(spacing: 0) {
-                FollowStat(value: "128", label: "Followers")
-                FollowStat(value: "96", label: "Following")
-                FollowStat(value: "\(store.feedItems.count)", label: "Posts")
+                FollowStat(value: "\(store.followerCount)", label: "Followers")
+                FollowStat(value: "\(store.followingCount)", label: "Following")
+                FollowStat(value: "\(store.mySessions.count)", label: "Posts")
             }
         }
         .cardStyle()
     }
 
+    private var handleLine: String {
+        guard let profile else { return "@—" }
+        if let court = profile.homeCourt, !court.isEmpty {
+            return "@\(profile.username) · \(court)"
+        }
+        return "@\(profile.username)"
+    }
+
     private var weeklyActivity: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("This week")
+            Text("Activity")
                 .font(.headline)
                 .foregroundStyle(Theme.textPrimary)
 
             HStack(spacing: 12) {
-                StatPill(title: "Sessions", value: "4", systemImage: "figure.pickleball")
-                StatPill(title: "Hours", value: "6.5", systemImage: "clock")
-                StatPill(title: "Record", value: "13-11", systemImage: "trophy")
+                StatPill(title: "Sessions", value: "\(store.mySessions.count)", systemImage: "figure.pickleball")
+                StatPill(title: "Hours", value: totalHours, systemImage: "clock")
+                StatPill(title: "Following", value: "\(store.followingCount)", systemImage: "person.2")
             }
         }
     }
@@ -82,11 +131,11 @@ struct ProfileView: View {
                 .foregroundStyle(Theme.textPrimary)
 
             VStack(spacing: 0) {
-                MeasureRow(label: "Rating", value: "3.42 DUPR")
+                MeasureRow(label: "Rating", value: profile?.rating.map { "\(String(format: "%.2f", $0)) DUPR" } ?? "—")
                 rowDivider
-                MeasureRow(label: "Paddle", value: "Joola Perseus")
+                MeasureRow(label: "Paddle", value: profile?.paddle ?? "—")
                 rowDivider
-                MeasureRow(label: "Preferred side", value: "Left")
+                MeasureRow(label: "Preferred side", value: profile?.preferredSide ?? "—")
             }
             .padding(.horizontal, 16)
             .cardStyle(padding: 0)
@@ -99,8 +148,14 @@ struct ProfileView: View {
                 .font(.headline)
                 .foregroundStyle(Theme.textPrimary)
 
-            ForEach(store.feedItems) { item in
-                PostingRow(item: item)
+            if store.mySessions.isEmpty {
+                Text("Nothing posted yet.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+            } else {
+                ForEach(store.mySessions) { session in
+                    PostingRow(session: session)
+                }
             }
         }
     }
@@ -146,21 +201,21 @@ struct MeasureRow: View {
 }
 
 struct PostingRow: View {
-    var item: FeedItem
+    var session: FeedSession
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: icon)
+            Image(systemName: "figure.pickleball")
                 .font(.title3)
                 .foregroundStyle(Theme.accent)
                 .frame(width: 44, height: 44)
                 .background(Theme.accentSoft, in: Circle())
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(title)
+                Text(session.displayTitle)
                     .font(.headline)
                     .foregroundStyle(Theme.textPrimary)
-                Text(subtitle)
+                Text("\(session.durationMinutes) min · \(session.location ?? "—")")
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)
                     .lineLimit(1)
@@ -168,31 +223,110 @@ struct PostingRow: View {
 
             Spacer()
 
-            Text(item.date.relativeLabel)
+            Text(session.date.relativeLabel)
                 .font(.caption)
                 .foregroundStyle(Theme.textTertiary)
         }
         .cardStyle()
     }
+}
 
-    private var icon: String {
-        switch item {
-        case .match: return "trophy"
-        case .session: return "figure.pickleball"
-        }
-    }
+// MARK: - Gear
 
-    private var title: String {
-        switch item {
-        case .match(let match): return "\(match.winningTeamNames) won"
-        case .session(let session): return "\(session.focus.rawValue) session"
+struct GearRow: View {
+    @EnvironmentObject private var store: AppStore
+    var item: GearItem
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: item.categoryIcon)
+                .font(.title3)
+                .foregroundStyle(Theme.accent)
+                .frame(width: 44, height: 44)
+                .background(Theme.accentSoft, in: Circle())
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.name)
+                    .font(.headline)
+                    .foregroundStyle(Theme.textPrimary)
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+
+            Spacer()
+
+            Menu {
+                Button(role: .destructive) {
+                    Task { await store.deleteGear(item) }
+                } label: {
+                    Label("Remove", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Theme.textTertiary)
+                    .frame(width: 44, height: 44)
+            }
         }
+        .cardStyle()
     }
 
     private var subtitle: String {
-        switch item {
-        case .match(let match): return "\(match.teamOneScore)–\(match.teamTwoScore) at \(match.location)"
-        case .session(let session): return "\(session.durationMinutes) min at \(session.location)"
+        if let brand = item.brand, !brand.isEmpty {
+            return "\(brand) · \(item.category)"
+        }
+        return item.category
+    }
+}
+
+struct AddGearSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: AppStore
+
+    @State private var category = GearCategory.paddle
+    @State private var name = ""
+    @State private var brand = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Gear") {
+                    Picker("Category", selection: $category) {
+                        ForEach(GearCategory.allCases) { cat in
+                            Text(cat.rawValue).tag(cat)
+                        }
+                    }
+                    TextField("Name (e.g. Perseus 16mm)", text: $name)
+                    TextField("Brand (optional)", text: $brand)
+                }
+
+                Section {
+                    Button {
+                        Task {
+                            await store.addGear(category: category.rawValue, name: name, brand: brand)
+                            dismiss()
+                        }
+                    } label: {
+                        Label("Add Gear", systemImage: "plus.circle.fill")
+                            .font(.headline)
+                            .foregroundStyle(Theme.background)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .disabled(name.isEmpty || store.isBusy)
+                    .listRowBackground(Theme.accent)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Theme.background)
+            .listRowBackground(Theme.surface)
+            .navigationTitle("Add Gear")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
         }
     }
 }
@@ -201,6 +335,7 @@ struct PostingRow: View {
 
 struct SettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: AppStore
 
     var body: some View {
         NavigationStack {
@@ -218,6 +353,10 @@ struct SettingsSheet: View {
 
                 Section {
                     Button(role: .destructive) {
+                        Task {
+                            await store.signOut()
+                            dismiss()
+                        }
                     } label: {
                         Text("Log out")
                             .frame(maxWidth: .infinity, alignment: .leading)

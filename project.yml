@@ -3,6 +3,10 @@ options:
   bundleIdPrefix: com.pickleball
   deploymentTarget:
     iOS: "17.0"
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: "2.0.0"
 settings:
   base:
     MARKETING_VERSION: "0.1.0"
@@ -14,6 +18,9 @@ targets:
     platform: iOS
     sources:
       - PickleballAI
+    dependencies:
+      - package: Supabase
+        product: Supabase
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.pickleball.ai

@@ -5,3 +5,6 @@ build/
 *.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
 *.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Supabase secrets (copy Supabase.example.plist -> Supabase.plist and fill in)
+PickleballAI/Supabase.plist

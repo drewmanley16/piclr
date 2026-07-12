@@ -23,7 +23,32 @@ struct RootView: View {
         UINavigationBar.appearance().compactAppearance = nav
     }
 
+    @EnvironmentObject private var store: AppStore
+
     var body: some View {
+        Group {
+            switch store.authState {
+            case .loading:
+                ProgressView()
+                    .tint(Theme.accent)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Theme.background.ignoresSafeArea())
+            case .unconfigured:
+                ConfigNeededView()
+            case .signedOut:
+                AuthView()
+            case .signedIn:
+                mainTabs
+            }
+        }
+        .task {
+            if store.authState == .loading {
+                await store.start()
+            }
+        }
+    }
+
+    private var mainTabs: some View {
         TabView {
             HomeView()
                 .tabItem {
