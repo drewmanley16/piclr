@@ -10,6 +10,9 @@ struct Profile: Identifiable, Decodable, Hashable {
     var avatarURL: String?
     var homeCourt: String?
     var rating: Double?
+    var skillLevel: String?
+    var onboardingCompletedAt: String?
+    var paddle: String?
     var preferredSide: String?
     var heightInches: Double?
     var weightPounds: Double?
@@ -22,6 +25,9 @@ struct Profile: Identifiable, Decodable, Hashable {
         case avatarURL = "avatar_url"
         case homeCourt = "home_court"
         case rating
+        case skillLevel = "skill_level"
+        case onboardingCompletedAt = "onboarding_completed_at"
+        case paddle
         case preferredSide = "preferred_side"
         case heightInches = "height_inches"
         case weightPounds = "weight_pounds"
@@ -32,6 +38,10 @@ struct Profile: Identifiable, Decodable, Hashable {
         if let a = avatarInitials, !a.isEmpty { return a }
         let letters = displayName.split(separator: " ").prefix(2).compactMap { $0.first }
         return letters.isEmpty ? "PB" : String(letters).uppercased()
+    }
+
+    var hasCompletedOnboarding: Bool {
+        onboardingCompletedAt != nil
     }
 }
 
@@ -126,6 +136,39 @@ struct GearItem: Identifiable, Decodable, Hashable {
     }
 }
 
+struct FriendRequest: Identifiable, Decodable, Hashable {
+    let id: UUID
+    let requesterId: UUID
+    let addresseeId: UUID
+    let status: String
+    let createdAt: String
+    let requester: Profile?
+    let addressee: Profile?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case requesterId = "requester_id"
+        case addresseeId = "addressee_id"
+        case status
+        case createdAt = "created_at"
+        case requester, addressee
+    }
+
+    func otherProfile(for userId: UUID) -> Profile? {
+        requesterId == userId ? addressee : requester
+    }
+
+    func otherUserId(for userId: UUID) -> UUID {
+        requesterId == userId ? addresseeId : requesterId
+    }
+}
+
+struct ContactMatch: Identifiable, Decodable, Hashable {
+    var id: UUID { profile.id }
+    let phone: String
+    let profile: Profile
+}
+
 // MARK: - Write models
 
 struct NewProfile: Encodable {
@@ -204,4 +247,44 @@ struct NewGear: Encodable {
         case userId = "user_id"
         case category, name, brand
     }
+}
+
+struct NewFriendRequest: Encodable {
+    let requesterId: UUID
+    let addresseeId: UUID
+    let status: String
+
+    enum CodingKeys: String, CodingKey {
+        case requesterId = "requester_id"
+        case addresseeId = "addressee_id"
+        case status
+    }
+}
+
+struct CompleteOnboardingRequest: Encodable {
+    let displayName: String
+    let username: String
+    let avatarInitials: String
+    let skillLevel: String
+    let duprRating: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case displayName = "display_name"
+        case username
+        case avatarInitials = "avatar_initials"
+        case skillLevel = "skill_level"
+        case duprRating = "dupr_rating"
+    }
+}
+
+struct CompleteOnboardingResponse: Decodable {
+    let profile: Profile
+}
+
+struct MatchContactsRequest: Encodable {
+    let phones: [String]
+}
+
+struct MatchContactsResponse: Decodable {
+    let matches: [ContactMatch]
 }

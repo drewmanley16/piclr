@@ -12,7 +12,7 @@ struct ProfileView: View {
 
     private var shareText: String {
         guard let profile else { return "Find me on pickleball.ai" }
-        return "Follow @\(profile.username) on pickleball.ai"
+        return "Add @\(profile.username) on pickleball.ai"
     }
 
     var body: some View {
@@ -22,6 +22,9 @@ struct ProfileView: View {
                 if completion < 1 { completionBanner }
                 activityCard
                 dashboard
+                if !store.incomingFriendRequests.isEmpty {
+                    friendRequestsSection
+                }
                 sessionsSection
             }
             .padding(.horizontal, 16)
@@ -37,7 +40,9 @@ struct ProfileView: View {
                             .foregroundStyle(Theme.textPrimary)
                     }
                     .accessibilityLabel("Share profile")
-                    HeaderIconButton(systemImage: "gearshape", accessibilityTitle: "Settings") { showSettings = true }
+                    HeaderIconButton(systemImage: "gearshape", accessibilityTitle: "Settings") {
+                        showSettings = true
+                    }
                 }
             }
             .background(Theme.background)
@@ -59,8 +64,8 @@ struct ProfileView: View {
             ProfileAvatar(profile: profile, size: 76)
 
             ProfileStat(label: "Sessions", value: "\(store.mySessions.count)")
-            ProfileStat(label: "Followers", value: "\(store.followerCount)")
-            ProfileStat(label: "Following", value: "\(store.followingCount)")
+            ProfileStat(label: "Friends", value: "\(store.friendCount)")
+            ProfileStat(label: "Pending", value: "\(store.pendingFriendRequestCount)")
         }
     }
 
@@ -111,7 +116,9 @@ struct ProfileView: View {
 
     // MARK: Activity chart
 
-    private var buckets: [ActivityBucket] { ActivityBucket.weekly(sessions: store.mySessions, range: range) }
+    private var buckets: [ActivityBucket] {
+        ActivityBucket.weekly(sessions: store.mySessions, range: range)
+    }
 
     private var thisWeekValue: (String, String) {
         let cal = Calendar.current
@@ -196,14 +203,26 @@ struct ProfileView: View {
         }
     }
 
+    // MARK: Friend requests
+
+    private var friendRequestsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Friend Requests").font(.headline).foregroundStyle(Theme.textPrimary)
+            ForEach(store.incomingFriendRequests) { request in
+                FriendRequestRow(request: request)
+            }
+        }
+    }
+
     // MARK: Sessions
 
     private var sessionsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Sessions").font(.headline).foregroundStyle(Theme.textPrimary)
             if store.mySessions.isEmpty {
-                Text("No sessions yet — log one from the Workout tab.")
-                    .font(.subheadline).foregroundStyle(Theme.textSecondary)
+                Text("No sessions yet. Log one from the Workout tab.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
             } else {
                 ForEach(store.mySessions) { session in
                     PostingRow(session: session)
@@ -330,6 +349,51 @@ struct PostingRow: View {
             Text(session.date.relativeLabel)
                 .font(.caption)
                 .foregroundStyle(Theme.textTertiary)
+        }
+        .cardStyle()
+    }
+}
+
+struct FriendRequestRow: View {
+    @EnvironmentObject private var store: AppStore
+    var request: FriendRequest
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ProfileAvatar(profile: request.requester, size: 44)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(request.requester?.displayName ?? "Player")
+                    .font(.headline)
+                    .foregroundStyle(Theme.textPrimary)
+                Text(request.requester.map { "@\($0.username)" } ?? "Wants to connect")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+
+            Spacer()
+
+            Button {
+                Task { await store.respond(to: request, status: "declined") }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(width: 38, height: 38)
+                    .background(Theme.surfaceElevated, in: Circle())
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                Task { await store.respond(to: request, status: "accepted") }
+            } label: {
+                Image(systemName: "checkmark")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(Theme.background)
+                    .frame(width: 38, height: 38)
+                    .background(Theme.accent, in: Circle())
+            }
+            .buttonStyle(.plain)
         }
         .cardStyle()
     }
