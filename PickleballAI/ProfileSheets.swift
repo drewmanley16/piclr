@@ -2,120 +2,6 @@ import SwiftUI
 import PhotosUI
 import UIKit
 
-// MARK: - Edit profile
-
-struct EditProfileSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
-
-    @State private var displayName = ""
-    @State private var homeCourt = ""
-    @State private var rating = ""
-    @State private var preferredSide = "Left"
-    @State private var selectedPhoto: PhotosPickerItem?
-    @State private var selectedPhotoData: Data?
-
-    private let sides = ["Left", "Right", "Both"]
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Profile") {
-                    HStack {
-                        Spacer()
-                        PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                            VStack(spacing: 8) {
-                                profilePhoto
-                                Text("Change Photo")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(Theme.accent)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        Spacer()
-                    }
-                    .listRowBackground(Color.clear)
-                    TextField("Display name", text: $displayName)
-                    TextField("Home court", text: $homeCourt)
-                }
-                Section("Player Details") {
-                    TextField("Rating (DUPR)", text: $rating)
-                        .keyboardType(.decimalPad)
-                    Picker("Preferred side", selection: $preferredSide) {
-                        ForEach(sides, id: \.self) { Text($0).tag($0) }
-                    }
-                }
-                Section {
-                    Button {
-                        Task {
-                            let profileSaved = await store.updateProfile(
-                                displayName: displayName,
-                                homeCourt: homeCourt,
-                                rating: Double(rating),
-                                preferredSide: preferredSide
-                            )
-                            guard profileSaved else { return }
-                            if let selectedPhotoData {
-                                guard await store.uploadProfilePhoto(selectedPhotoData) else { return }
-                            }
-                            dismiss()
-                        }
-                    } label: {
-                        Text("Save")
-                            .font(.headline)
-                            .foregroundStyle(Theme.background)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                    .disabled(displayName.isEmpty || store.isBusy)
-                    .listRowBackground(Theme.accent)
-                }
-                if let error = store.errorMessage {
-                    Section {
-                        Label(error, systemImage: "exclamationmark.triangle.fill")
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                    }
-                }
-            }
-            .scrollContentBackground(.hidden)
-            .background(Theme.background)
-            .listRowBackground(Theme.surface)
-            .navigationTitle("Edit Profile")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            }
-            .onAppear {
-                store.errorMessage = nil
-                guard let p = store.currentProfile else { return }
-                displayName = p.displayName
-                homeCourt = p.homeCourt ?? ""
-                rating = p.rating.map { String(format: "%.2f", $0) } ?? ""
-                preferredSide = p.preferredSide ?? "Left"
-            }
-            .onChange(of: selectedPhoto) { _, item in
-                Task {
-                    selectedPhotoData = try? await item?.loadTransferable(type: Data.self)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var profilePhoto: some View {
-        if let selectedPhotoData, let image = UIImage(data: selectedPhotoData) {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-                .frame(width: 96, height: 96)
-                .clipShape(Circle())
-                .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
-        } else {
-            ProfileAvatar(profile: store.currentProfile, size: 96)
-        }
-    }
-}
-
 // MARK: - Measures
 
 struct MeasuresSheet: View {
@@ -374,7 +260,15 @@ struct SettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: AppStore
     @AppStorage("notificationsEnabled") private var notifications = true
-    @State private var showEdit = false
+    @State private var displayName = ""
+    @State private var homeCourt = ""
+    @State private var rating = ""
+    @State private var preferredSide = "Left"
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var selectedPhotoData: Data?
+    @State private var didSave = false
+
+    private let sides = ["Left", "Right", "Both"]
 
     private var appVersion: String {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -386,11 +280,57 @@ struct SettingsSheet: View {
         NavigationStack {
             Form {
                 Section("Account") {
-                    LabeledContent("Username", value: store.currentProfile.map { "@\($0.username)" } ?? "—")
-                    Button { showEdit = true } label: {
-                        SettingsRow(label: "Edit profile", systemImage: "pencil")
+                    HStack {
+                        Spacer()
+                        PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                            VStack(spacing: 8) {
+                                profilePhoto
+                                Text("Change Photo")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Theme.accent)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        Spacer()
                     }
-                    .buttonStyle(.plain)
+                    .listRowBackground(Color.clear)
+                    LabeledContent("Username", value: store.currentProfile.map { "@\($0.username)" } ?? "—")
+                    TextField("Display name", text: $displayName)
+                    TextField("Home court", text: $homeCourt)
+                }
+
+                Section("Player Details") {
+                    TextField("Rating (DUPR)", text: $rating)
+                        .keyboardType(.decimalPad)
+                    Picker("Preferred side", selection: $preferredSide) {
+                        ForEach(sides, id: \.self) { Text($0).tag($0) }
+                    }
+                }
+
+                Section {
+                    Button {
+                        Task { await saveProfile() }
+                    } label: {
+                        Text(store.isBusy ? "Saving..." : "Save Profile")
+                            .font(.headline)
+                            .foregroundStyle(Theme.background)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .disabled(displayName.isEmpty || store.isBusy)
+                    .listRowBackground(Theme.accent)
+                }
+
+                if didSave {
+                    Section {
+                        Label("Profile saved", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(Theme.accent)
+                    }
+                } else if let error = store.errorMessage {
+                    Section {
+                        Label(error, systemImage: "exclamationmark.triangle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
                 }
 
                 Section("Preferences") {
@@ -417,31 +357,53 @@ struct SettingsSheet: View {
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
-            .sheet(isPresented: $showEdit) { EditProfileSheet() }
+            .onAppear { loadProfile() }
+            .onChange(of: selectedPhoto) { _, item in
+                didSave = false
+                Task {
+                    selectedPhotoData = try? await item?.loadTransferable(type: Data.self)
+                }
+            }
         }
     }
-}
 
-struct SettingsRow: View {
-    var label: String
-    var systemImage: String
-    var detail: String? = nil
-
-    var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: systemImage)
-                .font(.body)
-                .foregroundStyle(Theme.accent)
-                .frame(width: 28)
-            Text(label).foregroundStyle(Theme.textPrimary)
-            Spacer()
-            if let detail {
-                Text(detail).font(.subheadline).foregroundStyle(Theme.textSecondary)
-            }
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Theme.textTertiary)
+    @ViewBuilder
+    private var profilePhoto: some View {
+        if let selectedPhotoData, let image = UIImage(data: selectedPhotoData) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 96, height: 96)
+                .clipShape(Circle())
+                .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
+        } else {
+            ProfileAvatar(profile: store.currentProfile, size: 96)
         }
-        .frame(minHeight: 44)
+    }
+
+    private func loadProfile() {
+        store.errorMessage = nil
+        guard let profile = store.currentProfile else { return }
+        displayName = profile.displayName
+        homeCourt = profile.homeCourt ?? ""
+        rating = profile.rating.map { String(format: "%.2f", $0) } ?? ""
+        preferredSide = profile.preferredSide ?? "Left"
+    }
+
+    private func saveProfile() async {
+        didSave = false
+        let profileSaved = await store.updateProfile(
+            displayName: displayName,
+            homeCourt: homeCourt,
+            rating: Double(rating),
+            preferredSide: preferredSide
+        )
+        guard profileSaved else { return }
+        if let selectedPhotoData {
+            guard await store.uploadProfilePhoto(selectedPhotoData) else { return }
+            self.selectedPhotoData = nil
+            selectedPhoto = nil
+        }
+        didSave = true
     }
 }
