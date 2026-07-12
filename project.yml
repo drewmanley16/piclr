@@ -11,7 +11,8 @@ settings:
   base:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
-    DEVELOPMENT_TEAM: ""
+    DEVELOPMENT_TEAM: "X9H68STU8F"
+    CODE_SIGN_STYLE: Automatic
 targets:
   PickleballAI:
     type: application
@@ -34,3 +35,7 @@ targets:
       properties:
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
+        # Required: without this iOS letterboxes the app to a legacy size.
+        UILaunchScreen: {}
+        # Skip the export-compliance prompt on every TestFlight upload.
+        ITSAppUsesNonExemptEncryption: false
