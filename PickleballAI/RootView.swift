@@ -37,6 +37,8 @@ struct RootView: View {
                 ConfigNeededView()
             case .signedOut:
                 AuthView()
+            case .needsOnboarding:
+                AuthView(startsAtProfile: true)
             case .signedIn:
                 mainTabs
             }
@@ -67,4 +69,3 @@ struct RootView: View {
         }
     }
 }
-

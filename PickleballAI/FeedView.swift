@@ -2,12 +2,15 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject private var store: AppStore
+    @State private var showFindFriends = false
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
                 if store.feed.isEmpty {
-                    EmptyFeedState()
+                    EmptyFeedState {
+                        showFindFriends = true
+                    }
                         .padding(.top, 80)
                 } else {
                     ForEach(store.feed) { session in
@@ -29,25 +32,101 @@ struct HomeView: View {
             }
             .background(Theme.background)
         }
+        .sheet(isPresented: $showFindFriends) {
+            FindFriendsSheet()
+                .presentationDetents([.medium, .large])
+        }
     }
 }
 
 struct EmptyFeedState: View {
+    var action: () -> Void
+
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 14) {
             Image(systemName: "figure.pickleball")
                 .font(.largeTitle)
                 .foregroundStyle(Theme.accent)
-            Text("No posts yet")
+            Text("Bring your crew in")
                 .font(.headline)
                 .foregroundStyle(Theme.textPrimary)
-            Text("Log a session or follow players to fill your feed.")
+            Text("Your feed shows sessions from you and accepted friends.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
+            Button(action: action) {
+                Label("Find Friends", systemImage: "person.crop.circle.badge.plus")
+                    .font(.headline)
+                    .foregroundStyle(Theme.background)
+                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 8)
         }
         .frame(maxWidth: .infinity)
         .padding(24)
+    }
+}
+
+struct FindFriendsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: AppStore
+    @State private var searchQuery = ""
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack(spacing: 10) {
+                        AuthField(
+                            placeholder: "Search username",
+                            text: $searchQuery,
+                            autocapitalize: false,
+                            textContentType: .username
+                        )
+                        Button {
+                            Task { await store.searchProfiles(query: searchQuery) }
+                        } label: {
+                            Image(systemName: "magnifyingglass")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(Theme.background)
+                                .frame(width: 52, height: 52)
+                                .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
+                        }
+                        .disabled(searchQuery.normalizedUsername.count < 2)
+                    }
+
+                    if !store.searchResults.isEmpty {
+                        ForEach(store.searchResults) { profile in
+                            FriendCandidateRow(profile: profile)
+                        }
+                    }
+
+                    ShareLink(
+                        item: URL(string: "https://pickleball.ai/invite")!,
+                        subject: Text("Join my pickleball crew"),
+                        message: Text("Add me on pickleball.ai and log matches with the crew.")
+                    ) {
+                        Label("Share invite link", systemImage: "square.and.arrow.up")
+                            .font(.headline)
+                            .foregroundStyle(Theme.textPrimary)
+                            .frame(maxWidth: .infinity, minHeight: 52)
+                            .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
+                    }
+                }
+                .padding(20)
+            }
+            .background(Theme.background.ignoresSafeArea())
+            .navigationTitle("Find Friends")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
     }
 }
 

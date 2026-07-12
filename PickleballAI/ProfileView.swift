@@ -10,6 +10,7 @@ struct ProfileView: View {
             VStack(alignment: .leading, spacing: 24) {
                 profileHeader
                 weeklyActivity
+                friendRequestsSection
                 gearSection
                 measures
                 postings
@@ -94,8 +95,8 @@ struct ProfileView: View {
             }
 
             HStack(spacing: 0) {
-                FollowStat(value: "\(store.followerCount)", label: "Followers")
-                FollowStat(value: "\(store.followingCount)", label: "Following")
+                FollowStat(value: "\(store.friendCount)", label: "Friends")
+                FollowStat(value: "\(store.pendingFriendRequestCount)", label: "Pending")
                 FollowStat(value: "\(store.mySessions.count)", label: "Posts")
             }
         }
@@ -119,7 +120,25 @@ struct ProfileView: View {
             HStack(spacing: 12) {
                 StatPill(title: "Sessions", value: "\(store.mySessions.count)", systemImage: "figure.pickleball")
                 StatPill(title: "Hours", value: totalHours, systemImage: "clock")
-                StatPill(title: "Following", value: "\(store.followingCount)", systemImage: "person.2")
+                StatPill(title: "Friends", value: "\(store.friendCount)", systemImage: "person.2")
+            }
+        }
+    }
+
+    private var friendRequestsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Friend Requests")
+                .font(.headline)
+                .foregroundStyle(Theme.textPrimary)
+
+            if store.incomingFriendRequests.isEmpty {
+                Text("No pending requests.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+            } else {
+                ForEach(store.incomingFriendRequests) { request in
+                    FriendRequestRow(request: request)
+                }
             }
         }
     }
@@ -226,6 +245,48 @@ struct PostingRow: View {
             Text(session.date.relativeLabel)
                 .font(.caption)
                 .foregroundStyle(Theme.textTertiary)
+        }
+        .cardStyle()
+    }
+}
+
+struct FriendRequestRow: View {
+    @EnvironmentObject private var store: AppStore
+    var request: FriendRequest
+
+    var body: some View {
+        HStack(spacing: 12) {
+            AvatarView(initials: request.requester?.initials ?? "PB")
+            VStack(alignment: .leading, spacing: 3) {
+                Text(request.requester?.displayName ?? "Player")
+                    .font(.headline)
+                    .foregroundStyle(Theme.textPrimary)
+                Text(request.requester.map { "@\($0.username)" } ?? "Wants to connect")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            Spacer()
+            Button {
+                Task { await store.respond(to: request, status: "declined") }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(width: 38, height: 38)
+                    .background(Theme.surfaceElevated, in: Circle())
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                Task { await store.respond(to: request, status: "accepted") }
+            } label: {
+                Image(systemName: "checkmark")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(Theme.background)
+                    .frame(width: 38, height: 38)
+                    .background(Theme.accent, in: Circle())
+            }
+            .buttonStyle(.plain)
         }
         .cardStyle()
     }
