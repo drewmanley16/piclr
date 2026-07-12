@@ -1,0 +1,29 @@
+name: PickleballAI
+options:
+  bundleIdPrefix: com.pickleball
+  deploymentTarget:
+    iOS: "17.0"
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+targets:
+  PickleballAI:
+    type: application
+    platform: iOS
+    sources:
+      - PickleballAI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.pickleball.ai
+        PRODUCT_NAME: PickleballAI
+        INFOPLIST_KEY_CFBundleDisplayName: "pickleball.ai"
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    info:
+      path: PickleballAI/Info.plist
+      properties:
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
