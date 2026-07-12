@@ -1,0 +1,2 @@
+-- This migration was already applied remotely before the repository was linked.
+-- Kept as a history marker so subsequent migrations remain ordered.

@@ -13,10 +13,17 @@ create table if not exists public.profiles (
   avatar_initials text,
   home_court     text,
   rating         numeric,
-  paddle         text,
   preferred_side text,
+  height_inches  numeric,
+  weight_pounds  numeric,
+  shoe_size      numeric,
   created_at     timestamptz not null default now()
 );
+
+-- Keep existing projects in sync when this schema is re-run.
+alter table public.profiles add column if not exists height_inches numeric;
+alter table public.profiles add column if not exists weight_pounds numeric;
+alter table public.profiles add column if not exists shoe_size numeric;
 
 -- A session is the loggable + postable unit. It shows in the feed when posted = true.
 create table if not exists public.sessions (

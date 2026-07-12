@@ -50,6 +50,7 @@ struct ProfileView: View {
             switch sheet {
             case .stats: StatsSheet()
             case .gear: GearSheet()
+            case .measures: MeasuresSheet()
             }
         }
     }
@@ -75,19 +76,36 @@ struct ProfileView: View {
 
     private var completion: Double {
         guard let p = profile else { return 1 }
-        let checks = [p.homeCourt, p.paddle, p.preferredSide, p.rating.map { "\($0)" }]
+        let checks = [
+            p.homeCourt,
+            p.preferredSide,
+            p.rating.map { "\($0)" },
+            p.heightInches.map { "\($0)" },
+            p.weightPounds.map { "\($0)" },
+            p.shoeSize.map { "\($0)" }
+        ]
         let filled = checks.filter { ($0 ?? "").isEmpty == false }.count
         return Double(filled) / Double(checks.count)
     }
 
+    private var measuresIncomplete: Bool {
+        profile?.heightInches == nil || profile?.weightPounds == nil || profile?.shoeSize == nil
+    }
+
     private var completionBanner: some View {
-        Button { showEdit = true } label: {
+        Button {
+            if measuresIncomplete {
+                activeSheet = .measures
+            } else {
+                showEdit = true
+            }
+        } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Your profile is \(Int(completion * 100))% finished")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Theme.textPrimary)
-                    Text("Add your gear and measures")
+                    Text("Add player details and measures")
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -181,7 +199,7 @@ struct ProfileView: View {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
                 DashboardTile(icon: "chart.line.uptrend.xyaxis", label: "Statistics") { activeSheet = .stats }
                 DashboardTile(icon: "bag.fill", label: "Gear") { activeSheet = .gear }
-                DashboardTile(icon: "figure.stand", label: "Measures") { showEdit = true }
+                DashboardTile(icon: "figure.stand", label: "Measures") { activeSheet = .measures }
             }
         }
     }
@@ -326,6 +344,6 @@ struct PostingRow: View {
 }
 
 enum ProfileSheet: String, Identifiable {
-    case stats, gear
+    case stats, gear, measures
     var id: String { rawValue }
 }

@@ -205,7 +205,7 @@ final class AppStore: ObservableObject {
         }
     }
 
-    func updateProfile(displayName: String, homeCourt: String, rating: Double?, paddle: String, preferredSide: String) async -> Bool {
+    func updateProfile(displayName: String, homeCourt: String, rating: Double?, preferredSide: String) async -> Bool {
         guard let uid = currentProfile?.id else { return false }
         isBusy = true
         errorMessage = nil
@@ -215,8 +215,27 @@ final class AppStore: ObservableObject {
                 displayName: displayName,
                 homeCourt: homeCourt.isEmpty ? nil : homeCourt,
                 rating: rating,
-                paddle: paddle.isEmpty ? nil : paddle,
                 preferredSide: preferredSide.isEmpty ? nil : preferredSide
+            )
+            try await supabase.from("profiles").update(update).eq("id", value: uid.uuidString).execute()
+            await loadProfile(userId: uid)
+            return errorMessage == nil
+        } catch {
+            errorMessage = friendly(error)
+            return false
+        }
+    }
+
+    func updateMeasures(heightInches: Double?, weightPounds: Double?, shoeSize: Double?) async -> Bool {
+        guard let uid = currentProfile?.id else { return false }
+        isBusy = true
+        errorMessage = nil
+        defer { isBusy = false }
+        do {
+            let update = MeasuresUpdate(
+                heightInches: heightInches,
+                weightPounds: weightPounds,
+                shoeSize: shoeSize
             )
             try await supabase.from("profiles").update(update).eq("id", value: uid.uuidString).execute()
             await loadProfile(userId: uid)
