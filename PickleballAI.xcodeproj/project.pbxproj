@@ -12,6 +12,7 @@
 		0C149EF49C81B28648ED3BA8 /* Supabase.example.plist in Resources */ = {isa = PBXBuildFile; fileRef = DD24443783672F30DD360A7A /* Supabase.example.plist */; };
 		0E2AC177A194D8977E9C9DA3 /* RemoteModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8FD3C96B80BD2A5C26D975D /* RemoteModels.swift */; };
 		454F25CB28B5C41A3538D5E2 /* LogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3FA4363BCD03C413DB5D6C4 /* LogView.swift */; };
+		4C4D1BAB0ADC400DABD9541C /* ProfileSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = E57559D0A66C08920B1C67A3 /* ProfileSheets.swift */; };
 		664317151FD26AFB65FCFB64 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C2F55C19C493784AFEFC588 /* DesignSystem.swift */; };
 		80E343E6CCC9B13005C13F64 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 54014EB97F18D699B5E8FE5C /* Supabase */; };
 		82D712BA16C2330A23E44710 /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812326B10CE11A6D68558757 /* SupabaseService.swift */; };
@@ -39,6 +40,7 @@
 		B3FA4363BCD03C413DB5D6C4 /* LogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogView.swift; sourceTree = "<group>"; };
 		C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		DD24443783672F30DD360A7A /* Supabase.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Supabase.example.plist; sourceTree = "<group>"; };
+		E57559D0A66C08920B1C67A3 /* ProfileSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSheets.swift; sourceTree = "<group>"; };
 		F8FD3C96B80BD2A5C26D975D /* RemoteModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteModels.swift; sourceTree = "<group>"; };
 		FC7CF99A3E687EB8A86C623F /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -75,6 +77,7 @@
 				B3FA4363BCD03C413DB5D6C4 /* LogView.swift */,
 				FC7CF99A3E687EB8A86C623F /* Models.swift */,
 				81B8CE679ACD5A6F4E5DCB13 /* PickleballAIApp.swift */,
+				E57559D0A66C08920B1C67A3 /* ProfileSheets.swift */,
 				528729889F780FEF8B81D160 /* ProfileView.swift */,
 				F8FD3C96B80BD2A5C26D975D /* RemoteModels.swift */,
 				A26F3CB239971947B6371E26 /* RootView.swift */,
@@ -178,6 +181,7 @@
 				454F25CB28B5C41A3538D5E2 /* LogView.swift in Sources */,
 				076565ECFC5D40E2EDE1D5E1 /* Models.swift in Sources */,
 				09769653678BBE3A0E31E1CB /* PickleballAIApp.swift in Sources */,
+				4C4D1BAB0ADC400DABD9541C /* ProfileSheets.swift in Sources */,
 				C5338F649A3DC6D11AE71F0B /* ProfileView.swift in Sources */,
 				0E2AC177A194D8977E9C9DA3 /* RemoteModels.swift in Sources */,
 				89FF47F0442F182F044AEB75 /* RootView.swift in Sources */,

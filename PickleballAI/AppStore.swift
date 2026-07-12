@@ -1,5 +1,6 @@
 import Foundation
 import Supabase
+import UIKit
 
 @MainActor
 final class AppStore: ObservableObject {
@@ -205,9 +206,77 @@ final class AppStore: ObservableObject {
         }
     }
 
-    func addGear(category: String, name: String, brand: String) async {
-        guard let uid = currentProfile?.id else { return }
+    func updateProfile(displayName: String, homeCourt: String, rating: Double?, preferredSide: String) async -> Bool {
+        guard let uid = currentProfile?.id else { return false }
         isBusy = true
+        errorMessage = nil
+        defer { isBusy = false }
+        do {
+            let update = ProfileUpdate(
+                displayName: displayName,
+                homeCourt: homeCourt.isEmpty ? nil : homeCourt,
+                rating: rating,
+                preferredSide: preferredSide.isEmpty ? nil : preferredSide
+            )
+            try await supabase.from("profiles").update(update).eq("id", value: uid.uuidString).execute()
+            await loadProfile(userId: uid)
+            return errorMessage == nil
+        } catch {
+            errorMessage = friendly(error)
+            return false
+        }
+    }
+
+    func updateMeasures(heightInches: Double?, weightPounds: Double?, shoeSize: Double?) async -> Bool {
+        guard let uid = currentProfile?.id else { return false }
+        isBusy = true
+        errorMessage = nil
+        defer { isBusy = false }
+        do {
+            let update = MeasuresUpdate(
+                heightInches: heightInches,
+                weightPounds: weightPounds,
+                shoeSize: shoeSize
+            )
+            try await supabase.from("profiles").update(update).eq("id", value: uid.uuidString).execute()
+            await loadProfile(userId: uid)
+            return errorMessage == nil
+        } catch {
+            errorMessage = friendly(error)
+            return false
+        }
+    }
+
+    func uploadProfilePhoto(_ data: Data) async -> Bool {
+        guard let uid = currentProfile?.id, let image = UIImage(data: data),
+              let jpeg = profileJPEG(from: image) else { return false }
+        isBusy = true
+        errorMessage = nil
+        defer { isBusy = false }
+        do {
+            let path = "\(uid.uuidString)/\(UUID().uuidString).jpg"
+            try await supabase.storage.from("avatars").upload(
+                path,
+                data: jpeg,
+                options: FileOptions(contentType: "image/jpeg")
+            )
+            let publicURL = try supabase.storage.from("avatars").getPublicURL(path: path)
+            try await supabase.from("profiles")
+                .update(["avatar_url": publicURL.absoluteString])
+                .eq("id", value: uid.uuidString)
+                .execute()
+            await loadProfile(userId: uid)
+            return errorMessage == nil
+        } catch {
+            errorMessage = friendly(error)
+            return false
+        }
+    }
+
+    func addGear(category: String, name: String, brand: String) async -> Bool {
+        guard let uid = currentProfile?.id else { return false }
+        isBusy = true
+        errorMessage = nil
         defer { isBusy = false }
         do {
             let new = NewGear(
@@ -218,8 +287,10 @@ final class AppStore: ObservableObject {
             )
             try await supabase.from("gear").insert(new).execute()
             await loadGear(userId: uid)
+            return errorMessage == nil
         } catch {
             errorMessage = friendly(error)
+            return false
         }
     }
 
@@ -246,7 +317,7 @@ final class AppStore: ObservableObject {
                 .execute()
         } catch {
             // Already liked -> treat as unlike.
-            try? await supabase
+            _ = try? await supabase
                 .from("likes")
                 .delete()
                 .eq("user_id", value: uid.uuidString)
@@ -261,6 +332,20 @@ final class AppStore: ObservableObject {
     private func initials(from name: String) -> String {
         let letters = name.split(separator: " ").prefix(2).compactMap { $0.first }
         return letters.isEmpty ? "PB" : String(letters).uppercased()
+    }
+
+    private func profileJPEG(from image: UIImage) -> Data? {
+        let maximumDimension: CGFloat = 1024
+        let longestSide = max(image.size.width, image.size.height)
+        guard longestSide > maximumDimension else {
+            return image.jpegData(compressionQuality: 0.82)
+        }
+        let scale = maximumDimension / longestSide
+        let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        let resized = UIGraphicsImageRenderer(size: size).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: size))
+        }
+        return resized.jpegData(compressionQuality: 0.82)
     }
 
     private func friendly(_ error: Error) -> String {

@@ -107,6 +107,39 @@ struct AvatarView: View {
     }
 }
 
+struct ProfileAvatar: View {
+    var profile: Profile?
+    var size: CGFloat
+
+    var body: some View {
+        Group {
+            if let avatarURL = profile?.avatarURL, let url = URL(string: avatarURL) {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image.resizable().scaledToFill()
+                    } else {
+                        fallback
+                    }
+                }
+            } else {
+                fallback
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+        .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
+        .accessibilityLabel(profile.map { "\($0.displayName)'s profile photo" } ?? "Profile photo")
+    }
+
+    private var fallback: some View {
+        Text(profile?.initials ?? "PB")
+            .font(.title.weight(.bold))
+            .foregroundStyle(Theme.accent)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Theme.surfaceElevated)
+    }
+}
+
 struct SectionHeader: View {
     var title: String
     var actionTitle: String?
