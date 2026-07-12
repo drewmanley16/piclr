@@ -1,35 +1,44 @@
 import SwiftUI
+import UIKit
 
 struct RootView: View {
-    @State private var isShowingQuickLog = false
+    init() {
+        // True-black tab bar with a hairline top edge.
+        let tab = UITabBarAppearance()
+        tab.configureWithOpaqueBackground()
+        tab.backgroundColor = UIColor(Theme.background)
+        tab.shadowColor = UIColor(Theme.hairline)
+        UITabBar.appearance().standardAppearance = tab
+        UITabBar.appearance().scrollEdgeAppearance = tab
+
+        // Match navigation bars to the black canvas.
+        let nav = UINavigationBarAppearance()
+        nav.configureWithOpaqueBackground()
+        nav.backgroundColor = UIColor(Theme.background)
+        nav.shadowColor = .clear
+        nav.titleTextAttributes = [.foregroundColor: UIColor.white]
+        nav.largeTitleTextAttributes = [.foregroundColor: UIColor.white]
+        UINavigationBar.appearance().standardAppearance = nav
+        UINavigationBar.appearance().scrollEdgeAppearance = nav
+        UINavigationBar.appearance().compactAppearance = nav
+    }
 
     var body: some View {
         TabView {
-            FeedView(isShowingQuickLog: $isShowingQuickLog)
+            HomeView()
                 .tabItem {
-                    Label("Feed", systemImage: "list.bullet.rectangle")
+                    Label("Home", systemImage: "house.fill")
                 }
 
-            LogView()
+            WorkoutView()
                 .tabItem {
-                    Label("Log", systemImage: "plus.circle")
-                }
-
-            GroupsView()
-                .tabItem {
-                    Label("Groups", systemImage: "person.3")
+                    Label("Workout", systemImage: "figure.pickleball")
                 }
 
             ProfileView()
                 .tabItem {
-                    Label("Profile", systemImage: "person.crop.circle")
+                    Label("Profile", systemImage: "person.fill")
                 }
-        }
-        .sheet(isPresented: $isShowingQuickLog) {
-            NavigationStack {
-                LogView(isPresentedAsSheet: true)
-            }
-            .presentationDetents([.large])
         }
     }
 }

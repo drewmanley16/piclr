@@ -1,56 +1,160 @@
 import SwiftUI
 
+// MARK: - Workout Tab
+
+struct WorkoutView: View {
+    @EnvironmentObject private var store: AppStore
+    @State private var showLog = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                logCTA
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Your Sessions")
+                        .font(.headline)
+                        .foregroundStyle(Theme.textPrimary)
+
+                    ForEach(store.sessions) { session in
+                        SessionSummaryRow(session: session)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 24)
+        }
+        .background(Theme.background.ignoresSafeArea())
+        .safeAreaInset(edge: .top) {
+            AppHeader(title: "Workout") {
+                HeaderCircleButton(systemImage: "plus", accessibilityTitle: "Log session") {
+                    showLog = true
+                }
+            }
+            .background(Theme.background)
+        }
+        .sheet(isPresented: $showLog) {
+            LogView(isPresentedAsSheet: true)
+                .presentationDetents([.large])
+        }
+    }
+
+    private var logCTA: some View {
+        Button {
+            showLog = true
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "figure.pickleball")
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(Theme.background)
+                    .frame(width: 48, height: 48)
+                    .background(Theme.accent, in: Circle())
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Log a session")
+                        .font(.headline)
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("Track today's play and share it")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.textTertiary)
+            }
+            .cardStyle()
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct SessionSummaryRow: View {
+    var session: PracticeSession
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "figure.pickleball")
+                .font(.title3)
+                .foregroundStyle(Theme.accent)
+                .frame(width: 44, height: 44)
+                .background(Theme.accentSoft, in: Circle())
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("\(session.focus.rawValue) session")
+                    .font(.headline)
+                    .foregroundStyle(Theme.textPrimary)
+                Text("\(session.durationMinutes) min · \(session.location)")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+
+            Spacer()
+
+            Text(session.date.relativeLabel)
+                .font(.caption)
+                .foregroundStyle(Theme.textTertiary)
+        }
+        .cardStyle()
+    }
+}
+
+// MARK: - Log Session Form (presented as a sheet)
+
 struct LogView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
     var isPresentedAsSheet = false
 
-    @State private var selectedLogType = LogType.match
+    @State private var title = ""
     @State private var location = "Riverside Courts"
-    @State private var teamOneScore = 11
-    @State private var teamTwoScore = 8
-    @State private var selectedFocus = SkillFocus.thirdShot
-    @State private var notes = ""
     @State private var durationMinutes = 90
-    @State private var selectedDrills: Set<String> = ["Third-shot drops", "Cross-court dinks"]
+    @State private var selectedFocus = SkillFocus.thirdShot
+    @State private var takeaway = ""
+    @State private var postToFeed = true
 
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    Picker("Log Type", selection: $selectedLogType) {
-                        ForEach(LogType.allCases) { type in
-                            Text(type.rawValue).tag(type)
+                Section("Session") {
+                    TextField("Title (e.g. Chill dinks)", text: $title)
+                    TextField("Location", text: $location)
+                    Stepper("Duration: \(durationMinutes) min", value: $durationMinutes, in: 15...240, step: 5)
+                    Picker("Focus", selection: $selectedFocus) {
+                        ForEach(SkillFocus.allCases) { focus in
+                            Text(focus.rawValue).tag(focus)
                         }
                     }
-                    .pickerStyle(.segmented)
-                }
-
-                switch selectedLogType {
-                case .match:
-                    matchFields
-                case .session:
-                    sessionFields
                 }
 
                 Section("Takeaway") {
-                    TextEditor(text: $notes)
-                        .frame(minHeight: 92)
+                    TextField("What clicked today?", text: $takeaway, axis: .vertical)
+                        .lineLimit(3...6)
                         .accessibilityLabel("Takeaway notes")
+                }
+
+                Section {
+                    Toggle("Post to feed", isOn: $postToFeed)
                 }
 
                 Section {
                     Button {
                         dismiss()
                     } label: {
-                        Label("Save Log", systemImage: "checkmark.circle.fill")
+                        Label("Save Session", systemImage: "checkmark.circle.fill")
+                            .font(.headline)
+                            .foregroundStyle(Theme.background)
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .listRowBackground(Theme.accent)
                 }
             }
-            .navigationTitle("Log")
-            .navigationBarTitleDisplayMode(isPresentedAsSheet ? .inline : .large)
+            .scrollContentBackground(.hidden)
+            .background(Theme.background)
+            .listRowBackground(Theme.surface)
+            .navigationTitle("Log Session")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if isPresentedAsSheet {
                     ToolbarItem(placement: .cancellationAction) {
@@ -62,129 +166,4 @@ struct LogView: View {
             }
         }
     }
-
-    private var matchFields: some View {
-        Group {
-            Section("Match") {
-                TextField("Location", text: $location)
-                Picker("Focus", selection: $selectedFocus) {
-                    ForEach(SkillFocus.allCases) { focus in
-                        Text(focus.rawValue).tag(focus)
-                    }
-                }
-                Stepper("Team 1 Score: \(teamOneScore)", value: $teamOneScore, in: 0...30)
-                Stepper("Team 2 Score: \(teamTwoScore)", value: $teamTwoScore, in: 0...30)
-            }
-
-            Section("Players") {
-                PlayerPickerRow(title: "My Partner", player: store.players[safe: 1])
-                PlayerPickerRow(title: "Opponent 1", player: store.players[safe: 2])
-                PlayerPickerRow(title: "Opponent 2", player: store.players[safe: 3])
-            }
-
-            Section("Visibility") {
-                Toggle("Post to group feed", isOn: .constant(true))
-                Toggle("Ask tagged players to confirm", isOn: .constant(true))
-            }
-        }
-    }
-
-    private var sessionFields: some View {
-        Group {
-            Section("Session") {
-                TextField("Location", text: $location)
-                Stepper("Duration: \(durationMinutes) min", value: $durationMinutes, in: 15...240, step: 5)
-                Picker("Main Focus", selection: $selectedFocus) {
-                    ForEach(SkillFocus.allCases) { focus in
-                        Text(focus.rawValue).tag(focus)
-                    }
-                }
-            }
-
-            Section("Drills") {
-                ForEach(Self.drillOptions, id: \.self) { drill in
-                    Button {
-                        toggle(drill)
-                    } label: {
-                        HStack {
-                            Text(drill)
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            if selectedDrills.contains(drill) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(.teal)
-                            }
-                        }
-                        .frame(minHeight: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("\(selectedDrills.contains(drill) ? "Remove" : "Add") \(drill)")
-                }
-            }
-
-            Section("Played Today") {
-                Stepper("Matches: 5", value: .constant(5), in: 0...20)
-                Stepper("Wins: 3", value: .constant(3), in: 0...20)
-            }
-        }
-    }
-
-    private func toggle(_ drill: String) {
-        if selectedDrills.contains(drill) {
-            selectedDrills.remove(drill)
-        } else {
-            selectedDrills.insert(drill)
-        }
-    }
-
-    private static let drillOptions = [
-        "Deep serves",
-        "Return depth",
-        "Third-shot drops",
-        "Cross-court dinks",
-        "Transition resets",
-        "Kitchen hands",
-        "Middle communication"
-    ]
 }
-
-struct PlayerPickerRow: View {
-    var title: String
-    var player: Player?
-
-    var body: some View {
-        HStack(spacing: 12) {
-            if let player {
-                AvatarView(initials: player.avatarInitials)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(player.name)
-                        .font(.body)
-                }
-            } else {
-                Text(title)
-            }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-        }
-        .frame(minHeight: 44)
-    }
-}
-
-enum LogType: String, CaseIterable, Identifiable {
-    case match = "Match"
-    case session = "Session"
-
-    var id: String { rawValue }
-}
-
-extension Collection {
-    subscript(safe index: Index) -> Element? {
-        indices.contains(index) ? self[index] : nil
-    }
-}
-

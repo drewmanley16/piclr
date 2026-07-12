@@ -1,52 +1,27 @@
 import SwiftUI
 
-struct FeedView: View {
+struct HomeView: View {
     @EnvironmentObject private var store: AppStore
-    @Binding var isShowingQuickLog: Bool
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    topStats
-
-                    SectionHeader(title: "Crew Activity", actionTitle: "Log") {
-                        isShowingQuickLog = true
-                    }
-
-                    LazyVStack(spacing: 12) {
-                        ForEach(store.feedItems) { item in
-                            FeedCard(item: item)
-                        }
-                    }
-                }
-                .padding(16)
-            }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("pickleball.ai")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        isShowingQuickLog = true
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .accessibilityLabel("Log match or session")
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                ForEach(store.feedItems) { item in
+                    FeedCard(item: item)
                 }
             }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 24)
         }
-    }
-
-    private var topStats: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("This week")
-                .font(.headline)
-
-            HStack(spacing: 12) {
-                StatPill(title: "Matches", value: "8", systemImage: "sportscourt")
-                StatPill(title: "Win Rate", value: "63%", systemImage: "chart.line.uptrend.xyaxis")
-                StatPill(title: "Focus", value: "Drops", systemImage: "scope")
+        .background(Theme.background.ignoresSafeArea())
+        .safeAreaInset(edge: .top) {
+            AppHeader(title: "Home", showsChevron: true, onTitleTap: {}) {
+                HeaderPill {
+                    HeaderIconButton(systemImage: "magnifyingglass", accessibilityTitle: "Search") {}
+                    HeaderIconButton(systemImage: "bell", accessibilityTitle: "Notifications") {}
+                }
             }
+            .background(Theme.background)
         }
     }
 }
@@ -63,27 +38,38 @@ struct FeedCard: View {
                 SessionFeedContent(session: session)
             }
 
-            HStack(spacing: 16) {
-                Button {
-                } label: {
-                    Label("React", systemImage: "hand.thumbsup")
-                }
-                .buttonStyle(.borderless)
-                .frame(minHeight: 44)
+            Divider().overlay(Theme.hairline)
 
-                Button {
-                } label: {
-                    Label("Rematch", systemImage: "arrow.triangle.2.circlepath")
-                }
-                .buttonStyle(.borderless)
-                .frame(minHeight: 44)
-
+            HStack(spacing: 22) {
+                SocialAction(icon: "hand.thumbsup", count: item.likeCount)
+                SocialAction(icon: "bubble.right", count: item.commentCount)
+                SocialAction(icon: "square.and.arrow.up", count: nil)
                 Spacer()
             }
-            .font(.subheadline.weight(.semibold))
         }
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 8))
+        .cardStyle()
+    }
+}
+
+struct SocialAction: View {
+    var icon: String
+    var count: Int?
+
+    var body: some View {
+        Button {
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.body.weight(.semibold))
+                if let count {
+                    Text("\(count)")
+                        .font(.subheadline.weight(.semibold))
+                }
+            }
+            .foregroundStyle(Theme.textSecondary)
+            .frame(minHeight: 44)
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -128,9 +114,9 @@ struct SessionFeedContent: View {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "figure.pickleball")
                     .font(.title3)
-                    .foregroundStyle(.teal)
+                    .foregroundStyle(Theme.accent)
                     .frame(width: 40, height: 40)
-                    .background(Color.teal.opacity(0.12), in: Circle())
+                    .background(Theme.accentSoft, in: Circle())
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Practice session logged")
@@ -166,12 +152,13 @@ struct ScoreBox: View {
         VStack(spacing: 4) {
             Text("\(score)")
                 .font(.title3.weight(.bold))
+                .foregroundStyle(Theme.textPrimary)
             Text(label)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textSecondary)
         }
         .frame(minWidth: 72, minHeight: 56)
-        .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 8))
+        .background(Theme.surfaceElevated, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
     }
 }
 
@@ -181,9 +168,9 @@ struct FocusChip: View {
     var body: some View {
         Text(title)
             .font(.caption.weight(.semibold))
-            .padding(.horizontal, 10)
+            .padding(.horizontal, 12)
             .frame(minHeight: 32)
-            .background(Color.teal.opacity(0.12), in: Capsule())
-            .foregroundStyle(.teal)
+            .background(Theme.accentSoft, in: Capsule())
+            .foregroundStyle(Theme.accent)
     }
 }

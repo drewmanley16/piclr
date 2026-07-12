@@ -9,7 +9,8 @@ struct GroupsView: View {
                 if let group = store.groups.first {
                     Section {
                         GroupSummaryCard(group: group)
-                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 12, trailing: 16))
+                            .listRowBackground(Color.clear)
                     }
 
                     Section("Leaderboard") {
@@ -17,15 +18,19 @@ struct GroupsView: View {
                             LeaderboardRowView(rank: index + 1, row: row)
                         }
                     }
+                    .listRowBackground(Theme.surface)
 
                     Section("Rivalries") {
                         RivalryRow(title: "Drew vs Will", subtitle: "Drew leads 6-4", systemImage: "flame")
                         RivalryRow(title: "Maya & Sam", subtitle: "Best pair, 9-2 together", systemImage: "person.2.fill")
                         RivalryRow(title: "Alex wants a rematch", subtitle: "Lost last two by 3 total points", systemImage: "arrow.triangle.2.circlepath")
                     }
+                    .listRowBackground(Theme.surface)
                 }
             }
             .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background(Theme.background)
             .navigationTitle("Groups")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -106,9 +111,9 @@ struct RivalryRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: systemImage)
-                .foregroundStyle(.teal)
+                .foregroundStyle(Theme.accent)
                 .frame(width: 32, height: 32)
-                .background(Color.teal.opacity(0.12), in: Circle())
+                .background(Theme.accentSoft, in: Circle())
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)

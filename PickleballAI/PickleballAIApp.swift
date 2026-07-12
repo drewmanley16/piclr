@@ -8,7 +8,8 @@ struct PickleballAIApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(store)
-                .tint(.teal)
+                .tint(Theme.accent)
+                .preferredColorScheme(.dark)
         }
     }
 }

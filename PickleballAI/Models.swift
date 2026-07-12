@@ -114,4 +114,8 @@ enum FeedItem: Identifiable, Hashable {
             return session.date
         }
     }
+
+    // Lightweight deterministic social counts for the demo feed.
+    var likeCount: Int { abs(id.hashValue % 38) + 4 }
+    var commentCount: Int { abs(id.hashValue % 11) }
 }
