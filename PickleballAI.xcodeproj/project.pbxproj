@@ -9,28 +9,50 @@
 /* Begin PBXBuildFile section */
 		076565ECFC5D40E2EDE1D5E1 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC7CF99A3E687EB8A86C623F /* Models.swift */; };
 		09769653678BBE3A0E31E1CB /* PickleballAIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81B8CE679ACD5A6F4E5DCB13 /* PickleballAIApp.swift */; };
+		0C149EF49C81B28648ED3BA8 /* Supabase.example.plist in Resources */ = {isa = PBXBuildFile; fileRef = DD24443783672F30DD360A7A /* Supabase.example.plist */; };
+		0E2AC177A194D8977E9C9DA3 /* RemoteModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8FD3C96B80BD2A5C26D975D /* RemoteModels.swift */; };
 		454F25CB28B5C41A3538D5E2 /* LogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3FA4363BCD03C413DB5D6C4 /* LogView.swift */; };
 		664317151FD26AFB65FCFB64 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C2F55C19C493784AFEFC588 /* DesignSystem.swift */; };
+		80E343E6CCC9B13005C13F64 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 54014EB97F18D699B5E8FE5C /* Supabase */; };
+		82D712BA16C2330A23E44710 /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812326B10CE11A6D68558757 /* SupabaseService.swift */; };
 		89FF47F0442F182F044AEB75 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A26F3CB239971947B6371E26 /* RootView.swift */; };
-		93561A190B9F8DB00D00E299 /* GroupsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9A27CE378255A85267A165D /* GroupsView.swift */; };
+		95C8A46DA87219F98DD0A143 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38D466C6F8E7D2FD8E302914 /* AuthView.swift */; };
 		987C065BEC871C430815F0D5 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92AD1866882A183DAB69974D /* FeedView.swift */; };
 		C4D639B6FB92C30CB2822077 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D656AFC1851F5D01BC4BB70 /* AppStore.swift */; };
 		C5338F649A3DC6D11AE71F0B /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528729889F780FEF8B81D160 /* ProfileView.swift */; };
+		D60B10153096A64D929AE1AC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */; };
+		F9D4FE283820E25A05692966 /* Supabase.plist in Resources */ = {isa = PBXBuildFile; fileRef = 110EB1A0604D9D68DD50D886 /* Supabase.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		110EB1A0604D9D68DD50D886 /* Supabase.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Supabase.plist; sourceTree = "<group>"; };
 		2C2F55C19C493784AFEFC588 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
+		38D466C6F8E7D2FD8E302914 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		528729889F780FEF8B81D160 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		5D656AFC1851F5D01BC4BB70 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
 		6BAF5E29E3E19941F0F544FB /* PickleballAI.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PickleballAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6BF6725B8FBFB5A75FCF41BB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		812326B10CE11A6D68558757 /* SupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseService.swift; sourceTree = "<group>"; };
 		81B8CE679ACD5A6F4E5DCB13 /* PickleballAIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickleballAIApp.swift; sourceTree = "<group>"; };
 		92AD1866882A183DAB69974D /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
 		A26F3CB239971947B6371E26 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
-		A9A27CE378255A85267A165D /* GroupsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupsView.swift; sourceTree = "<group>"; };
 		B3FA4363BCD03C413DB5D6C4 /* LogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogView.swift; sourceTree = "<group>"; };
+		C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		DD24443783672F30DD360A7A /* Supabase.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Supabase.example.plist; sourceTree = "<group>"; };
+		F8FD3C96B80BD2A5C26D975D /* RemoteModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteModels.swift; sourceTree = "<group>"; };
 		FC7CF99A3E687EB8A86C623F /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		093F2A4AB07067E7B39F6177 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				80E343E6CCC9B13005C13F64 /* Supabase in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		1594D0D1F2011A6C13A02105 = {
@@ -45,15 +67,20 @@
 			isa = PBXGroup;
 			children = (
 				5D656AFC1851F5D01BC4BB70 /* AppStore.swift */,
+				C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */,
+				38D466C6F8E7D2FD8E302914 /* AuthView.swift */,
 				2C2F55C19C493784AFEFC588 /* DesignSystem.swift */,
 				92AD1866882A183DAB69974D /* FeedView.swift */,
-				A9A27CE378255A85267A165D /* GroupsView.swift */,
 				6BF6725B8FBFB5A75FCF41BB /* Info.plist */,
 				B3FA4363BCD03C413DB5D6C4 /* LogView.swift */,
 				FC7CF99A3E687EB8A86C623F /* Models.swift */,
 				81B8CE679ACD5A6F4E5DCB13 /* PickleballAIApp.swift */,
 				528729889F780FEF8B81D160 /* ProfileView.swift */,
+				F8FD3C96B80BD2A5C26D975D /* RemoteModels.swift */,
 				A26F3CB239971947B6371E26 /* RootView.swift */,
+				DD24443783672F30DD360A7A /* Supabase.example.plist */,
+				110EB1A0604D9D68DD50D886 /* Supabase.plist */,
+				812326B10CE11A6D68558757 /* SupabaseService.swift */,
 			);
 			path = PickleballAI;
 			sourceTree = "<group>";
@@ -74,6 +101,8 @@
 			buildConfigurationList = A7C4CD515EC3718A68FDBAED /* Build configuration list for PBXNativeTarget "PickleballAI" */;
 			buildPhases = (
 				556E04E047908FECE0552F06 /* Sources */,
+				314ECEABAAD3C8C3337674C1 /* Resources */,
+				093F2A4AB07067E7B39F6177 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -81,6 +110,7 @@
 			);
 			name = PickleballAI;
 			packageProductDependencies = (
+				54014EB97F18D699B5E8FE5C /* Supabase */,
 			);
 			productName = PickleballAI;
 			productReference = 6BAF5E29E3E19941F0F544FB /* PickleballAI.app */;
@@ -96,7 +126,8 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					88C9B1CBCD349BD12AF28E51 = {
-						DevelopmentTeam = "";
+						DevelopmentTeam = X9H68STU8F;
+						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -109,6 +140,9 @@
 			);
 			mainGroup = 1594D0D1F2011A6C13A02105;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				445F1CEC4B259418C30009CB /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E0D3ED6F956F4A18CE3AE724 /* Products */;
 			projectDirPath = "";
@@ -119,20 +153,35 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		314ECEABAAD3C8C3337674C1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D60B10153096A64D929AE1AC /* Assets.xcassets in Resources */,
+				0C149EF49C81B28648ED3BA8 /* Supabase.example.plist in Resources */,
+				F9D4FE283820E25A05692966 /* Supabase.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		556E04E047908FECE0552F06 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				C4D639B6FB92C30CB2822077 /* AppStore.swift in Sources */,
+				95C8A46DA87219F98DD0A143 /* AuthView.swift in Sources */,
 				664317151FD26AFB65FCFB64 /* DesignSystem.swift in Sources */,
 				987C065BEC871C430815F0D5 /* FeedView.swift in Sources */,
-				93561A190B9F8DB00D00E299 /* GroupsView.swift in Sources */,
 				454F25CB28B5C41A3538D5E2 /* LogView.swift in Sources */,
 				076565ECFC5D40E2EDE1D5E1 /* Models.swift in Sources */,
 				09769653678BBE3A0E31E1CB /* PickleballAIApp.swift in Sources */,
 				C5338F649A3DC6D11AE71F0B /* ProfileView.swift in Sources */,
+				0E2AC177A194D8977E9C9DA3 /* RemoteModels.swift in Sources */,
 				89FF47F0442F182F044AEB75 /* RootView.swift in Sources */,
+				82D712BA16C2330A23E44710 /* SupabaseService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -172,10 +221,11 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = X9H68STU8F;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -231,10 +281,11 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = X9H68STU8F;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -281,7 +332,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.pickleball.ai;
 				PRODUCT_NAME = PickleballAI;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -302,7 +353,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.pickleball.ai;
 				PRODUCT_NAME = PickleballAI;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -328,6 +379,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		445F1CEC4B259418C30009CB /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		54014EB97F18D699B5E8FE5C /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 445F1CEC4B259418C30009CB /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = FB8FB6D41A0B6CE682CE30D0 /* Project object */;
 }

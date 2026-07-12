@@ -1,112 +1,272 @@
 import Foundation
+import Supabase
 
 @MainActor
 final class AppStore: ObservableObject {
-    @Published var players: [Player]
-    @Published var matches: [Match]
-    @Published var sessions: [PracticeSession]
-    @Published var groups: [PickleballGroup]
-
-    init() {
-        let drew = Player(id: UUID(), name: "Drew", handle: "@drew", rating: 3.42, avatarInitials: "DM")
-        let will = Player(id: UUID(), name: "Will", handle: "@will", rating: 3.56, avatarInitials: "WI")
-        let alex = Player(id: UUID(), name: "Alex", handle: "@alex", rating: 3.31, avatarInitials: "AX")
-        let sam = Player(id: UUID(), name: "Sam", handle: "@sam", rating: 3.64, avatarInitials: "SM")
-        let jordan = Player(id: UUID(), name: "Jordan", handle: "@jordan", rating: 3.18, avatarInitials: "JR")
-        let maya = Player(id: UUID(), name: "Maya", handle: "@maya", rating: 3.73, avatarInitials: "MY")
-        players = [drew, will, alex, sam, jordan, maya]
-
-        matches = [
-            Match(
-                id: UUID(),
-                date: Date().addingTimeInterval(-60 * 28),
-                location: "Riverside Courts",
-                teamOne: [drew, will],
-                teamTwo: [alex, sam],
-                teamOneScore: 11,
-                teamTwoScore: 8,
-                matchType: .casual,
-                focus: .communication,
-                note: "Middle calls were cleaner after switching Will left."
-            ),
-            Match(
-                id: UUID(),
-                date: Date().addingTimeInterval(-60 * 60 * 5),
-                location: "Riverside Courts",
-                teamOne: [maya, drew],
-                teamTwo: [will, jordan],
-                teamOneScore: 7,
-                teamTwoScore: 11,
-                matchType: .ladder,
-                focus: .thirdShot,
-                note: "Got punished when third shots floated high."
-            ),
-            Match(
-                id: UUID(),
-                date: Date().addingTimeInterval(-60 * 60 * 28),
-                location: "Eastside YMCA",
-                teamOne: [sam, drew],
-                teamTwo: [alex, maya],
-                teamOneScore: 12,
-                teamTwoScore: 10,
-                matchType: .drillGame,
-                focus: .resets,
-                note: "Transition zone resets finally held up late."
-            )
-        ]
-
-        sessions = [
-            PracticeSession(
-                id: UUID(),
-                date: Date().addingTimeInterval(-60 * 60 * 2),
-                location: "Riverside Courts",
-                durationMinutes: 92,
-                drills: [
-                    Drill(id: UUID(), name: "Cross-court dinks", durationMinutes: 12, attempts: nil, makes: nil),
-                    Drill(id: UUID(), name: "Third-shot drops", durationMinutes: 18, attempts: 50, makes: 31)
-                ],
-                matchesPlayed: 5,
-                wins: 3,
-                focus: .thirdShot,
-                takeaway: "Better results when aiming drop height over pace."
-            ),
-            PracticeSession(
-                id: UUID(),
-                date: Date().addingTimeInterval(-60 * 60 * 48),
-                location: "Eastside YMCA",
-                durationMinutes: 55,
-                drills: [
-                    Drill(id: UUID(), name: "Deep serves", durationMinutes: 15, attempts: 60, makes: 51),
-                    Drill(id: UUID(), name: "Kitchen hands", durationMinutes: 10, attempts: nil, makes: nil)
-                ],
-                matchesPlayed: 2,
-                wins: 1,
-                focus: .serve,
-                takeaway: "Deep middle serves created weaker returns."
-            )
-        ]
-
-        groups = [
-            PickleballGroup(
-                id: UUID(),
-                name: "Saturday Morning Crew",
-                location: "Riverside Courts",
-                members: [drew, will, alex, sam, jordan, maya],
-                leaderboard: [
-                    LeaderboardRow(id: UUID(), player: maya, wins: 18, losses: 7, streak: 4),
-                    LeaderboardRow(id: UUID(), player: sam, wins: 16, losses: 9, streak: 2),
-                    LeaderboardRow(id: UUID(), player: will, wins: 14, losses: 10, streak: 1),
-                    LeaderboardRow(id: UUID(), player: drew, wins: 13, losses: 11, streak: 3),
-                    LeaderboardRow(id: UUID(), player: alex, wins: 11, losses: 13, streak: 0),
-                    LeaderboardRow(id: UUID(), player: jordan, wins: 8, losses: 15, streak: 0)
-                ]
-            )
-        ]
+    enum AuthState: Equatable {
+        case unconfigured
+        case loading
+        case signedOut
+        case signedIn
     }
 
-    var feedItems: [FeedItem] {
-        let matchItems = matches.map(FeedItem.match)
-        let sessionItems = sessions.map(FeedItem.session)
-        return (matchItems + sessionItems).sorted { $0.date > $1.date }
+    @Published var authState: AuthState = .loading
+    @Published var currentProfile: Profile?
+    @Published var feed: [FeedSession] = []
+    @Published var mySessions: [FeedSession] = []
+    @Published var followerCount = 0
+    @Published var followingCount = 0
+    @Published var gear: [GearItem] = []
+    @Published var isBusy = false
+    @Published var errorMessage: String?
+
+    private let selectWithCounts = "*, author:profiles(*), likes(count), comments(count)"
+
+    // MARK: - Lifecycle
+
+    func start() async {
+        guard SupabaseConfig.isConfigured else {
+            authState = .unconfigured
+            return
+        }
+        if let session = try? await supabase.auth.session {
+            await handleSignedIn(userId: session.user.id)
+        } else {
+            authState = .signedOut
+        }
+    }
+
+    // MARK: - Auth
+
+    func signIn(email: String, password: String) async {
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            let session = try await supabase.auth.signIn(email: email, password: password)
+            await handleSignedIn(userId: session.user.id)
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    func signUp(email: String, password: String, username: String, displayName: String) async {
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            // The profile row is created server-side by the on_auth_user_created
+            // trigger, using this metadata.
+            let response = try await supabase.auth.signUp(
+                email: email,
+                password: password,
+                data: [
+                    "username": .string(username),
+                    "display_name": .string(displayName),
+                    "avatar_initials": .string(initials(from: displayName))
+                ]
+            )
+            if let session = response.session {
+                await handleSignedIn(userId: session.user.id)
+            } else {
+                // Email confirmation is enabled: no session yet.
+                errorMessage = "Check your email to confirm your account, then sign in."
+                authState = .signedOut
+            }
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    func signOut() async {
+        try? await supabase.auth.signOut()
+        currentProfile = nil
+        feed = []
+        mySessions = []
+        followerCount = 0
+        followingCount = 0
+        authState = .signedOut
+    }
+
+    private func handleSignedIn(userId: UUID) async {
+        authState = .signedIn
+        await loadProfile(userId: userId)
+        await loadFeed()
+        await loadMySessions(userId: userId)
+        await loadGear(userId: userId)
+    }
+
+    // MARK: - Reads
+
+    func loadProfile(userId: UUID) async {
+        do {
+            let profile: Profile = try await supabase
+                .from("profiles")
+                .select()
+                .eq("id", value: userId.uuidString)
+                .single()
+                .execute()
+                .value
+            currentProfile = profile
+
+            followerCount = try await supabase
+                .from("follows")
+                .select("*", head: true, count: .exact)
+                .eq("following_id", value: userId.uuidString)
+                .execute()
+                .count ?? 0
+            followingCount = try await supabase
+                .from("follows")
+                .select("*", head: true, count: .exact)
+                .eq("follower_id", value: userId.uuidString)
+                .execute()
+                .count ?? 0
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    func loadFeed() async {
+        do {
+            feed = try await supabase
+                .from("sessions")
+                .select(selectWithCounts)
+                .eq("posted", value: true)
+                .order("created_at", ascending: false)
+                .limit(50)
+                .execute()
+                .value
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    func loadMySessions(userId: UUID) async {
+        do {
+            mySessions = try await supabase
+                .from("sessions")
+                .select(selectWithCounts)
+                .eq("user_id", value: userId.uuidString)
+                .order("created_at", ascending: false)
+                .execute()
+                .value
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    func loadGear(userId: UUID) async {
+        do {
+            gear = try await supabase
+                .from("gear")
+                .select()
+                .eq("user_id", value: userId.uuidString)
+                .order("created_at", ascending: false)
+                .execute()
+                .value
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    func refresh() async {
+        guard let uid = currentProfile?.id else { return }
+        await loadFeed()
+        await loadMySessions(userId: uid)
+        await loadGear(userId: uid)
+    }
+
+    // MARK: - Writes
+
+    func logSession(
+        title: String,
+        location: String,
+        durationMinutes: Int,
+        focus: String,
+        takeaway: String,
+        postToFeed: Bool
+    ) async {
+        guard let uid = currentProfile?.id else { return }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            let new = NewSession(
+                userId: uid,
+                title: title.isEmpty ? nil : title,
+                location: location.isEmpty ? nil : location,
+                durationMinutes: durationMinutes,
+                focus: focus,
+                takeaway: takeaway.isEmpty ? nil : takeaway,
+                posted: postToFeed
+            )
+            try await supabase.from("sessions").insert(new).execute()
+            await loadMySessions(userId: uid)
+            await loadFeed()
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    func addGear(category: String, name: String, brand: String) async {
+        guard let uid = currentProfile?.id else { return }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            let new = NewGear(
+                userId: uid,
+                category: category,
+                name: name,
+                brand: brand.isEmpty ? nil : brand
+            )
+            try await supabase.from("gear").insert(new).execute()
+            await loadGear(userId: uid)
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    func deleteGear(_ item: GearItem) async {
+        guard let uid = currentProfile?.id else { return }
+        do {
+            try await supabase
+                .from("gear")
+                .delete()
+                .eq("id", value: item.id.uuidString)
+                .execute()
+            await loadGear(userId: uid)
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    func toggleLike(_ session: FeedSession) async {
+        guard let uid = currentProfile?.id else { return }
+        do {
+            try await supabase
+                .from("likes")
+                .insert(NewLike(userId: uid, sessionId: session.id))
+                .execute()
+        } catch {
+            // Already liked -> treat as unlike.
+            try? await supabase
+                .from("likes")
+                .delete()
+                .eq("user_id", value: uid.uuidString)
+                .eq("session_id", value: session.id.uuidString)
+                .execute()
+        }
+        await loadFeed()
+    }
+
+    // MARK: - Helpers
+
+    private func initials(from name: String) -> String {
+        let letters = name.split(separator: " ").prefix(2).compactMap { $0.first }
+        return letters.isEmpty ? "PB" : String(letters).uppercased()
+    }
+
+    private func friendly(_ error: Error) -> String {
+        if let authError = error as? AuthError {
+            return authError.localizedDescription
+        }
+        return error.localizedDescription
     }
 }

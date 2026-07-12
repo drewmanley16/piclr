@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Copy this file to Supabase.plist (which is gitignored) and fill in
+	     the values from your Supabase project: Dashboard -> Project Settings
+	     -> API. SUPABASE_ANON_KEY is the "anon public" / publishable key. -->
+	<key>SUPABASE_URL</key>
+	<string>https://YOUR-PROJECT-ref.supabase.co</string>
+	<key>SUPABASE_ANON_KEY</key>
+	<string>YOUR-ANON-PUBLIC-KEY</string>
+</dict>
+</plist>

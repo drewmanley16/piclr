@@ -3,21 +3,30 @@ options:
   bundleIdPrefix: com.pickleball
   deploymentTarget:
     iOS: "17.0"
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: "2.0.0"
 settings:
   base:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
-    DEVELOPMENT_TEAM: ""
+    DEVELOPMENT_TEAM: "X9H68STU8F"
+    CODE_SIGN_STYLE: Automatic
 targets:
   PickleballAI:
     type: application
     platform: iOS
     sources:
       - PickleballAI
+    dependencies:
+      - package: Supabase
+        product: Supabase
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.pickleball.ai
         PRODUCT_NAME: PickleballAI
+        TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_KEY_CFBundleDisplayName: "pickleball.ai"
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
@@ -27,3 +36,10 @@ targets:
       properties:
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
+        # Required: without this iOS letterboxes the app to a legacy size.
+        UILaunchScreen: {}
+        # Skip the export-compliance prompt on every TestFlight upload.
+        ITSAppUsesNonExemptEncryption: false
+        # Portrait-only phone app (required for App Store validation).
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait

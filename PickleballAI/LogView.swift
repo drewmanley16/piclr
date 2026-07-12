@@ -16,8 +16,15 @@ struct WorkoutView: View {
                         .font(.headline)
                         .foregroundStyle(Theme.textPrimary)
 
-                    ForEach(store.sessions) { session in
-                        SessionSummaryRow(session: session)
+                    if store.mySessions.isEmpty {
+                        Text("No sessions yet — log your first one above.")
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.textSecondary)
+                            .padding(.vertical, 8)
+                    } else {
+                        ForEach(store.mySessions) { session in
+                            SessionSummaryRow(session: session)
+                        }
                     }
                 }
             }
@@ -25,6 +32,9 @@ struct WorkoutView: View {
             .padding(.bottom, 24)
         }
         .background(Theme.background.ignoresSafeArea())
+        .refreshable {
+            if let uid = store.currentProfile?.id { await store.loadMySessions(userId: uid) }
+        }
         .safeAreaInset(edge: .top) {
             AppHeader(title: "Workout") {
                 HeaderCircleButton(systemImage: "plus", accessibilityTitle: "Log session") {
@@ -34,7 +44,7 @@ struct WorkoutView: View {
             .background(Theme.background)
         }
         .sheet(isPresented: $showLog) {
-            LogView(isPresentedAsSheet: true)
+            LogView()
                 .presentationDetents([.large])
         }
     }
@@ -72,7 +82,7 @@ struct WorkoutView: View {
 }
 
 struct SessionSummaryRow: View {
-    var session: PracticeSession
+    var session: FeedSession
 
     var body: some View {
         HStack(spacing: 14) {
@@ -83,10 +93,10 @@ struct SessionSummaryRow: View {
                 .background(Theme.accentSoft, in: Circle())
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("\(session.focus.rawValue) session")
+                Text(session.displayTitle)
                     .font(.headline)
                     .foregroundStyle(Theme.textPrimary)
-                Text("\(session.durationMinutes) min · \(session.location)")
+                Text("\(session.durationMinutes) min · \(session.location ?? "—")")
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)
             }
@@ -101,11 +111,11 @@ struct SessionSummaryRow: View {
     }
 }
 
-// MARK: - Log Session Form (presented as a sheet)
+// MARK: - Log Session Form (sheet)
 
 struct LogView: View {
     @Environment(\.dismiss) private var dismiss
-    var isPresentedAsSheet = false
+    @EnvironmentObject private var store: AppStore
 
     @State private var title = ""
     @State private var location = "Riverside Courts"
@@ -140,13 +150,24 @@ struct LogView: View {
 
                 Section {
                     Button {
-                        dismiss()
+                        Task {
+                            await store.logSession(
+                                title: title,
+                                location: location,
+                                durationMinutes: durationMinutes,
+                                focus: selectedFocus.rawValue,
+                                takeaway: takeaway,
+                                postToFeed: postToFeed
+                            )
+                            dismiss()
+                        }
                     } label: {
                         Label("Save Session", systemImage: "checkmark.circle.fill")
                             .font(.headline)
                             .foregroundStyle(Theme.background)
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
+                    .disabled(store.isBusy)
                     .listRowBackground(Theme.accent)
                 }
             }
@@ -156,12 +177,8 @@ struct LogView: View {
             .navigationTitle("Log Session")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if isPresentedAsSheet {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
-                            dismiss()
-                        }
-                    }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
                 }
             }
         }
