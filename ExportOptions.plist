@@ -7,7 +7,14 @@
 	<key>teamID</key>
 	<string>X9H68STU8F</string>
 	<key>signingStyle</key>
-	<string>automatic</string>
+	<string>manual</string>
+	<key>signingCertificate</key>
+	<string>Apple Distribution</string>
+	<key>provisioningProfiles</key>
+	<dict>
+		<key>com.pickleball.ai</key>
+		<string>pickleball ai App Store</string>
+	</dict>
 	<key>uploadSymbols</key>
 	<true/>
 	<key>destination</key>

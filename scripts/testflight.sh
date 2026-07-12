@@ -31,15 +31,13 @@ xcodebuild -project "$PROJECT" -scheme "$SCHEME" \
   -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
   clean archive
 
+# ExportOptions.plist uses manual signing with the "pickleball ai App Store"
+# provisioning profile (App Manager API keys can't do cloud signing on export).
 echo "==> Exporting .ipa…"
 xcodebuild -exportArchive \
   -archivePath "$ARCHIVE" \
   -exportPath "$EXPORT_DIR" \
-  -exportOptionsPlist ExportOptions.plist \
-  -allowProvisioningUpdates \
-  -authenticationKeyID "$ASC_KEY_ID" \
-  -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-  -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+  -exportOptionsPlist ExportOptions.plist
 
 IPA=$(ls "$EXPORT_DIR"/*.ipa | head -1)
 echo "==> Uploading $IPA to App Store Connect…"
