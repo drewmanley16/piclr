@@ -205,9 +205,32 @@ final class AppStore: ObservableObject {
         }
     }
 
-    func addGear(category: String, name: String, brand: String) async {
-        guard let uid = currentProfile?.id else { return }
+    func updateProfile(displayName: String, homeCourt: String, rating: Double?, paddle: String, preferredSide: String) async -> Bool {
+        guard let uid = currentProfile?.id else { return false }
         isBusy = true
+        errorMessage = nil
+        defer { isBusy = false }
+        do {
+            let update = ProfileUpdate(
+                displayName: displayName,
+                homeCourt: homeCourt.isEmpty ? nil : homeCourt,
+                rating: rating,
+                paddle: paddle.isEmpty ? nil : paddle,
+                preferredSide: preferredSide.isEmpty ? nil : preferredSide
+            )
+            try await supabase.from("profiles").update(update).eq("id", value: uid.uuidString).execute()
+            await loadProfile(userId: uid)
+            return errorMessage == nil
+        } catch {
+            errorMessage = friendly(error)
+            return false
+        }
+    }
+
+    func addGear(category: String, name: String, brand: String) async -> Bool {
+        guard let uid = currentProfile?.id else { return false }
+        isBusy = true
+        errorMessage = nil
         defer { isBusy = false }
         do {
             let new = NewGear(
@@ -218,8 +241,10 @@ final class AppStore: ObservableObject {
             )
             try await supabase.from("gear").insert(new).execute()
             await loadGear(userId: uid)
+            return errorMessage == nil
         } catch {
             errorMessage = friendly(error)
+            return false
         }
     }
 
@@ -246,7 +271,7 @@ final class AppStore: ObservableObject {
                 .execute()
         } catch {
             // Already liked -> treat as unlike.
-            try? await supabase
+            _ = try? await supabase
                 .from("likes")
                 .delete()
                 .eq("user_id", value: uid.uuidString)

@@ -161,6 +161,21 @@ struct NewLike: Encodable {
     }
 }
 
+struct ProfileUpdate: Encodable {
+    let displayName: String
+    let homeCourt: String?
+    let rating: Double?
+    let paddle: String?
+    let preferredSide: String?
+
+    enum CodingKeys: String, CodingKey {
+        case displayName = "display_name"
+        case homeCourt = "home_court"
+        case rating, paddle
+        case preferredSide = "preferred_side"
+    }
+}
+
 struct NewGear: Encodable {
     let userId: UUID
     let category: String
