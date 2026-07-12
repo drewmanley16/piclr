@@ -11,6 +11,7 @@ create table if not exists public.profiles (
   username       text unique not null,
   display_name   text not null,
   avatar_initials text,
+  avatar_url     text,
   home_court     text,
   rating         numeric,
   preferred_side text,
@@ -24,6 +25,7 @@ create table if not exists public.profiles (
 alter table public.profiles add column if not exists height_inches numeric;
 alter table public.profiles add column if not exists weight_pounds numeric;
 alter table public.profiles add column if not exists shoe_size numeric;
+alter table public.profiles add column if not exists avatar_url text;
 
 -- A session is the loggable + postable unit. It shows in the feed when posted = true.
 create table if not exists public.sessions (

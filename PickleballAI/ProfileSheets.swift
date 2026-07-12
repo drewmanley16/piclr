@@ -1,4 +1,6 @@
 import SwiftUI
+import PhotosUI
+import UIKit
 
 // MARK: - Edit profile
 
@@ -10,6 +12,8 @@ struct EditProfileSheet: View {
     @State private var homeCourt = ""
     @State private var rating = ""
     @State private var preferredSide = "Left"
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var selectedPhotoData: Data?
 
     private let sides = ["Left", "Right", "Both"]
 
@@ -17,6 +21,20 @@ struct EditProfileSheet: View {
         NavigationStack {
             Form {
                 Section("Profile") {
+                    HStack {
+                        Spacer()
+                        PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                            VStack(spacing: 8) {
+                                profilePhoto
+                                Text("Change Photo")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Theme.accent)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        Spacer()
+                    }
+                    .listRowBackground(Color.clear)
                     TextField("Display name", text: $displayName)
                     TextField("Home court", text: $homeCourt)
                 }
@@ -30,13 +48,17 @@ struct EditProfileSheet: View {
                 Section {
                     Button {
                         Task {
-                            let saved = await store.updateProfile(
+                            let profileSaved = await store.updateProfile(
                                 displayName: displayName,
                                 homeCourt: homeCourt,
                                 rating: Double(rating),
                                 preferredSide: preferredSide
                             )
-                            if saved { dismiss() }
+                            guard profileSaved else { return }
+                            if let selectedPhotoData {
+                                guard await store.uploadProfilePhoto(selectedPhotoData) else { return }
+                            }
+                            dismiss()
                         }
                     } label: {
                         Text("Save")
@@ -71,6 +93,25 @@ struct EditProfileSheet: View {
                 rating = p.rating.map { String(format: "%.2f", $0) } ?? ""
                 preferredSide = p.preferredSide ?? "Left"
             }
+            .onChange(of: selectedPhoto) { _, item in
+                Task {
+                    selectedPhotoData = try? await item?.loadTransferable(type: Data.self)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var profilePhoto: some View {
+        if let selectedPhotoData, let image = UIImage(data: selectedPhotoData) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 96, height: 96)
+                .clipShape(Circle())
+                .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
+        } else {
+            ProfileAvatar(profile: store.currentProfile, size: 96)
         }
     }
 }

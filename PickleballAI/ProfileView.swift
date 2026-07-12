@@ -4,7 +4,6 @@ import Charts
 struct ProfileView: View {
     @EnvironmentObject private var store: AppStore
     @State private var showSettings = false
-    @State private var showEdit = false
     @State private var activeSheet: ProfileSheet?
     @State private var metric: ActivityMetric = .duration
     @State private var range: ActivityRange = .threeMonths
@@ -32,7 +31,6 @@ struct ProfileView: View {
         .safeAreaInset(edge: .top) {
             AppHeader(title: profile?.username ?? "Profile") {
                 HeaderPill {
-                    HeaderIconButton(systemImage: "pencil", accessibilityTitle: "Edit profile") { showEdit = true }
                     ShareLink(item: shareText) {
                         Image(systemName: "square.and.arrow.up")
                             .font(.body.weight(.semibold))
@@ -45,7 +43,6 @@ struct ProfileView: View {
             .background(Theme.background)
         }
         .sheet(isPresented: $showSettings) { SettingsSheet() }
-        .sheet(isPresented: $showEdit) { EditProfileSheet() }
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
             case .stats: StatsSheet()
@@ -59,12 +56,7 @@ struct ProfileView: View {
 
     private var profileRow: some View {
         HStack(spacing: 20) {
-            Text(profile?.initials ?? "PB")
-                .font(.title.weight(.bold))
-                .foregroundStyle(Theme.accent)
-                .frame(width: 76, height: 76)
-                .background(Theme.surfaceElevated, in: Circle())
-                .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
+            ProfileAvatar(profile: profile, size: 76)
 
             ProfileStat(label: "Sessions", value: "\(store.mySessions.count)")
             ProfileStat(label: "Followers", value: "\(store.followerCount)")
@@ -97,7 +89,7 @@ struct ProfileView: View {
             if measuresIncomplete {
                 activeSheet = .measures
             } else {
-                showEdit = true
+                showSettings = true
             }
         } label: {
             HStack {

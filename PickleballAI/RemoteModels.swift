@@ -7,6 +7,7 @@ struct Profile: Identifiable, Decodable, Hashable {
     var username: String
     var displayName: String
     var avatarInitials: String?
+    var avatarURL: String?
     var homeCourt: String?
     var rating: Double?
     var preferredSide: String?
@@ -18,6 +19,7 @@ struct Profile: Identifiable, Decodable, Hashable {
         case id, username
         case displayName = "display_name"
         case avatarInitials = "avatar_initials"
+        case avatarURL = "avatar_url"
         case homeCourt = "home_court"
         case rating
         case preferredSide = "preferred_side"
