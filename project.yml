@@ -26,6 +26,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.pickleball.ai
         PRODUCT_NAME: PickleballAI
+        TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_KEY_CFBundleDisplayName: "pickleball.ai"
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
@@ -39,3 +40,6 @@ targets:
         UILaunchScreen: {}
         # Skip the export-compliance prompt on every TestFlight upload.
         ITSAppUsesNonExemptEncryption: false
+        # Portrait-only phone app (required for App Store validation).
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait

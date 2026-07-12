@@ -332,7 +332,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.pickleball.ai;
 				PRODUCT_NAME = PickleballAI;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -353,7 +353,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.pickleball.ai;
 				PRODUCT_NAME = PickleballAI;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
