@@ -7,23 +7,31 @@ struct Profile: Identifiable, Decodable, Hashable {
     var username: String
     var displayName: String
     var avatarInitials: String?
+    var avatarURL: String?
     var homeCourt: String?
     var rating: Double?
     var skillLevel: String?
     var onboardingCompletedAt: String?
     var paddle: String?
     var preferredSide: String?
+    var heightInches: Double?
+    var weightPounds: Double?
+    var shoeSize: Double?
 
     enum CodingKeys: String, CodingKey {
         case id, username
         case displayName = "display_name"
         case avatarInitials = "avatar_initials"
+        case avatarURL = "avatar_url"
         case homeCourt = "home_court"
         case rating
         case skillLevel = "skill_level"
         case onboardingCompletedAt = "onboarding_completed_at"
         case paddle
         case preferredSide = "preferred_side"
+        case heightInches = "height_inches"
+        case weightPounds = "weight_pounds"
+        case shoeSize = "shoe_size"
     }
 
     var initials: String {
@@ -163,6 +171,19 @@ struct ContactMatch: Identifiable, Decodable, Hashable {
 
 // MARK: - Write models
 
+struct NewProfile: Encodable {
+    let id: UUID
+    let username: String
+    let displayName: String
+    let avatarInitials: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, username
+        case displayName = "display_name"
+        case avatarInitials = "avatar_initials"
+    }
+}
+
 struct NewSession: Encodable {
     let userId: UUID
     let title: String?
@@ -187,6 +208,32 @@ struct NewLike: Encodable {
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
         case sessionId = "session_id"
+    }
+}
+
+struct ProfileUpdate: Encodable {
+    let displayName: String
+    let homeCourt: String?
+    let rating: Double?
+    let preferredSide: String?
+
+    enum CodingKeys: String, CodingKey {
+        case displayName = "display_name"
+        case homeCourt = "home_court"
+        case rating
+        case preferredSide = "preferred_side"
+    }
+}
+
+struct MeasuresUpdate: Encodable {
+    let heightInches: Double?
+    let weightPounds: Double?
+    let shoeSize: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case heightInches = "height_inches"
+        case weightPounds = "weight_pounds"
+        case shoeSize = "shoe_size"
     }
 }
 

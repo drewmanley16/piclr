@@ -18,17 +18,28 @@ create table if not exists public.profiles (
   username                 text unique not null,
   display_name             text not null,
   avatar_initials          text,
+  avatar_url               text,
   home_court               text,
   rating                   numeric,
   skill_level              text,
   onboarding_completed_at  timestamptz,
   paddle                   text,
   preferred_side           text,
+  height_inches            numeric,
+  weight_pounds            numeric,
+  shoe_size                numeric,
   created_at               timestamptz not null default now()
 );
 
+-- Keep existing projects in sync when this schema is re-run.
+alter table public.profiles add column if not exists avatar_url text;
 alter table public.profiles add column if not exists skill_level text;
 alter table public.profiles add column if not exists onboarding_completed_at timestamptz;
+alter table public.profiles add column if not exists paddle text;
+alter table public.profiles add column if not exists preferred_side text;
+alter table public.profiles add column if not exists height_inches numeric;
+alter table public.profiles add column if not exists weight_pounds numeric;
+alter table public.profiles add column if not exists shoe_size numeric;
 create unique index if not exists profiles_username_lower_idx on public.profiles (lower(username));
 create index if not exists profiles_onboarding_idx on public.profiles (onboarding_completed_at);
 
@@ -328,6 +339,50 @@ create policy "friend_requests_update" on public.friend_requests
 create policy "friend_requests_delete" on public.friend_requests
   for delete to authenticated
   using (requester_id = auth.uid() and status = 'pending');
+
+-- =========================================================
+-- Storage
+-- =========================================================
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('avatars', 'avatars', true, 5242880, array['image/jpeg', 'image/png', 'image/heic'])
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "avatars_read" on storage.objects;
+create policy "avatars_read"
+  on storage.objects for select
+  using (bucket_id = 'avatars');
+
+drop policy if exists "avatars_insert_own" on storage.objects;
+create policy "avatars_insert_own"
+  on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "avatars_update_own" on storage.objects;
+create policy "avatars_update_own"
+  on storage.objects for update to authenticated
+  using (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  )
+  with check (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "avatars_delete_own" on storage.objects;
+create policy "avatars_delete_own"
+  on storage.objects for delete to authenticated
+  using (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
 
 -- =========================================================
 -- Data API grants
