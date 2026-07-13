@@ -28,13 +28,21 @@ final class AppStore: ObservableObject {
     @Published var searchResults: [Profile] = []
     @Published var requestedFollowIds: Set<UUID> = []
     @Published var gear: [GearItem] = []
+    @Published var incomingRepostRequests: [RepostRequest] = []
+    @Published var requestedRepostSessionIds: Set<UUID> = []
     @Published var isBusy = false
     @Published var errorMessage: String?
 
-    private let selectWithCounts = "*, author:profiles(*), likes(count), comments(count)"
+    private let selectWithCounts = "*, author:profiles(*), likes(count), comments(count), activities:session_activities(*, participants:activity_participants(*, profile:profiles(id,username,display_name,avatar_initials)))"
 
     private var realtimeChannel: RealtimeChannelV2?
     private var realtimeTask: Task<Void, Never>?
+
+    static let iso: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
 
     // MARK: - Lifecycle
 
@@ -145,6 +153,8 @@ final class AppStore: ObservableObject {
         searchResults = []
         requestedFollowIds = []
         gear = []
+        incomingRepostRequests = []
+        requestedRepostSessionIds = []
         authState = .signedOut
     }
 
@@ -184,6 +194,7 @@ final class AppStore: ObservableObject {
         await loadFeed()
         await loadMySessions(userId: userId)
         await loadGear(userId: userId)
+        await loadRepostRequests(userId: userId)
         startRealtime(userId: userId)
     }
 
@@ -528,6 +539,140 @@ final class AppStore: ObservableObject {
             try await supabase.from("sessions").insert(new).execute()
             await loadMySessions(userId: uid)
             await loadFeed()
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    /// Write a full multi-activity session built on-device. Inserts the session
+    /// unposted, writes activities + tagged participants, then flips `posted`
+    /// last so realtime subscribers only see the completed post.
+    func postSession(_ draft: SessionDraft) async -> Bool {
+        guard let uid = currentProfile?.id else { return false }
+        isBusy = true
+        errorMessage = nil
+        defer { isBusy = false }
+        do {
+            let now = Date()
+            let duration = max(1, Int(now.timeIntervalSince(draft.startedAt) / 60))
+            let firstFocus = draft.activities.first(where: { $0.kind == .practice && !$0.focus.isEmpty })?.focus
+
+            let session = NewSession(
+                userId: uid,
+                title: draft.title.isEmpty ? nil : draft.title,
+                location: draft.location.isEmpty ? nil : draft.location,
+                durationMinutes: duration,
+                focus: firstFocus,
+                takeaway: nil,
+                posted: false,
+                startedAt: Self.iso.string(from: draft.startedAt),
+                endedAt: Self.iso.string(from: now)
+            )
+            try await supabase.from("sessions").insert(session).execute()
+
+            for (index, activity) in draft.activities.enumerated() {
+                let isMatch = activity.kind == .match
+                let newActivity = NewSessionActivity(
+                    sessionId: session.id,
+                    kind: activity.kind.rawValue,
+                    position: index,
+                    focus: activity.focus.isEmpty ? nil : activity.focus,
+                    reps: activity.reps.isEmpty ? nil : activity.reps,
+                    notes: activity.notes.isEmpty ? nil : activity.notes,
+                    teamScore: isMatch ? activity.teamScore : nil,
+                    opponentScore: isMatch ? activity.opponentScore : nil,
+                    won: isMatch ? activity.won : nil
+                )
+                try await supabase.from("session_activities").insert(newActivity).execute()
+
+                let participants =
+                    activity.partners.map { player in
+                        NewActivityParticipant(activityId: newActivity.id, sessionId: session.id,
+                                               profileId: player.profile?.id, guestName: player.profile == nil ? player.guestName : nil, role: "partner")
+                    } +
+                    activity.opponents.map { player in
+                        NewActivityParticipant(activityId: newActivity.id, sessionId: session.id,
+                                               profileId: player.profile?.id, guestName: player.profile == nil ? player.guestName : nil, role: "opponent")
+                    }
+                if !participants.isEmpty {
+                    try await supabase.from("activity_participants").insert(participants).execute()
+                }
+            }
+
+            try await supabase.from("sessions")
+                .update(["posted": draft.postToFeed])
+                .eq("id", value: session.id.uuidString)
+                .execute()
+
+            await loadMySessions(userId: uid)
+            await loadFeed()
+            return true
+        } catch {
+            errorMessage = friendly(error)
+            return false
+        }
+    }
+
+    // MARK: - Reposts
+
+    /// Ask the session's author for permission to repost (copy) it. Only allowed
+    /// if you're tagged in the session (enforced by RLS).
+    func requestRepost(_ session: FeedSession) async {
+        guard let uid = currentProfile?.id else { return }
+        do {
+            try await supabase.from("repost_requests")
+                .insert(NewRepostRequest(sessionId: session.id, requesterId: uid))
+                .execute()
+            requestedRepostSessionIds.insert(session.id)
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    /// Incoming repost requests for sessions the signed-in user authored.
+    func loadRepostRequests(userId: UUID) async {
+        do {
+            let rows: [RepostRequest] = try await supabase
+                .from("repost_requests")
+                .select("*, requester:profiles!requester_id(id,username,display_name,avatar_initials), session:sessions!session_id(id,user_id,title)")
+                .eq("status", value: "pending")
+                .execute()
+                .value
+            incomingRepostRequests = rows.filter { $0.session?.userId == userId }
+
+            // Track your own outstanding requests so the button reads "Requested".
+            let mine: [RepostRequest] = try await supabase
+                .from("repost_requests")
+                .select("id,session_id,requester_id,status")
+                .eq("requester_id", value: userId.uuidString)
+                .eq("status", value: "pending")
+                .execute()
+                .value
+            requestedRepostSessionIds = Set(mine.map(\.sessionId))
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    func approveRepost(_ request: RepostRequest) async {
+        guard let uid = currentProfile?.id else { return }
+        do {
+            try await supabase.rpc("approve_repost", params: ["request_id": request.id.uuidString]).execute()
+            await loadRepostRequests(userId: uid)
+            await loadFeed()
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    func declineRepost(_ request: RepostRequest) async {
+        guard let uid = currentProfile?.id else { return }
+        do {
+            try await supabase.from("repost_requests")
+                .update(["status": "declined"])
+                .eq("id", value: request.id.uuidString)
+                .execute()
+            await loadRepostRequests(userId: uid)
         } catch {
             errorMessage = friendly(error)
         }

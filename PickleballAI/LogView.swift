@@ -4,12 +4,12 @@ import SwiftUI
 
 struct WorkoutView: View {
     @EnvironmentObject private var store: AppStore
-    @State private var showLog = false
+    @State private var showSession = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                logCTA
+                startCTA
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Your Sessions")
@@ -17,7 +17,7 @@ struct WorkoutView: View {
                         .foregroundStyle(Theme.textPrimary)
 
                     if store.mySessions.isEmpty {
-                        Text("No sessions yet — log your first one above.")
+                        Text("No sessions yet — start one above.")
                             .font(.subheadline)
                             .foregroundStyle(Theme.textSecondary)
                             .padding(.vertical, 8)
@@ -37,34 +37,33 @@ struct WorkoutView: View {
         }
         .safeAreaInset(edge: .top) {
             AppHeader(title: "Workout") {
-                HeaderCircleButton(systemImage: "plus", accessibilityTitle: "Log session") {
-                    showLog = true
+                HeaderCircleButton(systemImage: "plus", accessibilityTitle: "Start session") {
+                    showSession = true
                 }
             }
             .background(Theme.background)
         }
-        .sheet(isPresented: $showLog) {
-            LogView()
-                .presentationDetents([.large])
+        .fullScreenCover(isPresented: $showSession) {
+            ActiveSessionView()
         }
     }
 
-    private var logCTA: some View {
+    private var startCTA: some View {
         Button {
-            showLog = true
+            showSession = true
         } label: {
             HStack(spacing: 14) {
-                Image(systemName: "figure.pickleball")
+                Image(systemName: "play.fill")
                     .font(.title2.weight(.bold))
                     .foregroundStyle(Theme.background)
                     .frame(width: 48, height: 48)
                     .background(Theme.accent, in: Circle())
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Log a session")
+                    Text("Start a session")
                         .font(.headline)
                         .foregroundStyle(Theme.textPrimary)
-                    Text("Track today's play and share it")
+                    Text("Log practices and matches as you play")
                         .font(.subheadline)
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -96,9 +95,10 @@ struct SessionSummaryRow: View {
                 Text(session.displayTitle)
                     .font(.headline)
                     .foregroundStyle(Theme.textPrimary)
-                Text("\(session.durationMinutes) min · \(session.location ?? "—")")
+                Text(subtitle)
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
             }
 
             Spacer()
@@ -109,78 +109,205 @@ struct SessionSummaryRow: View {
         }
         .cardStyle()
     }
+
+    private var subtitle: String {
+        var parts: [String] = []
+        if session.matchCount > 0 { parts.append("\(session.matchCount) match\(session.matchCount == 1 ? "" : "es")") }
+        if session.practiceCount > 0 { parts.append("\(session.practiceCount) practice") }
+        parts.append("\(session.durationMinutes) min")
+        return parts.joined(separator: " · ")
+    }
 }
 
-// MARK: - Log Session Form (sheet)
+// MARK: - Active session (live builder)
 
-struct LogView: View {
+struct ActiveSessionView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: AppStore
 
-    @State private var title = ""
-    @State private var location = "Riverside Courts"
-    @State private var durationMinutes = 90
-    @State private var selectedFocus = SkillFocus.thirdShot
-    @State private var takeaway = ""
-    @State private var postToFeed = true
+    @State private var draft = SessionDraft()
+    @State private var editor: ActivityEditorRoute?
+    @State private var showDiscardConfirm = false
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Session") {
-                    TextField("Title (e.g. Chill dinks)", text: $title)
-                    TextField("Location", text: $location)
-                    Stepper("Duration: \(durationMinutes) min", value: $durationMinutes, in: 15...240, step: 5)
-                    Picker("Focus", selection: $selectedFocus) {
-                        ForEach(SkillFocus.allCases) { focus in
-                            Text(focus.rawValue).tag(focus)
-                        }
-                    }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    detailsCard
+                    addButtons
+                    activityList
                 }
-
-                Section("Takeaway") {
-                    TextField("What clicked today?", text: $takeaway, axis: .vertical)
-                        .lineLimit(3...6)
-                        .accessibilityLabel("Takeaway notes")
-                }
-
-                Section {
-                    Toggle("Post to feed", isOn: $postToFeed)
-                }
-
-                Section {
-                    Button {
-                        Task {
-                            await store.logSession(
-                                title: title,
-                                location: location,
-                                durationMinutes: durationMinutes,
-                                focus: selectedFocus.rawValue,
-                                takeaway: takeaway,
-                                postToFeed: postToFeed
-                            )
-                            dismiss()
-                        }
-                    } label: {
-                        Label("Save Session", systemImage: "checkmark.circle.fill")
-                            .font(.headline)
-                            .foregroundStyle(Theme.background)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                    .disabled(store.isBusy)
-                    .listRowBackground(Theme.accent)
-                }
+                .padding(16)
             }
-            .scrollContentBackground(.hidden)
-            .background(Theme.background)
-            .listRowBackground(Theme.surface)
-            .navigationTitle("Log Session")
+            .background(Theme.background.ignoresSafeArea())
+            .navigationTitle("New Session")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Discard", role: .destructive) {
+                        if draft.activities.isEmpty { dismiss() } else { showDiscardConfirm = true }
+                    }
+                    .tint(.red)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Post") { Task { await post() } }
+                        .disabled(draft.activities.isEmpty || store.isBusy)
                 }
             }
+            .sheet(item: $editor) { route in
+                switch route {
+                case .newPractice:
+                    ActivityEditorView(activity: DraftActivity(kind: .practice)) { add($0) }
+                case .newMatch:
+                    ActivityEditorView(activity: DraftActivity(kind: .match)) { add($0) }
+                case .edit(let activity):
+                    ActivityEditorView(activity: activity) { update($0) }
+                }
+            }
+            .confirmationDialog("Discard this session?", isPresented: $showDiscardConfirm, titleVisibility: .visible) {
+                Button("Discard session", role: .destructive) { dismiss() }
+                Button("Keep editing", role: .cancel) {}
+            }
+        }
+        .interactiveDismissDisabled(!draft.activities.isEmpty)
+    }
+
+    private var detailsCard: some View {
+        VStack(spacing: 0) {
+            TextField("Session title (optional)", text: $draft.title)
+                .font(.headline)
+                .frame(minHeight: 44)
+            Divider().overlay(Theme.hairline)
+            TextField("Location", text: $draft.location)
+                .frame(minHeight: 44)
+            Divider().overlay(Theme.hairline)
+            HStack {
+                Label("In progress", systemImage: "clock")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+                Spacer()
+                TimelineView(.periodic(from: draft.startedAt, by: 1)) { _ in
+                    Text(elapsed)
+                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(Theme.accent)
+                }
+            }
+            .frame(minHeight: 44)
+        }
+        .padding(.horizontal, 16)
+        .cardStyle(padding: 0)
+    }
+
+    private var addButtons: some View {
+        HStack(spacing: 12) {
+            AddActivityButton(title: "Practice", systemImage: "figure.cooldown") { editor = .newPractice }
+            AddActivityButton(title: "Match", systemImage: "flag.checkered") { editor = .newMatch }
+        }
+    }
+
+    private var activityList: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if draft.activities.isEmpty {
+                Text("Add practices and matches as you play. Post when you're done.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+            } else {
+                ForEach(draft.activities) { activity in
+                    Button { editor = .edit(activity) } label: {
+                        DraftActivityRow(activity: activity)
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        Button(role: .destructive) { remove(activity) } label: {
+                            Label("Remove", systemImage: "trash")
+                        }
+                    }
+                }
+
+                Toggle("Post to feed", isOn: $draft.postToFeed)
+                    .tint(Theme.accent)
+                    .padding(.top, 4)
+            }
+        }
+    }
+
+    private var elapsed: String {
+        let s = max(0, Int(Date().timeIntervalSince(draft.startedAt)))
+        return String(format: "%d:%02d", s / 60, s % 60)
+    }
+
+    private func add(_ activity: DraftActivity) { draft.activities.append(activity) }
+    private func update(_ activity: DraftActivity) {
+        if let i = draft.activities.firstIndex(where: { $0.id == activity.id }) { draft.activities[i] = activity }
+    }
+    private func remove(_ activity: DraftActivity) { draft.activities.removeAll { $0.id == activity.id } }
+
+    private func post() async {
+        if await store.postSession(draft) { dismiss() }
+    }
+}
+
+enum ActivityEditorRoute: Identifiable {
+    case newPractice, newMatch, edit(DraftActivity)
+    var id: String {
+        switch self {
+        case .newPractice: return "practice"
+        case .newMatch: return "match"
+        case .edit(let a): return a.id.uuidString
+        }
+    }
+}
+
+struct AddActivityButton: View {
+    var title: String
+    var systemImage: String
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Image(systemName: systemImage).font(.title2.weight(.semibold))
+                Text(title).font(.subheadline.weight(.semibold))
+            }
+            .foregroundStyle(Theme.accent)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 18)
+            .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct DraftActivityRow: View {
+    var activity: DraftActivity
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: activity.kind == .match ? "flag.checkered" : "figure.cooldown")
+                .font(.title3)
+                .foregroundStyle(Theme.accent)
+                .frame(width: 44, height: 44)
+                .background(Theme.accentSoft, in: Circle())
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(activity.summary)
+                    .font(.headline)
+                    .foregroundStyle(Theme.textPrimary)
+                if let detail { Text(detail).font(.subheadline).foregroundStyle(Theme.textSecondary).lineLimit(1) }
+            }
+            Spacer()
+            Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Theme.textTertiary)
+        }
+        .cardStyle()
+    }
+
+    private var detail: String? {
+        switch activity.kind {
+        case .practice:
+            return activity.reps.isEmpty ? (activity.notes.isEmpty ? nil : activity.notes) : activity.reps
+        case .match:
+            let names = (activity.partners + activity.opponents).map(\.displayName)
+            return names.isEmpty ? (activity.won ? "Won" : "Lost") : names.joined(separator: ", ")
         }
     }
 }
