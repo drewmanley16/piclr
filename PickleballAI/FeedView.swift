@@ -152,6 +152,12 @@ struct FeedCard: View {
                     .foregroundStyle(Theme.textTertiary)
             }
 
+            if session.isRepost {
+                Label("Reposted", systemImage: "arrow.2.squarepath")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.accent)
+            }
+
             Text(session.displayTitle)
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(Theme.textPrimary)
@@ -196,11 +202,34 @@ struct FeedCard: View {
 
                 SocialAction(icon: "bubble.right", count: session.commentCount)
                 SocialAction(icon: "square.and.arrow.up", count: nil)
+
+                if canRepost {
+                    Button {
+                        Task { await store.requestRepost(session) }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.2.squarepath").font(.body.weight(.semibold))
+                            Text(requested ? "Requested" : "Repost").font(.subheadline.weight(.semibold))
+                        }
+                        .foregroundStyle(requested ? Theme.textTertiary : Theme.accent)
+                        .frame(minHeight: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(requested)
+                }
+
                 Spacer()
             }
         }
         .cardStyle()
     }
+
+    private var canRepost: Bool {
+        guard let me = store.currentProfile?.id else { return false }
+        return session.userId != me && session.isParticipant(me)
+    }
+
+    private var requested: Bool { store.requestedRepostSessionIds.contains(session.id) }
 }
 
 struct ActivityLine: View {

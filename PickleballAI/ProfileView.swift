@@ -26,6 +26,9 @@ struct ProfileView: View {
                     if !store.incomingFollowRequests.isEmpty {
                         followRequestsSection
                     }
+                    if !store.incomingRepostRequests.isEmpty {
+                        repostRequestsSection
+                    }
                     sessionsSection
                 }
                 .padding(.horizontal, 16)
@@ -229,6 +232,15 @@ struct ProfileView: View {
         }
     }
 
+    private var repostRequestsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Repost Requests").font(.headline).foregroundStyle(Theme.textPrimary)
+            ForEach(store.incomingRepostRequests) { request in
+                RepostRequestRow(request: request)
+            }
+        }
+    }
+
     // MARK: Sessions
 
     private var sessionsSection: some View {
@@ -411,6 +423,63 @@ struct FollowRequestRow: View {
             .buttonStyle(.plain)
         }
         .cardStyle()
+    }
+}
+
+struct RepostRequestRow: View {
+    @EnvironmentObject private var store: AppStore
+    var request: RepostRequest
+
+    var body: some View {
+        HStack(spacing: 12) {
+            AvatarView(initials: initials)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(request.requester?.displayName ?? "Player")
+                    .font(.headline)
+                    .foregroundStyle(Theme.textPrimary)
+                Text("wants to repost \(sessionLabel)")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Button {
+                Task { await store.declineRepost(request) }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(width: 38, height: 38)
+                    .background(Theme.surfaceElevated, in: Circle())
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                Task { await store.approveRepost(request) }
+            } label: {
+                Image(systemName: "checkmark")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(Theme.background)
+                    .frame(width: 38, height: 38)
+                    .background(Theme.accent, in: Circle())
+            }
+            .buttonStyle(.plain)
+        }
+        .cardStyle()
+    }
+
+    private var sessionLabel: String {
+        if let title = request.session?.title, !title.isEmpty { return "\"\(title)\"" }
+        return "your session"
+    }
+
+    private var initials: String {
+        if let a = request.requester?.avatarInitials, !a.isEmpty { return a }
+        let letters = (request.requester?.displayName ?? "?").split(separator: " ").prefix(2).compactMap { $0.first }
+        return letters.isEmpty ? "?" : String(letters).uppercased()
     }
 }
 

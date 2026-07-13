@@ -58,9 +58,19 @@ struct FeedSession: Identifiable, Decodable, Hashable {
     let takeaway: String?
     let createdAt: String
     let author: Profile
+    let repostedFrom: UUID?
     private let likes: [CountRow]?
     private let comments: [CountRow]?
     private let activities: [SessionActivity]?
+
+    var isRepost: Bool { repostedFrom != nil }
+
+    /// Is the given user tagged as a participant in any of this session's matches?
+    func isParticipant(_ userId: UUID) -> Bool {
+        sortedActivities.contains { activity in
+            (activity.participants ?? []).contains { $0.profile?.id == userId }
+        }
+    }
 
     var likeCount: Int { likes?.first?.count ?? 0 }
     var commentCount: Int { comments?.first?.count ?? 0 }
@@ -95,6 +105,7 @@ struct FeedSession: Identifiable, Decodable, Hashable {
         case durationMinutes = "duration_minutes"
         case focus, takeaway
         case createdAt = "created_at"
+        case repostedFrom = "reposted_from"
         case author, likes, comments, activities
     }
 
@@ -264,6 +275,46 @@ struct SessionDraft {
     var startedAt: Date = Date()
     var activities: [DraftActivity] = []
     var postToFeed: Bool = true
+}
+
+// MARK: - Reposts
+
+struct RepostRequest: Identifiable, Decodable, Hashable {
+    let id: UUID
+    let sessionId: UUID
+    let requesterId: UUID
+    let status: String
+    let requester: ParticipantProfile?
+    let session: RepostSessionInfo?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case sessionId = "session_id"
+        case requesterId = "requester_id"
+        case status, requester, session
+    }
+}
+
+struct RepostSessionInfo: Decodable, Hashable {
+    let id: UUID
+    let userId: UUID
+    let title: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case title
+    }
+}
+
+struct NewRepostRequest: Encodable {
+    let sessionId: UUID
+    let requesterId: UUID
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case requesterId = "requester_id"
+    }
 }
 
 enum GearCategory: String, CaseIterable, Identifiable {
