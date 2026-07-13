@@ -16,22 +16,22 @@ final class AppStore: ObservableObject {
     @Published var currentProfile: Profile?
     @Published var feed: [FeedSession] = []
     @Published var mySessions: [FeedSession] = []
-    @Published var friendCount = 0
-    @Published var pendingFriendRequestCount = 0
-    @Published var incomingFriendRequests: [FriendRequest] = []
+    // Directional follow graph (the `follows` table). "Friend" naming is kept
+    // on a few discovery-UI hooks for compatibility, but the model is a
+    // directed follow: following someone doesn't require them to follow back.
+    @Published var followerCount = 0
+    @Published var followingCount = 0
+    @Published var incomingFollowRequests: [FollowRequest] = []
+    @Published var followers: [FollowListEntry] = []
+    @Published var following: [FollowListEntry] = []
     @Published var contactMatches: [ContactMatch] = []
     @Published var searchResults: [Profile] = []
-    @Published var requestedFriendIds: Set<UUID> = []
+    @Published var requestedFollowIds: Set<UUID> = []
     @Published var gear: [GearItem] = []
     @Published var isBusy = false
     @Published var errorMessage: String?
 
     private let selectWithCounts = "*, author:profiles(*), likes(count), comments(count)"
-    private let requestSelect = """
-    *,
-    requester:profiles!friend_requests_requester_id_fkey(*),
-    addressee:profiles!friend_requests_addressee_id_fkey(*)
-    """
 
     // MARK: - Lifecycle
 
@@ -104,9 +104,27 @@ final class AppStore: ObservableObject {
             await loadSignedInData(userId: response.profile.id)
             return true
         } catch {
-            errorMessage = friendly(error)
+            if isAuthFailure(error) {
+                // The session is invalid/expired (e.g. the account was deleted
+                // out from under this token). Bail out to the auth screen
+                // instead of stranding the user on onboarding.
+                await signOut()
+                errorMessage = "Your session expired. Please sign in again."
+            } else {
+                errorMessage = friendly(error)
+            }
             return false
         }
+    }
+
+    /// True when an error means the session is unauthenticated (HTTP 401/403
+    /// from an Edge Function, or a Supabase auth error).
+    private func isAuthFailure(_ error: Error) -> Bool {
+        if let functionsError = error as? FunctionsError,
+           case .httpError(let code, _) = functionsError {
+            return code == 401 || code == 403
+        }
+        return error is AuthError
     }
 
     func signOut() async {
@@ -114,21 +132,37 @@ final class AppStore: ObservableObject {
         currentProfile = nil
         feed = []
         mySessions = []
-        friendCount = 0
-        pendingFriendRequestCount = 0
-        incomingFriendRequests = []
+        followerCount = 0
+        followingCount = 0
+        incomingFollowRequests = []
+        followers = []
+        following = []
         contactMatches = []
         searchResults = []
-        requestedFriendIds = []
+        requestedFollowIds = []
         gear = []
         authState = .signedOut
     }
 
     private func handleSignedIn(userId: UUID) async {
         authState = .loading
-        let didLoadProfile = await loadProfile(userId: userId)
-        guard didLoadProfile, let profile = currentProfile else {
-            authState = .needsOnboarding
+        switch await loadProfile(userId: userId) {
+        case .missing:
+            // Valid token but no profile row (e.g. the account was deleted) —
+            // the session is orphaned. Clear it and return to the auth screen
+            // rather than dropping into an onboarding flow that can't complete.
+            await signOut()
+            return
+        case .failed:
+            // Couldn't reach the server; don't destroy a possibly-valid
+            // session. Show the auth screen; a good session restores next launch.
+            authState = .signedOut
+            return
+        case .loaded:
+            break
+        }
+        guard let profile = currentProfile else {
+            authState = .signedOut
             return
         }
         if profile.hasCompletedOnboarding {
@@ -136,12 +170,13 @@ final class AppStore: ObservableObject {
             await loadSignedInData(userId: userId)
         } else {
             authState = .needsOnboarding
-            await loadFriendState(userId: userId)
+            await loadFollowState(userId: userId)
         }
     }
 
     private func loadSignedInData(userId: UUID) async {
-        await loadFriendState(userId: userId)
+        await loadFollowState(userId: userId)
+        await loadFollowLists(userId: userId)
         await loadFeed()
         await loadMySessions(userId: userId)
         await loadGear(userId: userId)
@@ -149,29 +184,45 @@ final class AppStore: ObservableObject {
 
     // MARK: - Reads
 
+    /// Result of trying to load the signed-in user's profile.
+    /// `missing` distinguishes "no such profile" (orphaned/deleted account →
+    /// sign out) from `failed` (transient/network error → keep the session).
+    enum ProfileLoad {
+        case loaded
+        case missing
+        case failed
+    }
+
     @discardableResult
-    func loadProfile(userId: UUID) async -> Bool {
+    func loadProfile(userId: UUID) async -> ProfileLoad {
         do {
-            let profile: Profile = try await supabase
+            // Fetch as an array (not `.single()`) so an empty result is a
+            // definitive "no profile" rather than a thrown error.
+            let rows: [Profile] = try await supabase
                 .from("profiles")
                 .select()
                 .eq("id", value: userId.uuidString)
-                .single()
+                .limit(1)
                 .execute()
                 .value
+            guard let profile = rows.first else {
+                return .missing
+            }
             currentProfile = profile
-            return true
+            return .loaded
         } catch {
             errorMessage = friendly(error)
-            return false
+            return .failed
         }
     }
 
     func loadFeed() async {
         guard let uid = currentProfile?.id else { return }
         do {
-            let friendIds = try await acceptedFriendIds(for: uid)
-            let visibleIds = [uid] + friendIds
+            // Directional: your feed shows your own sessions plus those of the
+            // people you follow (accepted).
+            let followingIds = try await acceptedFollowingIds(for: uid)
+            let visibleIds = [uid] + followingIds
             let idFilter = Self.inFilter(for: visibleIds)
             feed = try await supabase
                 .from("sessions")
@@ -215,29 +266,91 @@ final class AppStore: ObservableObject {
         }
     }
 
-    func loadFriendState(userId: UUID) async {
+    /// Loads follow counts, incoming pending requests, and the set of people
+    /// this user has already requested/follows (for discovery button state).
+    func loadFollowState(userId: UUID) async {
         do {
-            let accepted: [FriendRequest] = try await supabase
-                .from("friend_requests")
-                .select()
+            followerCount = try await supabase
+                .from("follows")
+                .select("*", head: true, count: .exact)
+                .eq("followee_id", value: userId.uuidString)
+                .eq("status", value: "accepted")
+                .execute()
+                .count ?? 0
+            followingCount = try await supabase
+                .from("follows")
+                .select("*", head: true, count: .exact)
+                .eq("follower_id", value: userId.uuidString)
+                .eq("status", value: "accepted")
+                .execute()
+                .count ?? 0
+
+            // Outgoing edges (pending or accepted) → discovery "requested" state.
+            let outgoing: [FollowRow] = try await supabase
+                .from("follows")
+                .select("follower_id, followee_id, status, created_at")
+                .eq("follower_id", value: userId.uuidString)
+                .execute()
+                .value
+            requestedFollowIds = Set(outgoing.map(\.followeeId))
+
+            // Incoming pending requests → resolve requester profiles.
+            let incoming: [FollowRow] = try await supabase
+                .from("follows")
+                .select("follower_id, followee_id, status, created_at")
+                .eq("followee_id", value: userId.uuidString)
+                .eq("status", value: "pending")
+                .order("created_at", ascending: false)
+                .execute()
+                .value
+            let followers = try await profilesByID(for: incoming.map(\.followerId))
+            incomingFollowRequests = incoming.map { row in
+                FollowRequest(
+                    followerId: row.followerId,
+                    followeeId: row.followeeId,
+                    follower: followers[row.followerId]
+                )
+            }
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    /// Loads the accepted followers/following lists, each annotated with
+    /// whether the signed-in user follows that person back.
+    func loadFollowLists() async {
+        guard let uid = currentProfile?.id else { return }
+        await loadFollowLists(userId: uid)
+    }
+
+    func loadFollowLists(userId: UUID) async {
+        do {
+            let followerEdges: [FollowRow] = try await supabase
+                .from("follows")
+                .select("follower_id, followee_id, status, created_at")
+                .eq("followee_id", value: userId.uuidString)
                 .eq("status", value: "accepted")
                 .execute()
                 .value
-            let pending: [FriendRequest] = try await supabase
-                .from("friend_requests")
-                .select(requestSelect)
-                .eq("status", value: "pending")
+            let followingEdges: [FollowRow] = try await supabase
+                .from("follows")
+                .select("follower_id, followee_id, status, created_at")
+                .eq("follower_id", value: userId.uuidString)
+                .eq("status", value: "accepted")
                 .execute()
                 .value
 
-            friendCount = Set(accepted.map { $0.otherUserId(for: userId) }).count
-            incomingFriendRequests = pending.filter { $0.addresseeId == userId }
-            pendingFriendRequestCount = incomingFriendRequests.count
-            requestedFriendIds = Set(
-                pending
-                    .filter { $0.requesterId == userId }
-                    .map(\.addresseeId)
-            )
+            let followerIds = followerEdges.map(\.followerId)
+            let followingIds = followingEdges.map(\.followeeId)
+            let iFollow = Set(followingIds)
+            let byId = try await profilesByID(for: followerIds + followingIds)
+
+            followers = followerIds.map { id in
+                FollowListEntry(userId: id, profile: byId[id], isFollowedByMe: iFollow.contains(id))
+            }
+            following = followingIds.map { id in
+                FollowListEntry(userId: id, profile: byId[id], isFollowedByMe: true)
+            }
         } catch {
             errorMessage = friendly(error)
         }
@@ -245,7 +358,8 @@ final class AppStore: ObservableObject {
 
     func refresh() async {
         guard let uid = currentProfile?.id else { return }
-        await loadFriendState(userId: uid)
+        await loadFollowState(userId: uid)
+        await loadFollowLists(userId: uid)
         await loadFeed()
         await loadMySessions(userId: uid)
         await loadGear(userId: uid)
@@ -307,34 +421,44 @@ final class AppStore: ObservableObject {
         }
     }
 
-    func sendFriendRequest(to profile: Profile) async {
+    /// Sends a follow request: inserts a `pending` edge (me → profile).
+    func sendFollowRequest(to profile: Profile) async {
         guard let uid = currentProfile?.id, uid != profile.id else { return }
         isBusy = true
         errorMessage = nil
         defer { isBusy = false }
         do {
-            let new = NewFriendRequest(
-                requesterId: uid,
-                addresseeId: profile.id,
-                status: "pending"
-            )
-            try await supabase.from("friend_requests").insert(new).execute()
-            requestedFriendIds.insert(profile.id)
-            await loadFriendState(userId: uid)
+            let new = NewFollow(followerId: uid, followeeId: profile.id, status: "pending")
+            try await supabase.from("follows").insert(new).execute()
+            requestedFollowIds.insert(profile.id)
+            await loadFollowState(userId: uid)
         } catch {
             errorMessage = friendly(error)
         }
     }
 
-    func respond(to request: FriendRequest, status: String) async {
-        guard let uid = currentProfile?.id, request.addresseeId == uid else { return }
+    /// Respond to an incoming follow request. Accepting flips the edge to
+    /// accepted; declining deletes it so it can be re-requested later.
+    func respondToFollowRequest(_ request: FollowRequest, accept: Bool) async {
+        guard let uid = currentProfile?.id, request.followeeId == uid else { return }
         do {
-            try await supabase
-                .from("friend_requests")
-                .update(["status": status])
-                .eq("id", value: request.id.uuidString)
-                .execute()
-            await loadFriendState(userId: uid)
+            if accept {
+                try await supabase
+                    .from("follows")
+                    .update(["status": "accepted"])
+                    .eq("follower_id", value: request.followerId.uuidString)
+                    .eq("followee_id", value: uid.uuidString)
+                    .execute()
+            } else {
+                try await supabase
+                    .from("follows")
+                    .delete()
+                    .eq("follower_id", value: request.followerId.uuidString)
+                    .eq("followee_id", value: uid.uuidString)
+                    .execute()
+            }
+            await loadFollowState(userId: uid)
+            await loadFollowLists(userId: uid)
             await loadFeed()
         } catch {
             errorMessage = friendly(error)
@@ -495,14 +619,30 @@ final class AppStore: ObservableObject {
 
     // MARK: - Helpers
 
-    private func acceptedFriendIds(for userId: UUID) async throws -> [UUID] {
-        let accepted: [FriendRequest] = try await supabase
-            .from("friend_requests")
-            .select()
+    /// People `userId` follows with an accepted edge (for feed visibility).
+    private func acceptedFollowingIds(for userId: UUID) async throws -> [UUID] {
+        let edges: [FollowRow] = try await supabase
+            .from("follows")
+            .select("follower_id, followee_id, status, created_at")
+            .eq("follower_id", value: userId.uuidString)
             .eq("status", value: "accepted")
             .execute()
             .value
-        return Array(Set(accepted.map { $0.otherUserId(for: userId) }))
+        return Array(Set(edges.map(\.followeeId)))
+    }
+
+    /// Fetches profiles for the given ids in one query, keyed by id. Ids that
+    /// aren't visible (RLS) are simply absent from the result.
+    private func profilesByID(for ids: [UUID]) async throws -> [UUID: Profile] {
+        let unique = Array(Set(ids)).map(\.uuidString)
+        guard !unique.isEmpty else { return [:] }
+        let profiles: [Profile] = try await supabase
+            .from("profiles")
+            .select()
+            .in("id", values: unique)
+            .execute()
+            .value
+        return Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
     }
 
     private static func inFilter(for ids: [UUID]) -> String {

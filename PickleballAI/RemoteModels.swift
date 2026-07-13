@@ -136,37 +136,47 @@ struct GearItem: Identifiable, Decodable, Hashable {
     }
 }
 
-struct FriendRequest: Identifiable, Decodable, Hashable {
-    let id: UUID
-    let requesterId: UUID
-    let addresseeId: UUID
-    let status: String
-    let createdAt: String
-    let requester: Profile?
-    let addressee: Profile?
+/// An incoming follow request: someone (the follower) has asked to follow the
+/// signed-in user (the followee). Synthesized in the store from a pending
+/// `follows` row plus the follower's profile.
+struct FollowRequest: Identifiable, Hashable {
+    let followerId: UUID
+    let followeeId: UUID
+    let follower: Profile?
 
-    enum CodingKeys: String, CodingKey {
-        case id
-        case requesterId = "requester_id"
-        case addresseeId = "addressee_id"
-        case status
-        case createdAt = "created_at"
-        case requester, addressee
-    }
-
-    func otherProfile(for userId: UUID) -> Profile? {
-        requesterId == userId ? addressee : requester
-    }
-
-    func otherUserId(for userId: UUID) -> UUID {
-        requesterId == userId ? addresseeId : requesterId
-    }
+    var id: UUID { followerId }
 }
 
 struct ContactMatch: Identifiable, Decodable, Hashable {
     var id: UUID { profile.id }
     let phone: String
     let profile: Profile
+}
+
+/// A raw row from the `follows` table (directional follow edge).
+struct FollowRow: Decodable, Hashable {
+    let followerId: UUID
+    let followeeId: UUID
+    let status: String
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case followerId = "follower_id"
+        case followeeId = "followee_id"
+        case status
+        case createdAt = "created_at"
+    }
+}
+
+/// A row in the followers/following list: the other user, plus whether the
+/// signed-in user follows them back (Instagram-style). `profile` is nil when
+/// it isn't visible (e.g. hidden by RLS), rendering as "Unknown".
+struct FollowListEntry: Identifiable, Hashable {
+    let userId: UUID
+    let profile: Profile?
+    let isFollowedByMe: Bool
+
+    var id: UUID { userId }
 }
 
 // MARK: - Write models
@@ -249,14 +259,16 @@ struct NewGear: Encodable {
     }
 }
 
-struct NewFriendRequest: Encodable {
-    let requesterId: UUID
-    let addresseeId: UUID
+/// Directional follow edge write model. follower_id follows followee_id;
+/// the request starts `pending` until the followee accepts.
+struct NewFollow: Encodable {
+    let followerId: UUID
+    let followeeId: UUID
     let status: String
 
     enum CodingKeys: String, CodingKey {
-        case requesterId = "requester_id"
-        case addresseeId = "addressee_id"
+        case followerId = "follower_id"
+        case followeeId = "followee_id"
         case status
     }
 }

@@ -16,43 +16,46 @@ struct ProfileView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                profileRow
-                if completion < 1 { completionBanner }
-                activityCard
-                dashboard
-                if !store.incomingFriendRequests.isEmpty {
-                    friendRequestsSection
-                }
-                sessionsSection
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 24)
-        }
-        .background(Theme.background.ignoresSafeArea())
-        .safeAreaInset(edge: .top) {
-            AppHeader(title: profile?.username ?? "Profile") {
-                HeaderPill {
-                    ShareLink(item: shareText) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(Theme.textPrimary)
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    profileRow
+                    if completion < 1 { completionBanner }
+                    activityCard
+                    dashboard
+                    if !store.incomingFollowRequests.isEmpty {
+                        followRequestsSection
                     }
-                    .accessibilityLabel("Share profile")
-                    HeaderIconButton(systemImage: "gearshape", accessibilityTitle: "Settings") {
-                        showSettings = true
+                    sessionsSection
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 24)
+            }
+            .background(Theme.background.ignoresSafeArea())
+            .safeAreaInset(edge: .top) {
+                AppHeader(title: profile?.username ?? "Profile") {
+                    HeaderPill {
+                        ShareLink(item: shareText) {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(Theme.textPrimary)
+                        }
+                        .accessibilityLabel("Share profile")
+                        HeaderIconButton(systemImage: "gearshape", accessibilityTitle: "Settings") {
+                            showSettings = true
+                        }
                     }
                 }
+                .background(Theme.background)
             }
-            .background(Theme.background)
-        }
-        .sheet(isPresented: $showSettings) { SettingsSheet() }
-        .sheet(item: $activeSheet) { sheet in
-            switch sheet {
-            case .stats: StatsSheet()
-            case .gear: GearSheet()
-            case .measures: MeasuresSheet()
+            .toolbar(.hidden, for: .navigationBar)
+            .sheet(isPresented: $showSettings) { SettingsSheet() }
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case .stats: StatsSheet()
+                case .gear: GearSheet()
+                case .measures: MeasuresSheet()
+                }
             }
         }
     }
@@ -64,8 +67,20 @@ struct ProfileView: View {
             ProfileAvatar(profile: profile, size: 76)
 
             ProfileStat(label: "Sessions", value: "\(store.mySessions.count)")
-            ProfileStat(label: "Friends", value: "\(store.friendCount)")
-            ProfileStat(label: "Pending", value: "\(store.pendingFriendRequestCount)")
+
+            NavigationLink {
+                FollowListView(kind: .followers)
+            } label: {
+                ProfileStat(label: "Followers", value: "\(store.followerCount)")
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink {
+                FollowListView(kind: .following)
+            } label: {
+                ProfileStat(label: "Following", value: "\(store.followingCount)")
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -205,11 +220,11 @@ struct ProfileView: View {
 
     // MARK: Friend requests
 
-    private var friendRequestsSection: some View {
+    private var followRequestsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Friend Requests").font(.headline).foregroundStyle(Theme.textPrimary)
-            ForEach(store.incomingFriendRequests) { request in
-                FriendRequestRow(request: request)
+            Text("Follow Requests").font(.headline).foregroundStyle(Theme.textPrimary)
+            ForEach(store.incomingFollowRequests) { request in
+                FollowRequestRow(request: request)
             }
         }
     }
@@ -354,19 +369,19 @@ struct PostingRow: View {
     }
 }
 
-struct FriendRequestRow: View {
+struct FollowRequestRow: View {
     @EnvironmentObject private var store: AppStore
-    var request: FriendRequest
+    var request: FollowRequest
 
     var body: some View {
         HStack(spacing: 12) {
-            ProfileAvatar(profile: request.requester, size: 44)
+            ProfileAvatar(profile: request.follower, size: 44)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(request.requester?.displayName ?? "Player")
+                Text(request.follower?.displayName ?? "Player")
                     .font(.headline)
                     .foregroundStyle(Theme.textPrimary)
-                Text(request.requester.map { "@\($0.username)" } ?? "Wants to connect")
+                Text(request.follower.map { "@\($0.username)" } ?? "Wants to follow you")
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)
             }
@@ -374,7 +389,7 @@ struct FriendRequestRow: View {
             Spacer()
 
             Button {
-                Task { await store.respond(to: request, status: "declined") }
+                Task { await store.respondToFollowRequest(request, accept: false) }
             } label: {
                 Image(systemName: "xmark")
                     .font(.body.weight(.bold))
@@ -385,7 +400,7 @@ struct FriendRequestRow: View {
             .buttonStyle(.plain)
 
             Button {
-                Task { await store.respond(to: request, status: "accepted") }
+                Task { await store.respondToFollowRequest(request, accept: true) }
             } label: {
                 Image(systemName: "checkmark")
                     .font(.body.weight(.bold))

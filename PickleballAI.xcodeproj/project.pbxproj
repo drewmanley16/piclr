@@ -19,6 +19,7 @@
 		89FF47F0442F182F044AEB75 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A26F3CB239971947B6371E26 /* RootView.swift */; };
 		95C8A46DA87219F98DD0A143 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38D466C6F8E7D2FD8E302914 /* AuthView.swift */; };
 		987C065BEC871C430815F0D5 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92AD1866882A183DAB69974D /* FeedView.swift */; };
+		BACB683507C15BE288E50D3C /* FollowListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7854EB879EEA122DFA7E5FE1 /* FollowListView.swift */; };
 		C4D639B6FB92C30CB2822077 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D656AFC1851F5D01BC4BB70 /* AppStore.swift */; };
 		C5338F649A3DC6D11AE71F0B /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528729889F780FEF8B81D160 /* ProfileView.swift */; };
 		D60B10153096A64D929AE1AC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */; };
@@ -33,6 +34,7 @@
 		5D656AFC1851F5D01BC4BB70 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
 		6BAF5E29E3E19941F0F544FB /* PickleballAI.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PickleballAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6BF6725B8FBFB5A75FCF41BB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		7854EB879EEA122DFA7E5FE1 /* FollowListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowListView.swift; sourceTree = "<group>"; };
 		812326B10CE11A6D68558757 /* SupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseService.swift; sourceTree = "<group>"; };
 		81B8CE679ACD5A6F4E5DCB13 /* PickleballAIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickleballAIApp.swift; sourceTree = "<group>"; };
 		92AD1866882A183DAB69974D /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
@@ -73,6 +75,7 @@
 				38D466C6F8E7D2FD8E302914 /* AuthView.swift */,
 				2C2F55C19C493784AFEFC588 /* DesignSystem.swift */,
 				92AD1866882A183DAB69974D /* FeedView.swift */,
+				7854EB879EEA122DFA7E5FE1 /* FollowListView.swift */,
 				6BF6725B8FBFB5A75FCF41BB /* Info.plist */,
 				B3FA4363BCD03C413DB5D6C4 /* LogView.swift */,
 				FC7CF99A3E687EB8A86C623F /* Models.swift */,
@@ -178,6 +181,7 @@
 				95C8A46DA87219F98DD0A143 /* AuthView.swift in Sources */,
 				664317151FD26AFB65FCFB64 /* DesignSystem.swift in Sources */,
 				987C065BEC871C430815F0D5 /* FeedView.swift in Sources */,
+				BACB683507C15BE288E50D3C /* FollowListView.swift in Sources */,
 				454F25CB28B5C41A3538D5E2 /* LogView.swift in Sources */,
 				076565ECFC5D40E2EDE1D5E1 /* Models.swift in Sources */,
 				09769653678BBE3A0E31E1CB /* PickleballAIApp.swift in Sources */,

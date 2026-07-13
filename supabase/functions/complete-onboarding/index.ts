@@ -111,7 +111,10 @@ Deno.serve(async (req) => {
     );
 
   if (phoneError) {
-    return json({ error: phoneError.message }, 400);
+    // Non-fatal: phone_lookup only powers contact matching. The profile is
+    // already created and onboarding is complete, so don't block the user —
+    // log it and move on. Their number can be backfilled on a later match.
+    console.error("phone_lookup upsert failed (non-fatal):", phoneError.message);
   }
 
   return json({ profile });

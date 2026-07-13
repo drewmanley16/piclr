@@ -678,16 +678,16 @@ struct FriendCandidateRow: View {
             }
             Spacer()
             Button {
-                Task { await store.sendFriendRequest(to: profile) }
+                Task { await store.sendFollowRequest(to: profile) }
             } label: {
-                Image(systemName: store.requestedFriendIds.contains(profile.id) ? "checkmark" : "plus")
+                Image(systemName: store.requestedFollowIds.contains(profile.id) ? "checkmark" : "plus")
                     .font(.body.weight(.bold))
-                    .foregroundStyle(store.requestedFriendIds.contains(profile.id) ? Theme.textTertiary : Theme.background)
+                    .foregroundStyle(store.requestedFollowIds.contains(profile.id) ? Theme.textTertiary : Theme.background)
                     .frame(width: 40, height: 40)
-                    .background(store.requestedFriendIds.contains(profile.id) ? Theme.surfaceElevated : Theme.accent, in: Circle())
+                    .background(store.requestedFollowIds.contains(profile.id) ? Theme.surfaceElevated : Theme.accent, in: Circle())
             }
             .buttonStyle(.plain)
-            .disabled(store.requestedFriendIds.contains(profile.id) || store.isBusy)
+            .disabled(store.requestedFollowIds.contains(profile.id) || store.isBusy)
         }
         .cardStyle()
     }

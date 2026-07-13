@@ -83,14 +83,23 @@ create table if not exists public.gear (
 );
 create index if not exists gear_user_idx on public.gear (user_id, created_at desc);
 
--- Kept for compatibility with older builds. New app code uses friend_requests.
+-- Directional follow graph (the app's social model). One row per directed
+-- edge (follower_id -> followee_id). status is the single source of truth:
+--   pending  = requested, awaiting the followee's decision
+--   accepted = followee approved; follower now follows followee
+--   rejected = optional terminal state to suppress re-requests (default flow deletes)
+-- Following is directional: B accepting A does NOT make B follow A back.
 create table if not exists public.follows (
   follower_id  uuid not null references public.profiles(id) on delete cascade,
-  following_id uuid not null references public.profiles(id) on delete cascade,
+  followee_id  uuid not null references public.profiles(id) on delete cascade,
+  status       text not null default 'pending' check (status in ('pending', 'accepted', 'rejected')),
   created_at   timestamptz not null default now(),
-  primary key (follower_id, following_id),
-  check (follower_id <> following_id)
+  primary key (follower_id, followee_id),
+  check (follower_id <> followee_id)
 );
+-- Follower lists + pending-request inboxes ("edges into B, by status").
+-- Follower-side lists (edges out of A) are served by the primary key.
+create index if not exists follows_followee_status_idx on public.follows (followee_id, status);
 
 create table if not exists public.friend_requests (
   id            uuid primary key default gen_random_uuid(),
@@ -182,7 +191,8 @@ create policy "profiles_update" on public.profiles
   using (id = auth.uid())
   with check (id = auth.uid());
 
--- sessions: you can read your own sessions; accepted friends can read posted sessions.
+-- sessions: you can read your own sessions; you can read posted sessions of
+-- people you follow (accepted). Directional — matches the follow graph.
 drop policy if exists "sessions_read"   on public.sessions;
 drop policy if exists "sessions_insert" on public.sessions;
 drop policy if exists "sessions_update" on public.sessions;
@@ -194,12 +204,10 @@ create policy "sessions_read" on public.sessions
     or (
       posted = true
       and exists (
-        select 1 from public.friend_requests fr
-        where fr.status = 'accepted'
-          and (
-            (fr.requester_id = auth.uid() and fr.addressee_id = sessions.user_id)
-            or (fr.addressee_id = auth.uid() and fr.requester_id = sessions.user_id)
-          )
+        select 1 from public.follows f
+        where f.status = 'accepted'
+          and f.follower_id = auth.uid()
+          and f.followee_id = sessions.user_id
       )
     )
   );
@@ -267,59 +275,23 @@ create policy "gear_delete" on public.gear
   for delete to authenticated
   using (user_id = auth.uid());
 
--- follows: compatibility policies for older builds. Some databases used
--- followee_id before origin/main used following_id, so inspect before creating.
+-- follows: readable by any signed-in user. The requester controls the request
+-- (create pending / cancel); the recipient controls acceptance (accept/reject).
 drop policy if exists "follows_read"   on public.follows;
 drop policy if exists "follows_insert" on public.follows;
+drop policy if exists "follows_update" on public.follows;
 drop policy if exists "follows_delete" on public.follows;
-do $$
-begin
-  if exists (
-    select 1
-    from information_schema.columns
-    where table_schema = 'public'
-      and table_name = 'follows'
-      and column_name = 'following_id'
-  ) then
-    execute $policy$
-      create policy "follows_read" on public.follows
-        for select to authenticated
-        using (follower_id = auth.uid() or following_id = auth.uid())
-    $policy$;
-    execute $policy$
-      create policy "follows_insert" on public.follows
-        for insert to authenticated
-        with check (follower_id = auth.uid())
-    $policy$;
-    execute $policy$
-      create policy "follows_delete" on public.follows
-        for delete to authenticated
-        using (follower_id = auth.uid())
-    $policy$;
-  elsif exists (
-    select 1
-    from information_schema.columns
-    where table_schema = 'public'
-      and table_name = 'follows'
-      and column_name = 'followee_id'
-  ) then
-    execute $policy$
-      create policy "follows_read" on public.follows
-        for select to authenticated
-        using (follower_id = auth.uid() or followee_id = auth.uid())
-    $policy$;
-    execute $policy$
-      create policy "follows_insert" on public.follows
-        for insert to authenticated
-        with check (follower_id = auth.uid())
-    $policy$;
-    execute $policy$
-      create policy "follows_delete" on public.follows
-        for delete to authenticated
-        using (follower_id = auth.uid())
-    $policy$;
-  end if;
-end $$;
+create policy "follows_read"   on public.follows for select to authenticated using (true);
+-- You may only create your own request, and it must start as pending.
+create policy "follows_insert" on public.follows for insert to authenticated
+  with check (follower_id = auth.uid() and status = 'pending');
+-- Only the recipient can act on a request, and only to accept or reject it.
+create policy "follows_update" on public.follows for update to authenticated
+  using (followee_id = auth.uid())
+  with check (followee_id = auth.uid() and status in ('accepted', 'rejected'));
+-- The requester can cancel/unfollow; the recipient can reject/remove.
+create policy "follows_delete" on public.follows for delete to authenticated
+  using (follower_id = auth.uid() or followee_id = auth.uid());
 
 -- friend_requests: mutual friend graph with participant-only visibility.
 drop policy if exists "friend_requests_read"   on public.friend_requests;
@@ -393,7 +365,7 @@ grant select, insert, update, delete on public.sessions to authenticated;
 grant select, insert, delete on public.likes to authenticated;
 grant select, insert, delete on public.comments to authenticated;
 grant select, insert, update, delete on public.gear to authenticated;
-grant select, insert, delete on public.follows to authenticated;
+grant select, insert, update, delete on public.follows to authenticated;
 grant select, insert, delete on public.friend_requests to authenticated;
 revoke update on public.friend_requests from authenticated;
 grant update (status) on public.friend_requests to authenticated;
