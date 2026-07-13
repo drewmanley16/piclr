@@ -33,6 +33,9 @@ final class AppStore: ObservableObject {
 
     private let selectWithCounts = "*, author:profiles(*), likes(count), comments(count)"
 
+    private var realtimeChannel: RealtimeChannelV2?
+    private var realtimeTask: Task<Void, Never>?
+
     // MARK: - Lifecycle
 
     func start() async {
@@ -128,6 +131,7 @@ final class AppStore: ObservableObject {
     }
 
     func signOut() async {
+        stopRealtime()
         try? await supabase.auth.signOut()
         currentProfile = nil
         feed = []
@@ -180,6 +184,39 @@ final class AppStore: ObservableObject {
         await loadFeed()
         await loadMySessions(userId: userId)
         await loadGear(userId: userId)
+        startRealtime(userId: userId)
+    }
+
+    // MARK: - Realtime
+
+    /// Subscribe to `sessions` changes so new posts (yours or people you follow)
+    /// surface in the feed live, without a manual refresh.
+    private func startRealtime(userId: UUID) {
+        stopRealtime()
+        let channel = supabase.channel("public:sessions")
+        realtimeChannel = channel
+        realtimeTask = Task { [weak self] in
+            let changes = channel.postgresChange(AnyAction.self, schema: "public", table: "sessions")
+            await channel.subscribe()
+            for await _ in changes {
+                await self?.refreshFeeds(userId: userId)
+                if Task.isCancelled { break }
+            }
+        }
+    }
+
+    private func refreshFeeds(userId: UUID) async {
+        await loadFeed()
+        await loadMySessions(userId: userId)
+    }
+
+    private func stopRealtime() {
+        realtimeTask?.cancel()
+        realtimeTask = nil
+        if let channel = realtimeChannel {
+            realtimeChannel = nil
+            Task { await channel.unsubscribe() }
+        }
     }
 
     // MARK: - Reads
