@@ -19,6 +19,7 @@
 		89FF47F0442F182F044AEB75 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A26F3CB239971947B6371E26 /* RootView.swift */; };
 		95C8A46DA87219F98DD0A143 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38D466C6F8E7D2FD8E302914 /* AuthView.swift */; };
 		987C065BEC871C430815F0D5 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92AD1866882A183DAB69974D /* FeedView.swift */; };
+		A7AB3CB17285CB9C76938F9B /* SessionEditors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F3DE89404F54F718B1D071B /* SessionEditors.swift */; };
 		BACB683507C15BE288E50D3C /* FollowListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7854EB879EEA122DFA7E5FE1 /* FollowListView.swift */; };
 		C4D639B6FB92C30CB2822077 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D656AFC1851F5D01BC4BB70 /* AppStore.swift */; };
 		C5338F649A3DC6D11AE71F0B /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528729889F780FEF8B81D160 /* ProfileView.swift */; };
@@ -32,6 +33,7 @@
 		38D466C6F8E7D2FD8E302914 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		528729889F780FEF8B81D160 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		5D656AFC1851F5D01BC4BB70 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
+		5F3DE89404F54F718B1D071B /* SessionEditors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionEditors.swift; sourceTree = "<group>"; };
 		6BAF5E29E3E19941F0F544FB /* PickleballAI.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PickleballAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6BF6725B8FBFB5A75FCF41BB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7854EB879EEA122DFA7E5FE1 /* FollowListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowListView.swift; sourceTree = "<group>"; };
@@ -84,6 +86,7 @@
 				528729889F780FEF8B81D160 /* ProfileView.swift */,
 				F8FD3C96B80BD2A5C26D975D /* RemoteModels.swift */,
 				A26F3CB239971947B6371E26 /* RootView.swift */,
+				5F3DE89404F54F718B1D071B /* SessionEditors.swift */,
 				DD24443783672F30DD360A7A /* Supabase.example.plist */,
 				110EB1A0604D9D68DD50D886 /* Supabase.plist */,
 				812326B10CE11A6D68558757 /* SupabaseService.swift */,
@@ -189,6 +192,7 @@
 				C5338F649A3DC6D11AE71F0B /* ProfileView.swift in Sources */,
 				0E2AC177A194D8977E9C9DA3 /* RemoteModels.swift in Sources */,
 				89FF47F0442F182F044AEB75 /* RootView.swift in Sources */,
+				A7AB3CB17285CB9C76938F9B /* SessionEditors.swift in Sources */,
 				82D712BA16C2330A23E44710 /* SupabaseService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

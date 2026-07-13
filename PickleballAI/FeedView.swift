@@ -169,6 +169,15 @@ struct FeedCard: View {
                 }
             }
 
+            if !session.sortedActivities.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(session.sortedActivities) { activity in
+                        ActivityLine(activity: activity)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+
             if let takeaway = session.takeaway, !takeaway.isEmpty {
                 Text(takeaway)
                     .font(.subheadline)
@@ -191,6 +200,55 @@ struct FeedCard: View {
             }
         }
         .cardStyle()
+    }
+}
+
+struct ActivityLine: View {
+    var activity: SessionActivity
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: activity.isMatch ? "flag.checkered" : "figure.cooldown")
+                .font(.footnote.weight(.bold))
+                .foregroundStyle(Theme.accent)
+                .frame(width: 22, height: 20)
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(activity.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    if activity.isMatch, let won = activity.won {
+                        Text(won ? "W" : "L")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(won ? Theme.background : Theme.textSecondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 1)
+                            .background(won ? Theme.accent : Theme.surfaceElevated, in: Capsule())
+                    }
+                }
+                if let detail {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(2)
+                }
+            }
+        }
+    }
+
+    private var detail: String? {
+        if activity.isMatch {
+            var parts: [String] = []
+            let partners = activity.partners.map { $0.handle ?? $0.displayName }
+            let opps = activity.opponents.map { $0.handle ?? $0.displayName }
+            if !partners.isEmpty { parts.append("with " + partners.joined(separator: ", ")) }
+            if !opps.isEmpty { parts.append("vs " + opps.joined(separator: ", ")) }
+            return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        } else {
+            let bits = [activity.reps, activity.notes].compactMap { $0 }.filter { !$0.isEmpty }
+            return bits.isEmpty ? nil : bits.joined(separator: " — ")
+        }
     }
 }
 

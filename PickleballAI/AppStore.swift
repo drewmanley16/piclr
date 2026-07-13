@@ -31,10 +31,16 @@ final class AppStore: ObservableObject {
     @Published var isBusy = false
     @Published var errorMessage: String?
 
-    private let selectWithCounts = "*, author:profiles(*), likes(count), comments(count)"
+    private let selectWithCounts = "*, author:profiles(*), likes(count), comments(count), activities:session_activities(*, participants:activity_participants(*, profile:profiles(id,username,display_name,avatar_initials)))"
 
     private var realtimeChannel: RealtimeChannelV2?
     private var realtimeTask: Task<Void, Never>?
+
+    static let iso: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
 
     // MARK: - Lifecycle
 
@@ -530,6 +536,75 @@ final class AppStore: ObservableObject {
             await loadFeed()
         } catch {
             errorMessage = friendly(error)
+        }
+    }
+
+    /// Write a full multi-activity session built on-device. Inserts the session
+    /// unposted, writes activities + tagged participants, then flips `posted`
+    /// last so realtime subscribers only see the completed post.
+    func postSession(_ draft: SessionDraft) async -> Bool {
+        guard let uid = currentProfile?.id else { return false }
+        isBusy = true
+        errorMessage = nil
+        defer { isBusy = false }
+        do {
+            let now = Date()
+            let duration = max(1, Int(now.timeIntervalSince(draft.startedAt) / 60))
+            let firstFocus = draft.activities.first(where: { $0.kind == .practice && !$0.focus.isEmpty })?.focus
+
+            let session = NewSession(
+                userId: uid,
+                title: draft.title.isEmpty ? nil : draft.title,
+                location: draft.location.isEmpty ? nil : draft.location,
+                durationMinutes: duration,
+                focus: firstFocus,
+                takeaway: nil,
+                posted: false,
+                startedAt: Self.iso.string(from: draft.startedAt),
+                endedAt: Self.iso.string(from: now)
+            )
+            try await supabase.from("sessions").insert(session).execute()
+
+            for (index, activity) in draft.activities.enumerated() {
+                let isMatch = activity.kind == .match
+                let newActivity = NewSessionActivity(
+                    sessionId: session.id,
+                    kind: activity.kind.rawValue,
+                    position: index,
+                    focus: activity.focus.isEmpty ? nil : activity.focus,
+                    reps: activity.reps.isEmpty ? nil : activity.reps,
+                    notes: activity.notes.isEmpty ? nil : activity.notes,
+                    teamScore: isMatch ? activity.teamScore : nil,
+                    opponentScore: isMatch ? activity.opponentScore : nil,
+                    won: isMatch ? activity.won : nil
+                )
+                try await supabase.from("session_activities").insert(newActivity).execute()
+
+                let participants =
+                    activity.partners.map { player in
+                        NewActivityParticipant(activityId: newActivity.id, sessionId: session.id,
+                                               profileId: player.profile?.id, guestName: player.profile == nil ? player.guestName : nil, role: "partner")
+                    } +
+                    activity.opponents.map { player in
+                        NewActivityParticipant(activityId: newActivity.id, sessionId: session.id,
+                                               profileId: player.profile?.id, guestName: player.profile == nil ? player.guestName : nil, role: "opponent")
+                    }
+                if !participants.isEmpty {
+                    try await supabase.from("activity_participants").insert(participants).execute()
+                }
+            }
+
+            try await supabase.from("sessions")
+                .update(["posted": draft.postToFeed])
+                .eq("id", value: session.id.uuidString)
+                .execute()
+
+            await loadMySessions(userId: uid)
+            await loadFeed()
+            return true
+        } catch {
+            errorMessage = friendly(error)
+            return false
         }
     }
 
