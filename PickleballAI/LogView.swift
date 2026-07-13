@@ -118,7 +118,7 @@ struct LogView: View {
     @EnvironmentObject private var store: AppStore
 
     @State private var title = ""
-    @State private var location = "Riverside Courts"
+    @State private var location = ""
     @State private var durationMinutes = 90
     @State private var selectedFocus = SkillFocus.thirdShot
     @State private var takeaway = ""
