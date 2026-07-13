@@ -45,10 +45,7 @@ Deno.serve(async (req) => {
   }
 
   const { data: lookupRows, error: lookupError } = await admin
-    .schema("private")
-    .from("phone_lookup")
-    .select("profile_id, phone_e164")
-    .in("phone_e164", phones);
+    .rpc("match_phone_lookup", { phones });
 
   if (lookupError) {
     return json({ error: lookupError.message }, 400);
