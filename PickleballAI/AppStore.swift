@@ -30,6 +30,7 @@ final class AppStore: ObservableObject {
     @Published var gear: [GearItem] = []
     @Published var incomingRepostRequests: [RepostRequest] = []
     @Published var requestedRepostSessionIds: Set<UUID> = []
+    @Published var notifications: [AppNotification] = []
     @Published var isBusy = false
     @Published var errorMessage: String?
 
@@ -37,6 +38,8 @@ final class AppStore: ObservableObject {
 
     private var realtimeChannel: RealtimeChannelV2?
     private var realtimeTask: Task<Void, Never>?
+    private var notifChannel: RealtimeChannelV2?
+    private var notifTask: Task<Void, Never>?
 
     static let iso: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
@@ -155,6 +158,7 @@ final class AppStore: ObservableObject {
         gear = []
         incomingRepostRequests = []
         requestedRepostSessionIds = []
+        notifications = []
         authState = .signedOut
     }
 
@@ -195,6 +199,7 @@ final class AppStore: ObservableObject {
         await loadMySessions(userId: userId)
         await loadGear(userId: userId)
         await loadRepostRequests(userId: userId)
+        await loadNotifications(userId: userId)
         startRealtime(userId: userId)
     }
 
@@ -214,6 +219,23 @@ final class AppStore: ObservableObject {
                 if Task.isCancelled { break }
             }
         }
+
+        // Live badge: reload notifications when a new one arrives for this user.
+        let nChannel = supabase.channel("public:notifications:\(userId.uuidString)")
+        notifChannel = nChannel
+        notifTask = Task { [weak self] in
+            let changes = nChannel.postgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "notifications",
+                filter: "user_id=eq.\(userId.uuidString)"
+            )
+            await nChannel.subscribe()
+            for await _ in changes {
+                await self?.loadNotifications(userId: userId)
+                if Task.isCancelled { break }
+            }
+        }
     }
 
     private func refreshFeeds(userId: UUID) async {
@@ -224,8 +246,14 @@ final class AppStore: ObservableObject {
     private func stopRealtime() {
         realtimeTask?.cancel()
         realtimeTask = nil
+        notifTask?.cancel()
+        notifTask = nil
         if let channel = realtimeChannel {
             realtimeChannel = nil
+            Task { await channel.unsubscribe() }
+        }
+        if let channel = notifChannel {
+            notifChannel = nil
             Task { await channel.unsubscribe() }
         }
     }
@@ -615,8 +643,43 @@ final class AppStore: ObservableObject {
 
     // MARK: - Notifications
 
+    /// Requests that need an action (follow + repost approvals).
     var pendingNotificationCount: Int {
         incomingFollowRequests.count + incomingRepostRequests.count
+    }
+
+    var unreadNotificationCount: Int { notifications.filter { !$0.read }.count }
+
+    /// Total count shown on the bell badge: actionable requests + unread activity.
+    var badgeCount: Int { pendingNotificationCount + unreadNotificationCount }
+
+    func loadNotifications(userId: UUID) async {
+        do {
+            notifications = try await supabase
+                .from("notifications")
+                .select("id,type,read,created_at, actor:profiles!notifications_actor_id_fkey(id,username,display_name,avatar_initials), session:sessions!notifications_session_id_fkey(id,title), comment:comments!notifications_comment_id_fkey(id,body)")
+                .eq("user_id", value: userId.uuidString)
+                .order("created_at", ascending: false)
+                .limit(50)
+                .execute()
+                .value
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    func markNotificationsRead() async {
+        guard let uid = currentProfile?.id, unreadNotificationCount > 0 else { return }
+        do {
+            try await supabase.from("notifications")
+                .update(["read": true])
+                .eq("user_id", value: uid.uuidString)
+                .eq("read", value: false)
+                .execute()
+            await loadNotifications(userId: uid)
+        } catch {
+            errorMessage = friendly(error)
+        }
     }
 
     // MARK: - Comments

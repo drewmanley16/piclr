@@ -27,16 +27,14 @@ struct HomeView: View {
         .safeAreaInset(edge: .top) {
             AppHeader(title: "Home", showsChevron: true, onTitleTap: {}) {
                 HeaderPill {
-                    HeaderIconButton(systemImage: "magnifyingglass", accessibilityTitle: "Search") {
-                        showFindFriends = true
-                    }
+                    HeaderIconButton(systemImage: "magnifyingglass", accessibilityTitle: "Search") {}
                     Button { showNotifications = true } label: {
                         ZStack(alignment: .topTrailing) {
                             Image(systemName: "bell")
                                 .font(.body.weight(.semibold))
                                 .foregroundStyle(Theme.textPrimary)
-                            if store.pendingNotificationCount > 0 {
-                                Text("\(min(store.pendingNotificationCount, 9))\(store.pendingNotificationCount > 9 ? "+" : "")")
+                            if store.badgeCount > 0 {
+                                Text("\(min(store.badgeCount, 9))\(store.badgeCount > 9 ? "+" : "")")
                                     .font(.system(size: 10, weight: .bold))
                                     .foregroundStyle(Theme.background)
                                     .padding(.horizontal, 4)
