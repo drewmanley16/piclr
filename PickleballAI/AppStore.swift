@@ -541,6 +541,27 @@ final class AppStore: ObservableObject {
         }
     }
 
+    /// Unfollow someone: deletes the signed-in user's outgoing edge (me → them),
+    /// whether it was accepted or still pending. Their sessions drop out of the
+    /// feed and their profile becomes private again.
+    func unfollow(userId: UUID) async {
+        guard let uid = currentProfile?.id, uid != userId else { return }
+        do {
+            try await supabase
+                .from("follows")
+                .delete()
+                .eq("follower_id", value: uid.uuidString)
+                .eq("followee_id", value: userId.uuidString)
+                .execute()
+            requestedFollowIds.remove(userId)
+            await loadFollowState(userId: uid)
+            await loadFollowLists(userId: uid)
+            await loadFeed()
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
     /// Loads another user's public profile. Basic fields + follower/following
     /// counts are always visible; sessions are fetched only when the signed-in
     /// user follows them (accepted). The `sessions` query is additionally

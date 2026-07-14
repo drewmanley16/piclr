@@ -95,10 +95,27 @@ struct FollowEntryRow: View {
 struct FollowActionButton: View {
     @EnvironmentObject private var store: AppStore
     var entry: FollowListEntry
+    @State private var confirmUnfollow = false
 
     var body: some View {
         if entry.isFollowedByMe {
-            capsule("Following", filled: false, muted: false)
+            Button {
+                confirmUnfollow = true
+            } label: {
+                capsule("Following", filled: false, muted: false)
+            }
+            .buttonStyle(.plain)
+            .disabled(store.isBusy)
+            .confirmationDialog(
+                "Are you sure you want to unfollow this person?",
+                isPresented: $confirmUnfollow,
+                titleVisibility: .visible
+            ) {
+                Button("Unfollow", role: .destructive) {
+                    Task { await store.unfollow(userId: entry.userId) }
+                }
+                Button("Cancel", role: .cancel) {}
+            }
         } else if let profile = entry.profile {
             if store.requestedFollowIds.contains(entry.userId) {
                 capsule("Requested", filled: false, muted: true)

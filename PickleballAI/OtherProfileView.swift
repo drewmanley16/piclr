@@ -14,6 +14,7 @@ struct OtherProfileView: View {
 
     @State private var loaded: PublicProfile?
     @State private var isLoading = true
+    @State private var confirmUnfollow = false
 
     private var profile: Profile? { loaded?.profile ?? placeholder }
     private var relationship: FollowRelationship { loaded?.relationship ?? .none }
@@ -80,7 +81,26 @@ struct OtherProfileView: View {
         case .isSelf:
             EmptyView()
         case .following:
-            capsuleLabel("Following", filled: false)
+            Button {
+                confirmUnfollow = true
+            } label: {
+                capsuleLabel("Following", filled: false)
+            }
+            .buttonStyle(.plain)
+            .disabled(store.isBusy)
+            .confirmationDialog(
+                "Are you sure you want to unfollow this person?",
+                isPresented: $confirmUnfollow,
+                titleVisibility: .visible
+            ) {
+                Button("Unfollow", role: .destructive) {
+                    Task {
+                        await store.unfollow(userId: userId)
+                        await load()
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            }
         case .requested:
             capsuleLabel("Requested", filled: false, muted: true)
         case .none:
