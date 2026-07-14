@@ -1,4 +1,3 @@
-import Contacts
 import SwiftUI
 
 struct AuthView: View {
@@ -28,8 +27,6 @@ struct AuthView: View {
     @State private var duprRating = ""
     @State private var searchQuery = ""
     @State private var contactStatus: String?
-
-    private let contactStore = CNContactStore()
 
     init(startsAtProfile: Bool = false) {
         self.startsAtProfile = startsAtProfile
@@ -440,12 +437,12 @@ struct AuthView: View {
     private func syncContacts() async {
         contactStatus = "Checking contacts permission..."
         do {
-            let granted = try await requestContactsAccess()
+            let granted = try await ContactsImporter.requestAccess()
             guard granted else {
                 contactStatus = "Contacts access was not granted. Search or share an invite instead."
                 return
             }
-            let phones = try fetchContactPhones()
+            let phones = try ContactsImporter.fetchPhones()
             guard !phones.isEmpty else {
                 contactStatus = "No phone numbers found in contacts."
                 return
@@ -460,46 +457,6 @@ struct AuthView: View {
         } catch {
             contactStatus = error.localizedDescription
         }
-    }
-
-    private func requestContactsAccess() async throws -> Bool {
-        let status = CNContactStore.authorizationStatus(for: .contacts)
-        switch status {
-        case .authorized, .limited:
-            return true
-        case .denied, .restricted:
-            return false
-        case .notDetermined:
-            return try await withCheckedThrowingContinuation { continuation in
-                contactStore.requestAccess(for: .contacts) { granted, error in
-                    if let error {
-                        continuation.resume(throwing: error)
-                    } else {
-                        continuation.resume(returning: granted)
-                    }
-                }
-            }
-        @unknown default:
-            return false
-        }
-    }
-
-    private func fetchContactPhones() throws -> [String] {
-        let keys = [
-            CNContactGivenNameKey,
-            CNContactFamilyNameKey,
-            CNContactPhoneNumbersKey
-        ] as [CNKeyDescriptor]
-        let request = CNContactFetchRequest(keysToFetch: keys)
-        var phones: Set<String> = []
-        try contactStore.enumerateContacts(with: request) { contact, _ in
-            contact.phoneNumbers.forEach { number in
-                if let normalized = Self.normalizePhone(number.value.stringValue) {
-                    phones.insert(normalized)
-                }
-            }
-        }
-        return Array(phones)
     }
 
     private var title: String {
@@ -525,7 +482,7 @@ struct AuthView: View {
     }
 
     private var normalizedPhone: String? {
-        Self.normalizePhone(phone)
+        ContactsImporter.normalizePhone(phone)
     }
 
     private var codeDigits: String {
@@ -549,22 +506,6 @@ struct AuthView: View {
         guard selectedSkill == .dupr else { return nil }
         guard let value = Double(duprRating), (2.0...8.0).contains(value) else { return nil }
         return value
-    }
-
-    private static func normalizePhone(_ value: String) -> String? {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        let digits = trimmed.filter(\.isNumber)
-        guard digits.count >= 8, digits.count <= 15 else { return nil }
-        if trimmed.hasPrefix("+") {
-            return "+\(digits)"
-        }
-        if digits.count == 10 {
-            return "+1\(digits)"
-        }
-        if digits.count == 11, digits.hasPrefix("1") {
-            return "+\(digits)"
-        }
-        return "+\(digits)"
     }
 
     private static func suggestUsername(from name: String) -> String {
@@ -664,8 +605,28 @@ struct SkillLevelButton: View {
 struct FriendCandidateRow: View {
     @EnvironmentObject private var store: AppStore
     var profile: Profile
+    /// When true, tapping the name/avatar area pushes the player's profile
+    /// (Instagram-style). Only enable within a NavigationStack.
+    var navigable: Bool = false
 
     var body: some View {
+        HStack(spacing: 12) {
+            if navigable {
+                NavigationLink {
+                    OtherProfileView(userId: profile.id, placeholder: profile)
+                } label: {
+                    identity
+                }
+                .buttonStyle(.plain)
+            } else {
+                identity
+            }
+            followButton
+        }
+        .cardStyle()
+    }
+
+    private var identity: some View {
         HStack(spacing: 12) {
             AvatarView(initials: profile.initials)
             VStack(alignment: .leading, spacing: 3) {
@@ -677,19 +638,22 @@ struct FriendCandidateRow: View {
                     .foregroundStyle(Theme.textSecondary)
             }
             Spacer()
-            Button {
-                Task { await store.sendFollowRequest(to: profile) }
-            } label: {
-                Image(systemName: store.requestedFollowIds.contains(profile.id) ? "checkmark" : "plus")
-                    .font(.body.weight(.bold))
-                    .foregroundStyle(store.requestedFollowIds.contains(profile.id) ? Theme.textTertiary : Theme.background)
-                    .frame(width: 40, height: 40)
-                    .background(store.requestedFollowIds.contains(profile.id) ? Theme.surfaceElevated : Theme.accent, in: Circle())
-            }
-            .buttonStyle(.plain)
-            .disabled(store.requestedFollowIds.contains(profile.id) || store.isBusy)
         }
-        .cardStyle()
+        .contentShape(Rectangle())
+    }
+
+    private var followButton: some View {
+        Button {
+            Task { await store.sendFollowRequest(to: profile) }
+        } label: {
+            Image(systemName: store.requestedFollowIds.contains(profile.id) ? "checkmark" : "plus")
+                .font(.body.weight(.bold))
+                .foregroundStyle(store.requestedFollowIds.contains(profile.id) ? Theme.textTertiary : Theme.background)
+                .frame(width: 40, height: 40)
+                .background(store.requestedFollowIds.contains(profile.id) ? Theme.surfaceElevated : Theme.accent, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(store.requestedFollowIds.contains(profile.id) || store.isBusy)
     }
 }
 

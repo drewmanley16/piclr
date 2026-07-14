@@ -26,7 +26,9 @@ struct HomeView: View {
         .safeAreaInset(edge: .top) {
             AppHeader(title: "Home", showsChevron: true, onTitleTap: {}) {
                 HeaderPill {
-                    HeaderIconButton(systemImage: "magnifyingglass", accessibilityTitle: "Search") {}
+                    HeaderIconButton(systemImage: "magnifyingglass", accessibilityTitle: "Find friends") {
+                        showFindFriends = true
+                    }
                     HeaderIconButton(systemImage: "bell", accessibilityTitle: "Notifications") {}
                 }
             }
@@ -73,6 +75,7 @@ struct FindFriendsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: AppStore
     @State private var searchQuery = ""
+    @State private var contactStatus: String?
 
     var body: some View {
         NavigationStack {
@@ -99,9 +102,11 @@ struct FindFriendsSheet: View {
 
                     if !store.searchResults.isEmpty {
                         ForEach(store.searchResults) { profile in
-                            FriendCandidateRow(profile: profile)
+                            FriendCandidateRow(profile: profile, navigable: true)
                         }
                     }
+
+                    contactsSection
 
                     ShareLink(
                         item: URL(string: "https://pickleball.ai/invite")!,
@@ -126,6 +131,75 @@ struct FindFriendsSheet: View {
                     Button("Done") { dismiss() }
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var contactsSection: some View {
+        Button {
+            Task { await syncContacts() }
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "person.crop.circle.badge.plus")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(Theme.background)
+                    .frame(width: 44, height: 44)
+                    .background(Theme.accent, in: Circle())
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Find friends from your contacts")
+                        .font(.headline)
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("Contacts are matched once and not stored.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                Spacer()
+            }
+            .cardStyle()
+        }
+        .buttonStyle(.plain)
+        .disabled(store.isBusy)
+
+        if let contactStatus {
+            Text(contactStatus)
+                .font(.caption)
+                .foregroundStyle(Theme.textTertiary)
+        }
+
+        if !store.contactMatches.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("From contacts")
+                    .font(.headline)
+                    .foregroundStyle(Theme.textPrimary)
+                ForEach(store.contactMatches) { match in
+                    FriendCandidateRow(profile: match.profile, navigable: true)
+                }
+            }
+        }
+    }
+
+    private func syncContacts() async {
+        contactStatus = "Checking contacts permission..."
+        do {
+            let granted = try await ContactsImporter.requestAccess()
+            guard granted else {
+                contactStatus = "Contacts access was not granted. Search or share an invite instead."
+                return
+            }
+            let phones = try ContactsImporter.fetchPhones()
+            guard !phones.isEmpty else {
+                contactStatus = "No phone numbers found in contacts."
+                return
+            }
+            contactStatus = "Looking for players in your contacts..."
+            await store.matchContacts(phones: phones)
+            if store.errorMessage != nil {
+                contactStatus = nil
+                return
+            }
+            contactStatus = store.contactMatches.isEmpty ? "No matching players found yet." : nil
+        } catch {
+            contactStatus = error.localizedDescription
         }
     }
 }

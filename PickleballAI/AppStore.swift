@@ -513,6 +513,82 @@ final class AppStore: ObservableObject {
         }
     }
 
+    /// Loads another user's public profile. Basic fields + follower/following
+    /// counts are always visible; sessions are fetched only when the signed-in
+    /// user follows them (accepted). The `sessions` query is additionally
+    /// RLS-gated, so it returns nothing even if this check were bypassed.
+    func loadPublicProfile(userId: UUID) async -> PublicProfile? {
+        guard let me = currentProfile?.id else { return nil }
+        do {
+            let rows: [Profile] = try await supabase
+                .from("profiles")
+                .select()
+                .eq("id", value: userId.uuidString)
+                .limit(1)
+                .execute()
+                .value
+            guard let profile = rows.first else { return nil }
+
+            let relationship: FollowRelationship
+            if userId == me {
+                relationship = .isSelf
+            } else {
+                let edges: [FollowRow] = try await supabase
+                    .from("follows")
+                    .select("follower_id, followee_id, status, created_at")
+                    .eq("follower_id", value: me.uuidString)
+                    .eq("followee_id", value: userId.uuidString)
+                    .limit(1)
+                    .execute()
+                    .value
+                switch edges.first?.status {
+                case "accepted": relationship = .following
+                case "pending": relationship = .requested
+                default: relationship = .none
+                }
+            }
+
+            let followerCount = try await supabase
+                .from("follows")
+                .select("*", head: true, count: .exact)
+                .eq("followee_id", value: userId.uuidString)
+                .eq("status", value: "accepted")
+                .execute()
+                .count ?? 0
+            let followingCount = try await supabase
+                .from("follows")
+                .select("*", head: true, count: .exact)
+                .eq("follower_id", value: userId.uuidString)
+                .eq("status", value: "accepted")
+                .execute()
+                .count ?? 0
+
+            var sessions: [FeedSession] = []
+            if relationship.canViewContent {
+                sessions = try await supabase
+                    .from("sessions")
+                    .select(selectWithCounts)
+                    .eq("user_id", value: userId.uuidString)
+                    .eq("posted", value: true)
+                    .order("created_at", ascending: false)
+                    .limit(50)
+                    .execute()
+                    .value
+            }
+
+            return PublicProfile(
+                profile: profile,
+                relationship: relationship,
+                followerCount: followerCount,
+                followingCount: followingCount,
+                sessions: sessions
+            )
+        } catch {
+            errorMessage = friendly(error)
+            return nil
+        }
+    }
+
     // MARK: - Writes
 
     func logSession(

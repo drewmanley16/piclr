@@ -41,7 +41,12 @@ struct FollowListView: View {
                         .padding(.top, 48)
                 } else {
                     ForEach(entries) { entry in
-                        FollowEntryRow(entry: entry)
+                        NavigationLink {
+                            OtherProfileView(userId: entry.userId, placeholder: entry.profile)
+                        } label: {
+                            FollowEntryRow(entry: entry)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
