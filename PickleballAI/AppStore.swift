@@ -30,11 +30,13 @@ final class AppStore: ObservableObject {
     @Published var gear: [GearItem] = []
     @Published var incomingRepostRequests: [RepostRequest] = []
     @Published var requestedRepostSessionIds: Set<UUID> = []
+    @Published var likedSessionIds: Set<UUID> = []
     @Published var notifications: [AppNotification] = []
     @Published var isBusy = false
     @Published var errorMessage: String?
 
     private let selectWithCounts = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(id,username,display_name,avatar_initials)))"
+    private let selectFeedPreview = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), preview_comments:comments(*, author:profiles!comments_user_id_fkey(id,username,display_name,avatar_initials)), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(id,username,display_name,avatar_initials)))"
 
     private var realtimeChannel: RealtimeChannelV2?
     private var realtimeTask: Task<Void, Never>?
@@ -158,6 +160,7 @@ final class AppStore: ObservableObject {
         gear = []
         incomingRepostRequests = []
         requestedRepostSessionIds = []
+        likedSessionIds = []
         notifications = []
         authState = .signedOut
     }
@@ -300,15 +303,20 @@ final class AppStore: ObservableObject {
             let followingIds = try await acceptedFollowingIds(for: uid)
             let visibleIds = [uid] + followingIds
             let idFilter = Self.inFilter(for: visibleIds)
-            feed = try await supabase
+            let sessions: [FeedSession] = try await supabase
                 .from("sessions")
-                .select(selectWithCounts)
+                .select(selectFeedPreview)
                 .eq("posted", value: true)
                 .filter("user_id", operator: "in", value: idFilter)
                 .order("created_at", ascending: false)
+                .order("created_at", ascending: true, referencedTable: "preview_comments")
                 .limit(50)
+                .limit(3, referencedTable: "preview_comments")
                 .execute()
                 .value
+            let likedIds = try await likedSessionIds(for: uid, sessionIds: sessions.map(\.id))
+            feed = sessions
+            likedSessionIds = likedIds
         } catch {
             errorMessage = friendly(error)
         }
@@ -1011,19 +1019,34 @@ final class AppStore: ObservableObject {
 
     func toggleLike(_ session: FeedSession) async {
         guard let uid = currentProfile?.id else { return }
+        let wasLiked = likedSessionIds.contains(session.id)
+        if wasLiked {
+            likedSessionIds.remove(session.id)
+        } else {
+            likedSessionIds.insert(session.id)
+        }
+
         do {
-            try await supabase
-                .from("likes")
-                .insert(NewLike(userId: uid, sessionId: session.id))
-                .execute()
+            if wasLiked {
+                try await supabase
+                    .from("likes")
+                    .delete()
+                    .eq("user_id", value: uid.uuidString)
+                    .eq("session_id", value: session.id.uuidString)
+                    .execute()
+            } else {
+                try await supabase
+                    .from("likes")
+                    .insert(NewLike(userId: uid, sessionId: session.id))
+                    .execute()
+            }
         } catch {
-            // Already liked -> treat as unlike.
-            _ = try? await supabase
-                .from("likes")
-                .delete()
-                .eq("user_id", value: uid.uuidString)
-                .eq("session_id", value: session.id.uuidString)
-                .execute()
+            if wasLiked {
+                likedSessionIds.insert(session.id)
+            } else {
+                likedSessionIds.remove(session.id)
+            }
+            errorMessage = friendly(error)
         }
         await loadFeed()
     }
@@ -1054,6 +1077,19 @@ final class AppStore: ObservableObject {
             .execute()
             .value
         return Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
+    }
+
+    private func likedSessionIds(for userId: UUID, sessionIds: [UUID]) async throws -> Set<UUID> {
+        let unique = Array(Set(sessionIds)).map(\.uuidString)
+        guard !unique.isEmpty else { return [] }
+        let rows: [LikeRow] = try await supabase
+            .from("likes")
+            .select("session_id")
+            .eq("user_id", value: userId.uuidString)
+            .in("session_id", values: unique)
+            .execute()
+            .value
+        return Set(rows.map(\.sessionId))
     }
 
     private static func inFilter(for ids: [UUID]) -> String {
