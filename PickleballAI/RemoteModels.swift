@@ -17,6 +17,7 @@ struct Profile: Identifiable, Decodable, Hashable {
     var heightInches: Double?
     var weightPounds: Double?
     var shoeSize: Double?
+    var birthday: String?
 
     enum CodingKeys: String, CodingKey {
         case id, username
@@ -32,6 +33,7 @@ struct Profile: Identifiable, Decodable, Hashable {
         case heightInches = "height_inches"
         case weightPounds = "weight_pounds"
         case shoeSize = "shoe_size"
+        case birthday
     }
 
     var initials: String {
@@ -606,12 +608,14 @@ struct ProfileUpdate: Encodable {
     let homeCourt: String?
     let rating: Double?
     let preferredSide: String?
+    let birthday: String?
 
     enum CodingKeys: String, CodingKey {
         case displayName = "display_name"
         case homeCourt = "home_court"
         case rating
         case preferredSide = "preferred_side"
+        case birthday
     }
 }
 

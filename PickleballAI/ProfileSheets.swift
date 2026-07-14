@@ -264,11 +264,20 @@ struct SettingsSheet: View {
     @State private var homeCourt = ""
     @State private var rating = ""
     @State private var preferredSide = "Left"
+    @State private var birthdaySet = false
+    @State private var birthdayDate = Calendar.current.date(byAdding: .year, value: -25, to: Date()) ?? Date()
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var selectedPhotoData: Data?
     @State private var didSave = false
 
     private let sides = ["Left", "Right", "Both"]
+
+    private static let birthdayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
 
     private var appVersion: String {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -304,6 +313,15 @@ struct SettingsSheet: View {
                         .keyboardType(.decimalPad)
                     Picker("Preferred side", selection: $preferredSide) {
                         ForEach(sides, id: \.self) { Text($0).tag($0) }
+                    }
+                }
+
+                Section("Birthday") {
+                    Toggle("Add birthday", isOn: $birthdaySet.animation())
+                        .tint(Theme.accent)
+                    if birthdaySet {
+                        DatePicker("Birthday", selection: $birthdayDate, in: ...Date(), displayedComponents: .date)
+                            .tint(Theme.accent)
                     }
                 }
 
@@ -388,6 +406,12 @@ struct SettingsSheet: View {
         homeCourt = profile.homeCourt ?? ""
         rating = profile.rating.map { String(format: "%.2f", $0) } ?? ""
         preferredSide = profile.preferredSide ?? "Left"
+        if let bday = profile.birthday, let date = Self.birthdayFormatter.date(from: bday) {
+            birthdayDate = date
+            birthdaySet = true
+        } else {
+            birthdaySet = false
+        }
     }
 
     private func saveProfile() async {
@@ -396,7 +420,8 @@ struct SettingsSheet: View {
             displayName: displayName,
             homeCourt: homeCourt,
             rating: Double(rating),
-            preferredSide: preferredSide
+            preferredSide: preferredSide,
+            birthday: birthdaySet ? Self.birthdayFormatter.string(from: birthdayDate) : nil
         )
         guard profileSaved else { return }
         if let selectedPhotoData {

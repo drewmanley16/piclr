@@ -8,7 +8,6 @@ struct ProfileView: View {
     @State private var showNotifications = false
     @State private var activeSheet: ProfileSheet?
     @State private var metric: ActivityMetric = .duration
-    @State private var range: ActivityRange = .threeMonths
 
     private var profile: Profile? { store.currentProfile }
 
@@ -25,8 +24,8 @@ struct ProfileView: View {
                     if !store.incomingFollowRequests.isEmpty { followRequestsBanner }
                     if completion < 1 { completionBanner }
                     activityCard
+                    WorkoutCalendarCard(sessions: store.mySessions)
                     dashboard
-                    sessionsSection
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 24)
@@ -177,7 +176,7 @@ struct ProfileView: View {
     // MARK: Activity chart
 
     private var buckets: [ActivityBucket] {
-        ActivityBucket.weekly(sessions: store.mySessions, range: range)
+        ActivityBucket.lastWeekDaily(sessions: store.mySessions)
     }
 
     private var thisWeekValue: (String, String) {
@@ -199,25 +198,18 @@ struct ProfileView: View {
                 Text(thisWeekValue.0).font(.title2.weight(.bold)).foregroundStyle(Theme.textPrimary)
                 + Text("  \(thisWeekValue.1)").font(.subheadline).foregroundStyle(Theme.textSecondary)
                 Spacer()
-                Menu {
-                    ForEach(ActivityRange.allCases) { r in
-                        Button(r.rawValue) { range = r }
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(range.rawValue).font(.subheadline.weight(.semibold))
-                        Image(systemName: "chevron.down").font(.caption2.weight(.bold))
-                    }
-                    .foregroundStyle(Theme.accent)
-                }
+                Text("Last 7 days")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.textSecondary)
             }
 
             Chart(buckets) { b in
                 BarMark(
-                    x: .value("Week", b.weekStart, unit: .weekOfYear),
+                    x: .value("Day", b.day, unit: .day),
                     y: .value(metric.rawValue, metric == .duration ? b.hours : Double(b.sessions))
                 )
                 .foregroundStyle(Theme.accent)
+                .cornerRadius(4)
             }
             .frame(height: 170)
             .chartYAxis {
@@ -227,8 +219,8 @@ struct ProfileView: View {
                 }
             }
             .chartXAxis {
-                AxisMarks(values: .stride(by: .month)) { _ in
-                    AxisValueLabel(format: .dateTime.month(.abbreviated)).foregroundStyle(Theme.textTertiary)
+                AxisMarks(values: .stride(by: .day)) { _ in
+                    AxisValueLabel(format: .dateTime.weekday(.narrow)).foregroundStyle(Theme.textTertiary)
                 }
             }
 
@@ -263,24 +255,6 @@ struct ProfileView: View {
         }
     }
 
-    // MARK: Friend requests
-
-    // MARK: Sessions
-
-    private var sessionsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Sessions").font(.headline).foregroundStyle(Theme.textPrimary)
-            if store.mySessions.isEmpty {
-                Text("No sessions yet. Log one from the Workout tab.")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textSecondary)
-            } else {
-                ForEach(store.mySessions) { session in
-                    PostingRow(session: session)
-                }
-            }
-        }
-    }
 }
 
 // MARK: - Activity types
@@ -290,47 +264,140 @@ enum ActivityMetric: String, CaseIterable, Hashable {
     case sessions = "Sessions"
 }
 
-enum ActivityRange: String, CaseIterable, Identifiable {
-    case month = "Last month"
-    case threeMonths = "Last 3 months"
-    case sixMonths = "Last 6 months"
-    case year = "Last year"
+struct ActivityBucket: Identifiable {
+    let id = UUID()
+    let day: Date
+    var hours: Double
+    var sessions: Int
 
-    var id: String { rawValue }
-    var days: Int {
-        switch self {
-        case .month: return 30
-        case .threeMonths: return 90
-        case .sixMonths: return 180
-        case .year: return 365
+    /// One bucket per day for the last 7 days (oldest → today).
+    static func lastWeekDaily(sessions: [FeedSession]) -> [ActivityBucket] {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        var map: [Date: ActivityBucket] = [:]
+        for offset in 0..<7 {
+            if let day = cal.date(byAdding: .day, value: -offset, to: today) {
+                map[day] = ActivityBucket(day: day, hours: 0, sessions: 0)
+            }
+        }
+        let weekAgo = cal.date(byAdding: .day, value: -6, to: today) ?? today
+        for s in sessions where s.date >= weekAgo {
+            let day = cal.startOfDay(for: s.date)
+            guard map[day] != nil else { continue }
+            map[day]!.hours += Double(s.durationMinutes) / 60
+            map[day]!.sessions += 1
+        }
+        return map.values.sorted { $0.day < $1.day }
+    }
+}
+
+// MARK: - Workout calendar
+
+struct WorkoutCalendarCard: View {
+    let sessions: [FeedSession]
+    @State private var monthAnchor = Date()
+
+    private let cal = Calendar.current
+
+    private var workoutDays: Set<Date> {
+        Set(sessions.map { cal.startOfDay(for: $0.date) })
+    }
+
+    private var monthTitle: String {
+        let f = DateFormatter()
+        f.dateFormat = "LLLL yyyy"
+        return f.string(from: monthAnchor)
+    }
+
+    /// Day cells for the anchored month, with leading nils to align weekdays.
+    private var cells: [Date?] {
+        guard let interval = cal.dateInterval(of: .month, for: monthAnchor) else { return [] }
+        let firstOfMonth = interval.start
+        let daysInMonth = cal.range(of: .day, in: .month, for: monthAnchor)?.count ?? 30
+        let leading = (cal.component(.weekday, from: firstOfMonth) - cal.firstWeekday + 7) % 7
+        var result: [Date?] = Array(repeating: nil, count: leading)
+        for d in 0..<daysInMonth {
+            result.append(cal.date(byAdding: .day, value: d, to: firstOfMonth))
+        }
+        return result
+    }
+
+    private var weekdaySymbols: [String] {
+        let symbols = DateFormatter().veryShortStandaloneWeekdaySymbols ?? ["S", "M", "T", "W", "T", "F", "S"]
+        let start = cal.firstWeekday - 1
+        return Array(symbols[start...] + symbols[..<start])
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text(monthTitle).font(.headline).foregroundStyle(Theme.textPrimary)
+                Spacer()
+                Button { shiftMonth(-1) } label: {
+                    Image(systemName: "chevron.left").foregroundStyle(Theme.textSecondary)
+                }
+                Button { shiftMonth(1) } label: {
+                    Image(systemName: "chevron.right").foregroundStyle(Theme.textSecondary)
+                }
+                .disabled(isCurrentMonth)
+                .opacity(isCurrentMonth ? 0.4 : 1)
+            }
+
+            let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 7)
+            LazyVGrid(columns: columns, spacing: 8) {
+                ForEach(weekdaySymbols, id: \.self) { s in
+                    Text(s).font(.caption2.weight(.semibold)).foregroundStyle(Theme.textTertiary)
+                }
+                ForEach(Array(cells.enumerated()), id: \.offset) { _, date in
+                    DayCell(date: date, worked: date.map { workoutDays.contains(cal.startOfDay(for: $0)) } ?? false,
+                            isToday: date.map { cal.isDateInToday($0) } ?? false)
+                }
+            }
+
+            HStack(spacing: 14) {
+                legend(color: Theme.accent, label: "Worked out")
+                legend(color: Theme.surfaceElevated, label: "Rest day")
+            }
+            .padding(.top, 2)
+        }
+        .cardStyle()
+    }
+
+    private var isCurrentMonth: Bool {
+        cal.isDate(monthAnchor, equalTo: Date(), toGranularity: .month)
+    }
+
+    private func shiftMonth(_ delta: Int) {
+        if let d = cal.date(byAdding: .month, value: delta, to: monthAnchor) { monthAnchor = d }
+    }
+
+    private func legend(color: Color, label: String) -> some View {
+        HStack(spacing: 6) {
+            Circle().fill(color).frame(width: 10, height: 10)
+            Text(label).font(.caption).foregroundStyle(Theme.textSecondary)
         }
     }
 }
 
-struct ActivityBucket: Identifiable {
-    let id = UUID()
-    let weekStart: Date
-    var hours: Double
-    var sessions: Int
+struct DayCell: View {
+    let date: Date?
+    let worked: Bool
+    let isToday: Bool
 
-    static func weekly(sessions: [FeedSession], range: ActivityRange) -> [ActivityBucket] {
-        let cal = Calendar.current
-        let now = Date()
-        guard let start = cal.date(byAdding: .day, value: -range.days, to: now) else { return [] }
-        var map: [Date: ActivityBucket] = [:]
-        var cursor = cal.dateInterval(of: .weekOfYear, for: start)?.start ?? start
-        while cursor <= now {
-            map[cursor] = ActivityBucket(weekStart: cursor, hours: 0, sessions: 0)
-            cursor = cal.date(byAdding: .weekOfYear, value: 1, to: cursor) ?? now.addingTimeInterval(1)
+    var body: some View {
+        Group {
+            if let date {
+                Text("\(Calendar.current.component(.day, from: date))")
+                    .font(.caption.weight(worked ? .bold : .regular))
+                    .foregroundStyle(worked ? Theme.background : Theme.textSecondary)
+                    .frame(width: 34, height: 34)
+                    .background(worked ? Theme.accent : Theme.surfaceElevated, in: Circle())
+                    .overlay(Circle().strokeBorder(isToday ? Theme.accent : .clear, lineWidth: 1.5))
+            } else {
+                Color.clear.frame(width: 34, height: 34)
+            }
         }
-        for s in sessions where s.date >= start {
-            let wk = cal.dateInterval(of: .weekOfYear, for: s.date)?.start ?? start
-            var b = map[wk] ?? ActivityBucket(weekStart: wk, hours: 0, sessions: 0)
-            b.hours += Double(s.durationMinutes) / 60
-            b.sessions += 1
-            map[wk] = b
-        }
-        return map.values.sorted { $0.weekStart < $1.weekStart }
+        .frame(maxWidth: .infinity)
     }
 }
 
