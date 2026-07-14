@@ -5,6 +5,7 @@ struct ProfileView: View {
     @EnvironmentObject private var store: AppStore
     @State private var showSettings = false
     @State private var showFindFriends = false
+    @State private var showNotifications = false
     @State private var activeSheet: ProfileSheet?
     @State private var metric: ActivityMetric = .duration
     @State private var range: ActivityRange = .threeMonths
@@ -21,6 +22,7 @@ struct ProfileView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     profileRow
+                    if !store.incomingFollowRequests.isEmpty { followRequestsBanner }
                     if completion < 1 { completionBanner }
                     activityCard
                     dashboard
@@ -55,6 +57,7 @@ struct ProfileView: View {
                 FindFriendsSheet()
                     .presentationDetents([.medium, .large])
             }
+            .sheet(isPresented: $showNotifications) { NotificationsView() }
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
                 case .stats: StatsSheet()
@@ -87,6 +90,43 @@ struct ProfileView: View {
             }
             .buttonStyle(.plain)
         }
+    }
+
+    // MARK: Follow requests banner
+
+    private var followRequestsBanner: some View {
+        Button {
+            showNotifications = true
+        } label: {
+            HStack(spacing: 14) {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: "person.crop.circle.badge.checkmark")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(Theme.accent)
+                        .frame(width: 44, height: 44)
+                        .background(Theme.accentSoft, in: Circle())
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(followRequestsTitle)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("Tap to review and accept")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.textTertiary)
+            }
+            .cardStyle()
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var followRequestsTitle: String {
+        let count = store.incomingFollowRequests.count
+        return count == 1 ? "1 follow request" : "\(count) follow requests"
     }
 
     // MARK: Completion banner
