@@ -284,12 +284,18 @@ struct FeedCard: View {
             Divider().overlay(Theme.hairline)
 
             HStack(spacing: 22) {
+                let liked = store.likedSessionIds.contains(session.id)
                 Button {
                     Task { await store.toggleLike(session) }
                 } label: {
-                    SocialLabel(icon: "hand.thumbsup", count: session.likeCount)
+                    SocialLabel(
+                        icon: liked ? "hand.thumbsup.fill" : "hand.thumbsup",
+                        count: session.likeCount,
+                        isHighlighted: liked
+                    )
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(liked ? "Unlike" : "Like")
 
                 Button { showComments = true } label: {
                     SocialLabel(icon: "bubble.right", count: session.commentCount)
@@ -320,6 +326,27 @@ struct FeedCard: View {
 
                 Spacer()
             }
+
+            if !session.inlineComments.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(session.inlineComments) { comment in
+                        InlineCommentRow(comment: comment)
+                    }
+
+                    if session.commentCount > session.inlineComments.count {
+                        Button {
+                            showComments = true
+                        } label: {
+                            Text("View all \(session.commentCount) comments")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Theme.textTertiary)
+                                .frame(minHeight: 28, alignment: .leading)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.top, 2)
+            }
         }
         .cardStyle()
         .sheet(isPresented: $showComments) {
@@ -333,6 +360,22 @@ struct FeedCard: View {
     }
 
     private var requested: Bool { store.requestedRepostSessionIds.contains(session.id) }
+}
+
+struct InlineCommentRow: View {
+    let comment: Comment
+
+    var body: some View {
+        (
+            Text(comment.authorName)
+                .font(.subheadline.weight(.semibold))
+            + Text(" \(comment.body)")
+                .font(.subheadline)
+        )
+        .foregroundStyle(Theme.textPrimary)
+        .lineLimit(2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 }
 
 struct ActivityLine: View {
@@ -400,6 +443,7 @@ struct SocialAction: View {
 struct SocialLabel: View {
     var icon: String
     var count: Int?
+    var isHighlighted = false
 
     var body: some View {
         HStack(spacing: 6) {
@@ -410,8 +454,9 @@ struct SocialLabel: View {
                     .font(.subheadline.weight(.semibold))
             }
         }
-        .foregroundStyle(Theme.textSecondary)
+        .foregroundStyle(isHighlighted ? Theme.accent : Theme.textSecondary)
         .frame(minHeight: 44)
+        .animation(.easeInOut(duration: 0.16), value: isHighlighted)
     }
 }
 

@@ -48,6 +48,14 @@ struct Profile: Identifiable, Decodable, Hashable {
 /// Embedded `{ count: N }` rows returned by PostgREST aggregate selects.
 struct CountRow: Decodable, Hashable { let count: Int }
 
+struct LikeRow: Decodable, Hashable {
+    let sessionId: UUID
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+    }
+}
+
 struct FeedSession: Identifiable, Decodable, Hashable {
     let id: UUID
     let userId: UUID
@@ -62,6 +70,7 @@ struct FeedSession: Identifiable, Decodable, Hashable {
     let photoUrl: String?
     private let likes: [CountRow]?
     private let comments: [CountRow]?
+    private let previewComments: [Comment]?
     private let activities: [SessionActivity]?
 
     var isRepost: Bool { repostedFrom != nil }
@@ -75,6 +84,7 @@ struct FeedSession: Identifiable, Decodable, Hashable {
 
     var likeCount: Int { likes?.first?.count ?? 0 }
     var commentCount: Int { comments?.first?.count ?? 0 }
+    var inlineComments: [Comment] { (previewComments ?? []).prefix(3).map { $0 } }
     var sortedActivities: [SessionActivity] { (activities ?? []).sorted { $0.position < $1.position } }
     var matchCount: Int { sortedActivities.filter(\.isMatch).count }
     var practiceCount: Int { sortedActivities.filter { !$0.isMatch }.count }
@@ -125,6 +135,7 @@ struct FeedSession: Identifiable, Decodable, Hashable {
         case repostedFrom = "reposted_from"
         case photoUrl = "photo_url"
         case author, likes, comments, activities
+        case previewComments = "preview_comments"
     }
 
     private static let isoFractional: ISO8601DateFormatter = {
