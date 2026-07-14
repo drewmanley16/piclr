@@ -991,7 +991,7 @@ final class AppStore: ObservableObject {
         }
     }
 
-    func updateProfile(displayName: String, homeCourt: String, rating: Double?, preferredSide: String) async -> Bool {
+    func updateProfile(displayName: String, homeCourt: String, rating: Double?, preferredSide: String, birthday: String?) async -> Bool {
         guard let uid = currentProfile?.id else { return false }
         isBusy = true
         errorMessage = nil
@@ -1001,7 +1001,8 @@ final class AppStore: ObservableObject {
                 displayName: displayName,
                 homeCourt: homeCourt.isEmpty ? nil : homeCourt,
                 rating: rating,
-                preferredSide: preferredSide.isEmpty ? nil : preferredSide
+                preferredSide: preferredSide.isEmpty ? nil : preferredSide,
+                birthday: birthday
             )
             try await supabase.from("profiles").update(update).eq("id", value: uid.uuidString).execute()
             // Apply locally instead of re-fetching — saves a round trip and
