@@ -172,7 +172,7 @@ struct PlayerPickerSheet: View {
                                 dismiss()
                             } label: {
                                 HStack(spacing: 12) {
-                                    AvatarView(initials: profile.initials)
+                                    ProfileAvatar(profile: profile, size: 40)
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(profile.displayName).foregroundStyle(Theme.textPrimary)
                                         Text("@\(profile.username)").font(.caption).foregroundStyle(Theme.textSecondary)

@@ -210,11 +210,19 @@ struct ParticipantProfile: Decodable, Hashable {
     let username: String
     let displayName: String
     let avatarInitials: String?
+    let avatarURL: String?
 
     enum CodingKeys: String, CodingKey {
         case id, username
         case displayName = "display_name"
         case avatarInitials = "avatar_initials"
+        case avatarURL = "avatar_url"
+    }
+
+    var initials: String {
+        if let a = avatarInitials, !a.isEmpty { return a }
+        let letters = displayName.split(separator: " ").prefix(2).compactMap { $0.first }
+        return letters.isEmpty ? "?" : String(letters).uppercased()
     }
 }
 

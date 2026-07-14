@@ -456,7 +456,7 @@ struct RepostRequestRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            AvatarView(initials: initials)
+            ProfileAvatar(participant: request.requester, size: 40)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(request.requester?.displayName ?? "Player")
@@ -498,12 +498,6 @@ struct RepostRequestRow: View {
     private var sessionLabel: String {
         if let title = request.session?.title, !title.isEmpty { return "\"\(title)\"" }
         return "your session"
-    }
-
-    private var initials: String {
-        if let a = request.requester?.avatarInitials, !a.isEmpty { return a }
-        let letters = (request.requester?.displayName ?? "?").split(separator: " ").prefix(2).compactMap { $0.first }
-        return letters.isEmpty ? "?" : String(letters).uppercased()
     }
 }
 

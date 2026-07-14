@@ -509,7 +509,7 @@ struct OnboardingPreviewCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 12) {
-                AvatarView(initials: "DM")
+                ProfileAvatar(url: nil, initials: "DM", size: 40)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Drew & Maya won")
                         .font(.headline)
@@ -619,7 +619,7 @@ struct FriendCandidateRow: View {
 
     private var identity: some View {
         HStack(spacing: 12) {
-            AvatarView(initials: profile.initials)
+            ProfileAvatar(profile: profile, size: 40)
             VStack(alignment: .leading, spacing: 3) {
                 Text(profile.displayName)
                     .font(.headline)

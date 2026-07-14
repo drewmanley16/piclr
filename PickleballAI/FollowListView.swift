@@ -66,7 +66,7 @@ struct FollowEntryRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            AvatarView(initials: entry.profile?.initials ?? "PB")
+            ProfileAvatar(profile: entry.profile, size: 40)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.profile?.displayName ?? "Unknown")

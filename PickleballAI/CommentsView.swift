@@ -131,7 +131,7 @@ struct CommentRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            AvatarView(initials: comment.authorInitials)
+            ProfileAvatar(participant: comment.author, size: 40)
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {

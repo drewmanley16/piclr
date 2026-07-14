@@ -94,20 +94,6 @@ struct StatPill: View {
     }
 }
 
-struct AvatarView: View {
-    var initials: String
-
-    var body: some View {
-        Text(initials)
-            .font(.caption.weight(.bold))
-            .foregroundStyle(Theme.accent)
-            .frame(width: 40, height: 40)
-            .background(Theme.surfaceElevated, in: Circle())
-            .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
-            .accessibilityHidden(true)
-    }
-}
-
 /// Loads a remote image with retries so a slow/blipped first load doesn't get
 /// stuck on the placeholder forever (AsyncImage never retries a failed load).
 struct RemoteImage: View {
@@ -150,20 +136,33 @@ struct RemoteImage: View {
     }
 }
 
+/// The single avatar component used everywhere. Shows the profile photo when a
+/// URL is available (with retries via `RemoteImage`) and falls back to initials
+/// otherwise. Build it from a `Profile`, a `ParticipantProfile`, or raw
+/// url/initials so every call site renders photos consistently.
 struct ProfileAvatar: View {
-    var profile: Profile?
+    var url: String?
+    var initials: String
     var size: CGFloat
+
+    init(url: String?, initials: String, size: CGFloat = 44) {
+        self.url = url
+        self.initials = initials.isEmpty ? "PB" : initials
+        self.size = size
+    }
+
+    init(profile: Profile?, size: CGFloat = 44) {
+        self.init(url: profile?.avatarURL, initials: profile?.initials ?? "PB", size: size)
+    }
+
+    init(participant: ParticipantProfile?, size: CGFloat = 44) {
+        self.init(url: participant?.avatarURL, initials: participant?.initials ?? "?", size: size)
+    }
 
     var body: some View {
         Group {
-            if let avatarURL = profile?.avatarURL, let url = URL(string: avatarURL) {
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFill()
-                    } else {
-                        fallback
-                    }
-                }
+            if let url, let parsed = URL(string: url) {
+                RemoteImage(url: parsed)
             } else {
                 fallback
             }
@@ -171,12 +170,12 @@ struct ProfileAvatar: View {
         .frame(width: size, height: size)
         .clipShape(Circle())
         .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
-        .accessibilityLabel(profile.map { "\($0.displayName)'s profile photo" } ?? "Profile photo")
+        .accessibilityLabel("Profile photo")
     }
 
     private var fallback: some View {
-        Text(profile?.initials ?? "PB")
-            .font(.title.weight(.bold))
+        Text(initials)
+            .font(.system(size: size * 0.38, weight: .bold))
             .foregroundStyle(Theme.accent)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Theme.surfaceElevated)

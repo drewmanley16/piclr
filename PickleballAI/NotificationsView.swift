@@ -85,7 +85,7 @@ struct NotificationRow: View {
     var body: some View {
         HStack(spacing: 12) {
             ZStack(alignment: .bottomTrailing) {
-                AvatarView(initials: notification.actorInitials)
+                ProfileAvatar(participant: notification.actor, size: 40)
                 Image(systemName: notification.icon)
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(Theme.background)

@@ -35,8 +35,8 @@ final class AppStore: ObservableObject {
     @Published var isBusy = false
     @Published var errorMessage: String?
 
-    private let selectWithCounts = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(id,username,display_name,avatar_initials)))"
-    private let selectFeedPreview = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), preview_comments:comments(*, author:profiles!comments_user_id_fkey(id,username,display_name,avatar_initials)), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(id,username,display_name,avatar_initials)))"
+    private let selectWithCounts = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(id,username,display_name,avatar_initials,avatar_url)))"
+    private let selectFeedPreview = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), preview_comments:comments(*, author:profiles!comments_user_id_fkey(id,username,display_name,avatar_initials,avatar_url)), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(id,username,display_name,avatar_initials,avatar_url)))"
 
     private var realtimeChannel: RealtimeChannelV2?
     private var realtimeTask: Task<Void, Never>?
@@ -867,7 +867,7 @@ final class AppStore: ObservableObject {
         do {
             notifications = try await supabase
                 .from("notifications")
-                .select("id,type,read,created_at, actor:profiles!notifications_actor_id_fkey(id,username,display_name,avatar_initials), session:sessions!notifications_session_id_fkey(id,title), comment:comments!notifications_comment_id_fkey(id,body)")
+                .select("id,type,read,created_at, actor:profiles!notifications_actor_id_fkey(id,username,display_name,avatar_initials,avatar_url), session:sessions!notifications_session_id_fkey(id,title), comment:comments!notifications_comment_id_fkey(id,body)")
                 .eq("user_id", value: userId.uuidString)
                 .order("created_at", ascending: false)
                 .limit(50)
@@ -898,7 +898,7 @@ final class AppStore: ObservableObject {
         do {
             return try await supabase
                 .from("comments")
-                .select("*, author:profiles!comments_user_id_fkey(id,username,display_name,avatar_initials)")
+                .select("*, author:profiles!comments_user_id_fkey(id,username,display_name,avatar_initials,avatar_url)")
                 .eq("session_id", value: sessionId.uuidString)
                 .order("created_at", ascending: true)
                 .execute()
@@ -947,7 +947,7 @@ final class AppStore: ObservableObject {
         do {
             let rows: [RepostRequest] = try await supabase
                 .from("repost_requests")
-                .select("*, requester:profiles!requester_id(id,username,display_name,avatar_initials), session:sessions!session_id(id,user_id,title)")
+                .select("*, requester:profiles!requester_id(id,username,display_name,avatar_initials,avatar_url), session:sessions!session_id(id,user_id,title)")
                 .eq("status", value: "pending")
                 .execute()
                 .value
