@@ -51,11 +51,26 @@ struct OtherProfileView: View {
             HStack(spacing: 20) {
                 ProfileAvatar(profile: profile, size: 76)
 
-                if loaded?.relationship.canViewContent == true, let loaded {
+                if let loaded, loaded.relationship.canViewContent {
+                    // You follow them → their graph is visible (tappable).
                     ProfileStat(label: "Sessions", value: "\(loaded.sessions.count)")
+                    NavigationLink {
+                        UserFollowListView(userId: userId, kind: .followers)
+                    } label: {
+                        ProfileStat(label: "Followers", value: "\(loaded.followerCount)")
+                    }
+                    .buttonStyle(.plain)
+                    NavigationLink {
+                        UserFollowListView(userId: userId, kind: .following)
+                    } label: {
+                        ProfileStat(label: "Following", value: "\(loaded.followingCount)")
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    // Private to you → counts show, but the lists stay hidden.
+                    ProfileStat(label: "Followers", value: "\(loaded?.followerCount ?? 0)")
+                    ProfileStat(label: "Following", value: "\(loaded?.followingCount ?? 0)")
                 }
-                ProfileStat(label: "Followers", value: "\(loaded?.followerCount ?? 0)")
-                ProfileStat(label: "Following", value: "\(loaded?.followingCount ?? 0)")
             }
 
             VStack(alignment: .leading, spacing: 2) {

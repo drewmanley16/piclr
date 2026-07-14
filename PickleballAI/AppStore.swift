@@ -491,6 +491,34 @@ final class AppStore: ObservableObject {
         }
     }
 
+    /// Loads another user's followers or following list. Each entry's
+    /// `isFollowedByMe` reflects whether the *signed-in* user follows that
+    /// person (accepted) — so the follow-back button is relative to me,
+    /// Instagram-style. Returns the entries rather than mutating the store's
+    /// own published lists.
+    func followList(for userId: UUID, kind: FollowListKind) async -> [FollowListEntry] {
+        guard let me = currentProfile?.id else { return [] }
+        do {
+            let column = kind == .followers ? "followee_id" : "follower_id"
+            let edges: [FollowRow] = try await supabase
+                .from("follows")
+                .select("follower_id, followee_id, status, created_at")
+                .eq(column, value: userId.uuidString)
+                .eq("status", value: "accepted")
+                .execute()
+                .value
+            let otherIds = edges.map { kind == .followers ? $0.followerId : $0.followeeId }
+            let byId = try await profilesByID(for: otherIds)
+            let myFollowing = Set(try await acceptedFollowingIds(for: me))
+            return otherIds.map { id in
+                FollowListEntry(userId: id, profile: byId[id], isFollowedByMe: myFollowing.contains(id))
+            }
+        } catch {
+            errorMessage = friendly(error)
+            return []
+        }
+    }
+
     func refresh() async {
         guard let uid = currentProfile?.id else { return }
         await loadFollowState(userId: uid)

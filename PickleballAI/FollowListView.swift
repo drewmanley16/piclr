@@ -98,7 +98,10 @@ struct FollowActionButton: View {
     @State private var confirmUnfollow = false
 
     var body: some View {
-        if entry.isFollowedByMe {
+        if entry.userId == store.currentProfile?.id {
+            // Don't offer a follow control for yourself in someone's list.
+            EmptyView()
+        } else if entry.isFollowedByMe {
             Button {
                 confirmUnfollow = true
             } label: {
@@ -139,5 +142,57 @@ struct FollowActionButton: View {
             .frame(height: 32)
             .background(filled ? Theme.accent : Theme.surfaceElevated, in: Capsule())
             .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: filled ? 0 : 1))
+    }
+}
+
+/// Another user's followers/following list, reached from their profile. Loads
+/// on demand (the store's own `followers`/`following` remain the signed-in
+/// user's). Each row's follow-back button is relative to me.
+struct UserFollowListView: View {
+    @EnvironmentObject private var store: AppStore
+    let userId: UUID
+    let kind: FollowListKind
+
+    @State private var entries: [FollowListEntry] = []
+    @State private var isLoading = true
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: 10) {
+                if isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 48)
+                } else if entries.isEmpty {
+                    Text(kind.emptyMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 48)
+                } else {
+                    ForEach(entries) { entry in
+                        NavigationLink {
+                            OtherProfileView(userId: entry.userId, placeholder: entry.profile)
+                        } label: {
+                            FollowEntryRow(entry: entry)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
+        }
+        .background(Theme.background.ignoresSafeArea())
+        .navigationTitle(kind.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await load() }
+        .refreshable { await load() }
+    }
+
+    private func load() async {
+        isLoading = true
+        entries = await store.followList(for: userId, kind: kind)
+        isLoading = false
     }
 }
