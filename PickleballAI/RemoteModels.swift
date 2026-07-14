@@ -59,6 +59,7 @@ struct FeedSession: Identifiable, Decodable, Hashable {
     let createdAt: String
     let author: Profile
     let repostedFrom: UUID?
+    let photoUrl: String?
     private let likes: [CountRow]?
     private let comments: [CountRow]?
     private let activities: [SessionActivity]?
@@ -98,6 +99,22 @@ struct FeedSession: Identifiable, Decodable, Hashable {
         return "Session"
     }
 
+    /// Human-readable subtitle: focus · duration · location (no chips).
+    var metaLine: String {
+        var parts: [String] = []
+        if let focus, !focus.isEmpty { parts.append(focus) }
+        parts.append("\(durationMinutes) min")
+        if let location, !location.isEmpty { parts.append(location) }
+        return parts.joined(separator: " · ")
+    }
+
+    var shareSummary: String {
+        var parts = ["\(author.displayName) — \(displayTitle)"]
+        if matchCount > 0 { parts.append("\(matchCount) match\(matchCount == 1 ? "" : "es")") }
+        parts.append("\(durationMinutes) min")
+        return parts.joined(separator: " · ") + " · on pickleball.ai"
+    }
+
     enum CodingKeys: String, CodingKey {
         case id
         case userId = "user_id"
@@ -106,6 +123,7 @@ struct FeedSession: Identifiable, Decodable, Hashable {
         case focus, takeaway
         case createdAt = "created_at"
         case repostedFrom = "reposted_from"
+        case photoUrl = "photo_url"
         case author, likes, comments, activities
     }
 
@@ -275,6 +293,7 @@ struct SessionDraft {
     var startedAt: Date = Date()
     var activities: [DraftActivity] = []
     var postToFeed: Bool = true
+    var photoData: Data? = nil
 }
 
 // MARK: - Reposts

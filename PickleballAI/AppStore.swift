@@ -703,6 +703,14 @@ final class AppStore: ObservableObject {
                 }
             }
 
+            if let photoData = draft.photoData,
+               let photoURL = await uploadPostPhoto(photoData, sessionId: session.id, uid: uid) {
+                try await supabase.from("sessions")
+                    .update(["photo_url": photoURL])
+                    .eq("id", value: session.id.uuidString)
+                    .execute()
+            }
+
             try await supabase.from("sessions")
                 .update(["posted": draft.postToFeed])
                 .eq("id", value: session.id.uuidString)
@@ -1017,6 +1025,24 @@ final class AppStore: ObservableObject {
     private func initials(from name: String) -> String {
         let letters = name.split(separator: " ").prefix(2).compactMap { $0.first }
         return letters.isEmpty ? "PB" : String(letters).uppercased()
+    }
+
+    /// Uploads a post photo to the post-photos bucket under the user's
+    /// (lowercase) uid folder and returns its public URL.
+    func uploadPostPhoto(_ data: Data, sessionId: UUID, uid: UUID) async -> String? {
+        guard let image = UIImage(data: data), let jpeg = profileJPEG(from: image) else { return nil }
+        do {
+            let path = "\(uid.uuidString.lowercased())/\(sessionId.uuidString.lowercased()).jpg"
+            try await supabase.storage.from("post-photos").upload(
+                path,
+                data: jpeg,
+                options: FileOptions(contentType: "image/jpeg")
+            )
+            return try supabase.storage.from("post-photos").getPublicURL(path: path).absoluteString
+        } catch {
+            errorMessage = friendly(error)
+            return nil
+        }
     }
 
     private func profileJPEG(from image: UIImage) -> Data? {
