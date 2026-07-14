@@ -170,6 +170,21 @@ struct ActiveSessionView: View {
             }
         }
         .interactiveDismissDisabled(!draft.activities.isEmpty)
+        .onAppear { store.errorMessage = nil }
+        .alert("Couldn't post session", isPresented: postErrorBinding) {
+            Button("OK", role: .cancel) { store.errorMessage = nil }
+        } message: {
+            Text(store.errorMessage ?? "Please try again.")
+        }
+    }
+
+    private var postErrorBinding: Binding<Bool> {
+        Binding(
+            get: { store.errorMessage != nil },
+            set: { isPresented in
+                if !isPresented { store.errorMessage = nil }
+            }
+        )
     }
 
     private var detailsCard: some View {

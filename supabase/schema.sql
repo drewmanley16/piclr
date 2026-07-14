@@ -44,6 +44,7 @@ create unique index if not exists profiles_username_lower_idx on public.profiles
 create index if not exists profiles_onboarding_idx on public.profiles (onboarding_completed_at);
 
 -- A session is the loggable + postable unit. It shows in the feed when posted = true.
+-- A session is also a container of activities (practice/match) written on-device.
 create table if not exists public.sessions (
   id               uuid primary key default gen_random_uuid(),
   user_id          uuid not null references public.profiles(id) on delete cascade,
@@ -53,9 +54,19 @@ create table if not exists public.sessions (
   focus            text,
   takeaway         text,
   posted           boolean not null default true,
+  started_at       timestamptz,
+  ended_at         timestamptz,
+  reposted_from    uuid references public.sessions(id) on delete set null,
   created_at       timestamptz not null default now()
 );
+-- Keep existing projects in sync when this schema is re-run.
+alter table public.sessions add column if not exists started_at timestamptz;
+alter table public.sessions add column if not exists ended_at   timestamptz;
+alter table public.sessions add column if not exists reposted_from uuid references public.sessions(id) on delete set null;
 create index if not exists sessions_user_created_idx on public.sessions (user_id, created_at desc);
+create unique index if not exists sessions_repost_target_idx
+  on public.sessions (user_id, reposted_from)
+  where reposted_from is not null;
 
 create table if not exists public.likes (
   user_id    uuid not null references public.profiles(id) on delete cascade,
@@ -123,6 +134,89 @@ create table if not exists private.phone_lookup (
 alter table private.phone_lookup enable row level security;
 revoke all on table private.phone_lookup from anon, authenticated;
 
+-- A session is a container of activities (practice or match). Match activities
+-- tag the people you played with/against — either app members (profile_id) or
+-- free-text guests (guest_name).
+create table if not exists public.session_activities (
+  id             uuid primary key default gen_random_uuid(),
+  session_id     uuid not null references public.sessions(id) on delete cascade,
+  kind           text not null check (kind in ('practice', 'match')),
+  position       int  not null default 0,
+  -- practice
+  focus          text,
+  reps           text,
+  notes          text,
+  -- match
+  team_score     int,
+  opponent_score int,
+  won            boolean,
+  created_at     timestamptz not null default now(),
+  constraint session_activities_id_session_id_key unique (id, session_id)
+);
+create index if not exists session_activities_session_idx
+  on public.session_activities (session_id, position);
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.session_activities'::regclass
+      and conname = 'session_activities_id_session_id_key'
+  ) then
+    alter table public.session_activities
+      add constraint session_activities_id_session_id_key unique (id, session_id);
+  end if;
+end $$;
+
+create table if not exists public.activity_participants (
+  id          uuid primary key default gen_random_uuid(),
+  activity_id uuid not null references public.session_activities(id) on delete cascade,
+  session_id  uuid not null references public.sessions(id) on delete cascade,
+  profile_id  uuid references public.profiles(id) on delete set null,
+  guest_name  text,
+  role        text not null check (role in ('partner', 'opponent')),
+  created_at  timestamptz not null default now(),
+  check (profile_id is not null or guest_name is not null),
+  constraint activity_participants_activity_session_fkey
+    foreign key (activity_id, session_id)
+    references public.session_activities(id, session_id)
+    on delete cascade
+);
+create index if not exists activity_participants_activity_idx
+  on public.activity_participants (activity_id);
+create index if not exists activity_participants_profile_idx
+  on public.activity_participants (profile_id);
+create index if not exists activity_participants_session_idx
+  on public.activity_participants (session_id);
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.activity_participants'::regclass
+      and conname = 'activity_participants_activity_session_fkey'
+  ) then
+    alter table public.activity_participants
+      add constraint activity_participants_activity_session_fkey
+      foreign key (activity_id, session_id)
+      references public.session_activities(id, session_id)
+      on delete cascade;
+  end if;
+end $$;
+
+-- Permission-gated reposts: a player tagged in a session can request to repost
+-- it; the original author approves, which copies the session into the
+-- requester's log (a new session pointing back via sessions.reposted_from).
+create table if not exists public.repost_requests (
+  id           uuid primary key default gen_random_uuid(),
+  session_id   uuid not null references public.sessions(id) on delete cascade,
+  requester_id uuid not null references public.profiles(id) on delete cascade,
+  status       text not null default 'pending' check (status in ('pending', 'approved', 'declined')),
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now(),
+  unique (session_id, requester_id)
+);
+create index if not exists repost_requests_requester_idx on public.repost_requests (requester_id, status);
+create index if not exists repost_requests_session_idx on public.repost_requests (session_id, status);
+
 -- =========================================================
 -- Auto-create a profile row when a user signs up.
 -- Phone users arrive before profile onboarding, so they get safe placeholders.
@@ -175,6 +269,9 @@ alter table public.comments        enable row level security;
 alter table public.gear            enable row level security;
 alter table public.follows         enable row level security;
 alter table public.friend_requests enable row level security;
+alter table public.session_activities   enable row level security;
+alter table public.activity_participants enable row level security;
+alter table public.repost_requests       enable row level security;
 
 -- profiles: signed-in users can discover completed profiles; you manage your own row.
 drop policy if exists "profiles_read"   on public.profiles;
@@ -312,6 +409,173 @@ create policy "friend_requests_delete" on public.friend_requests
   for delete to authenticated
   using (requester_id = auth.uid() and status = 'pending');
 
+-- session_activities / activity_participants: children are readable like
+-- sessions; only the session owner writes them.
+drop policy if exists "session_activities_read"   on public.session_activities;
+drop policy if exists "session_activities_write"  on public.session_activities;
+create policy "session_activities_read" on public.session_activities
+  for select to authenticated
+  using (exists (select 1 from public.sessions s where s.id = session_activities.session_id));
+create policy "session_activities_write" on public.session_activities
+  for all to authenticated
+  using (exists (
+    select 1 from public.sessions s
+    where s.id = session_activities.session_id and s.user_id = auth.uid()
+  ))
+  with check (exists (
+    select 1 from public.sessions s
+    where s.id = session_activities.session_id and s.user_id = auth.uid()
+  ));
+
+drop policy if exists "activity_participants_read"  on public.activity_participants;
+drop policy if exists "activity_participants_write" on public.activity_participants;
+create policy "activity_participants_read" on public.activity_participants
+  for select to authenticated
+  using (exists (select 1 from public.sessions s where s.id = activity_participants.session_id));
+create policy "activity_participants_write" on public.activity_participants
+  for all to authenticated
+  using (
+    exists (
+      select 1 from public.sessions s
+      where s.id = activity_participants.session_id and s.user_id = auth.uid()
+    )
+    and exists (
+      select 1 from public.session_activities a
+      where a.id = activity_participants.activity_id
+        and a.session_id = activity_participants.session_id
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.sessions s
+      where s.id = activity_participants.session_id and s.user_id = auth.uid()
+    )
+    and exists (
+      select 1 from public.session_activities a
+      where a.id = activity_participants.activity_id
+        and a.session_id = activity_participants.session_id
+    )
+  );
+
+-- repost_requests: visible to the requester and to the session's author.
+drop policy if exists "repost_requests_read"   on public.repost_requests;
+drop policy if exists "repost_requests_insert" on public.repost_requests;
+drop policy if exists "repost_requests_update" on public.repost_requests;
+create policy "repost_requests_read" on public.repost_requests
+  for select to authenticated using (
+    requester_id = auth.uid()
+    or exists (select 1 from public.sessions s where s.id = session_id and s.user_id = auth.uid())
+  );
+-- Only a tagged participant may request to repost, and only as themselves.
+create policy "repost_requests_insert" on public.repost_requests
+  for insert to authenticated with check (
+    requester_id = auth.uid()
+    and status = 'pending'
+    and exists (
+      select 1 from public.activity_participants ap
+      where ap.session_id = repost_requests.session_id and ap.profile_id = auth.uid()
+    )
+    and exists (
+      select 1 from public.sessions s
+      where s.id = repost_requests.session_id and s.user_id <> auth.uid()
+    )
+  );
+-- The session's author may decline directly. Approval must go through
+-- approve_repost so the copied session is created atomically.
+create policy "repost_requests_update" on public.repost_requests
+  for update to authenticated
+  using (
+    status = 'pending'
+    and exists (
+      select 1 from public.sessions s
+      where s.id = repost_requests.session_id and s.user_id = auth.uid()
+    )
+  )
+  with check (
+    status = 'declined'
+    and exists (
+      select 1 from public.sessions s
+      where s.id = repost_requests.session_id and s.user_id = auth.uid()
+    )
+  );
+
+-- Approve + copy the session into the requester's log. SECURITY DEFINER so the
+-- copy can be written as the requester; the caller must be the original author.
+create or replace function public.approve_repost(request_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  req  public.repost_requests;
+  orig public.sessions;
+  new_session_id uuid := gen_random_uuid();
+  act  public.session_activities;
+  new_act_id uuid;
+begin
+  select * into req from public.repost_requests where id = request_id for update;
+  if req.id is null then raise exception 'Repost request not found'; end if;
+  if req.status <> 'pending' then raise exception 'Repost request is not pending'; end if;
+
+  select * into orig from public.sessions where id = req.session_id;
+  if orig.user_id <> auth.uid() then raise exception 'Only the author can approve'; end if;
+  if orig.user_id = req.requester_id then raise exception 'You cannot repost your own session'; end if;
+  if not exists (
+    select 1 from public.activity_participants ap
+    where ap.session_id = req.session_id and ap.profile_id = req.requester_id
+  ) then
+    raise exception 'Requester is not tagged in this session';
+  end if;
+
+  update public.repost_requests set status = 'approved', updated_at = now() where id = request_id;
+
+  insert into public.sessions
+    (id, user_id, title, location, duration_minutes, focus, takeaway, posted,
+     started_at, ended_at, reposted_from, created_at)
+  values
+    (new_session_id, req.requester_id, orig.title, orig.location, orig.duration_minutes,
+     orig.focus, orig.takeaway, true, orig.started_at, orig.ended_at, orig.id, now());
+
+  for act in
+    select * from public.session_activities where session_id = orig.id order by position
+  loop
+    new_act_id := gen_random_uuid();
+    insert into public.session_activities
+      (id, session_id, kind, position, focus, reps, notes, team_score, opponent_score, won)
+    values
+      (new_act_id, new_session_id, act.kind, act.position, act.focus, act.reps, act.notes,
+       act.team_score, act.opponent_score, act.won);
+    insert into public.activity_participants (activity_id, session_id, profile_id, guest_name, role)
+      select new_act_id, new_session_id, profile_id, guest_name, role
+      from public.activity_participants where activity_id = act.id;
+  end loop;
+
+  return new_session_id;
+end;
+$$;
+
+revoke all on function public.approve_repost(uuid) from public, anon;
+grant execute on function public.approve_repost(uuid) to authenticated;
+
+-- =========================================================
+-- Realtime
+-- =========================================================
+
+-- Enable Supabase Realtime on the sessions table so new posts surface live in
+-- the feed (Home + Profile) without a manual refresh. Idempotent.
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'sessions'
+  ) then
+    alter publication supabase_realtime add table public.sessions;
+  end if;
+end $$;
+
 -- =========================================================
 -- Storage
 -- =========================================================
@@ -361,7 +625,16 @@ create policy "avatars_delete_own"
 -- =========================================================
 
 grant select, insert, update, delete on public.profiles to authenticated;
-grant select, insert, update, delete on public.sessions to authenticated;
+grant select, delete on public.sessions to authenticated;
+revoke insert, update on public.sessions from authenticated;
+revoke insert (reposted_from), update (reposted_from) on public.sessions from authenticated;
+grant insert (
+  id, user_id, title, location, duration_minutes, focus, takeaway, posted,
+  started_at, ended_at, created_at
+) on public.sessions to authenticated;
+grant update (
+  title, location, duration_minutes, focus, takeaway, posted, started_at, ended_at
+) on public.sessions to authenticated;
 grant select, insert, delete on public.likes to authenticated;
 grant select, insert, delete on public.comments to authenticated;
 grant select, insert, update, delete on public.gear to authenticated;
@@ -369,4 +642,9 @@ grant select, insert, update, delete on public.follows to authenticated;
 grant select, insert, delete on public.friend_requests to authenticated;
 revoke update on public.friend_requests from authenticated;
 grant update (status) on public.friend_requests to authenticated;
+grant select, insert, update, delete on public.session_activities to authenticated;
+grant select, insert, update, delete on public.activity_participants to authenticated;
+grant select, insert on public.repost_requests to authenticated;
+revoke update, delete on public.repost_requests from authenticated;
+grant update (status) on public.repost_requests to authenticated;
 grant usage on schema public to authenticated;
