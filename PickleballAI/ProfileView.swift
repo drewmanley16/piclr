@@ -24,12 +24,6 @@ struct ProfileView: View {
                     if completion < 1 { completionBanner }
                     activityCard
                     dashboard
-                    if !store.incomingFollowRequests.isEmpty {
-                        followRequestsSection
-                    }
-                    if !store.incomingRepostRequests.isEmpty {
-                        repostRequestsSection
-                    }
                     sessionsSection
                 }
                 .padding(.horizontal, 16)
@@ -230,24 +224,6 @@ struct ProfileView: View {
     }
 
     // MARK: Friend requests
-
-    private var followRequestsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Follow Requests").font(.headline).foregroundStyle(Theme.textPrimary)
-            ForEach(store.incomingFollowRequests) { request in
-                FollowRequestRow(request: request)
-            }
-        }
-    }
-
-    private var repostRequestsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Repost Requests").font(.headline).foregroundStyle(Theme.textPrimary)
-            ForEach(store.incomingRepostRequests) { request in
-                RepostRequestRow(request: request)
-            }
-        }
-    }
 
     // MARK: Sessions
 

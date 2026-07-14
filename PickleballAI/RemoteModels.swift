@@ -317,6 +317,105 @@ struct NewRepostRequest: Encodable {
     }
 }
 
+// MARK: - Activity notifications
+
+struct AppNotification: Identifiable, Decodable, Hashable {
+    let id: UUID
+    let type: String
+    let read: Bool
+    let createdAt: String
+    let actor: ParticipantProfile?
+    let session: NotifSessionRef?
+    let comment: NotifCommentRef?
+
+    enum CodingKeys: String, CodingKey {
+        case id, type, read
+        case createdAt = "created_at"
+        case actor, session, comment
+    }
+
+    var date: Date { FeedSession.parse(createdAt) }
+
+    var actorInitials: String {
+        if let a = actor?.avatarInitials, !a.isEmpty { return a }
+        let letters = (actor?.displayName ?? "?").split(separator: " ").prefix(2).compactMap { $0.first }
+        return letters.isEmpty ? "?" : String(letters).uppercased()
+    }
+
+    private var handle: String { actor.map { "@\($0.username)" } ?? "Someone" }
+
+    var message: String {
+        switch type {
+        case "like":            return "\(handle) liked your session"
+        case "comment":         return "\(handle) commented: \(comment?.body ?? "")"
+        case "follow":          return "\(handle) started following you"
+        case "tag":             return "\(handle) tagged you in a session"
+        case "repost_approved": return "\(handle) approved your repost"
+        default:                return "\(handle) interacted with your post"
+        }
+    }
+
+    var icon: String {
+        switch type {
+        case "like":    return "hand.thumbsup.fill"
+        case "comment": return "bubble.right.fill"
+        case "follow":  return "person.fill.badge.plus"
+        case "tag":     return "flag.checkered"
+        default:        return "bell.fill"
+        }
+    }
+}
+
+struct NotifSessionRef: Decodable, Hashable {
+    let id: UUID
+    let title: String?
+}
+
+struct NotifCommentRef: Decodable, Hashable {
+    let id: UUID
+    let body: String
+}
+
+// MARK: - Comments
+
+struct Comment: Identifiable, Decodable, Hashable {
+    let id: UUID
+    let sessionId: UUID
+    let userId: UUID
+    let body: String
+    let createdAt: String
+    let author: ParticipantProfile?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case sessionId = "session_id"
+        case userId = "user_id"
+        case body
+        case createdAt = "created_at"
+        case author
+    }
+
+    var date: Date { FeedSession.parse(createdAt) }
+    var authorName: String { author?.displayName ?? "Player" }
+    var authorInitials: String {
+        if let a = author?.avatarInitials, !a.isEmpty { return a }
+        let letters = (author?.displayName ?? "?").split(separator: " ").prefix(2).compactMap { $0.first }
+        return letters.isEmpty ? "?" : String(letters).uppercased()
+    }
+}
+
+struct NewComment: Encodable {
+    let sessionId: UUID
+    let userId: UUID
+    let body: String
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case userId = "user_id"
+        case body
+    }
+}
+
 enum GearCategory: String, CaseIterable, Identifiable {
     case paddle = "Paddle"
     case shoes = "Shoes"

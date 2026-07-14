@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject private var store: AppStore
     @State private var showFindFriends = false
+    @State private var showNotifications = false
 
     var body: some View {
         ScrollView {
@@ -29,7 +30,23 @@ struct HomeView: View {
                     HeaderIconButton(systemImage: "magnifyingglass", accessibilityTitle: "Find friends") {
                         showFindFriends = true
                     }
-                    HeaderIconButton(systemImage: "bell", accessibilityTitle: "Notifications") {}
+                    Button { showNotifications = true } label: {
+                        ZStack(alignment: .topTrailing) {
+                            Image(systemName: "bell")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(Theme.textPrimary)
+                            if store.badgeCount > 0 {
+                                Text("\(min(store.badgeCount, 9))\(store.badgeCount > 9 ? "+" : "")")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(Theme.background)
+                                    .padding(.horizontal, 4)
+                                    .frame(minWidth: 15, minHeight: 15)
+                                    .background(Theme.accent, in: Capsule())
+                                    .offset(x: 9, y: -8)
+                            }
+                        }
+                    }
+                    .accessibilityLabel("Notifications")
                 }
             }
             .background(Theme.background)
@@ -37,6 +54,9 @@ struct HomeView: View {
         .sheet(isPresented: $showFindFriends) {
             FindFriendsSheet()
                 .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showNotifications) {
+            NotificationsView()
         }
     }
 }
@@ -207,6 +227,7 @@ struct FindFriendsSheet: View {
 struct FeedCard: View {
     @EnvironmentObject private var store: AppStore
     var session: FeedSession
+    @State private var showComments = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -274,7 +295,11 @@ struct FeedCard: View {
                 }
                 .buttonStyle(.plain)
 
-                SocialAction(icon: "bubble.right", count: session.commentCount)
+                Button { showComments = true } label: {
+                    SocialLabel(icon: "bubble.right", count: session.commentCount)
+                }
+                .buttonStyle(.plain)
+
                 SocialAction(icon: "square.and.arrow.up", count: nil)
 
                 if canRepost {
@@ -296,6 +321,9 @@ struct FeedCard: View {
             }
         }
         .cardStyle()
+        .sheet(isPresented: $showComments) {
+            CommentsView(session: session)
+        }
     }
 
     private var canRepost: Bool {
