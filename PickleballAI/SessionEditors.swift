@@ -187,8 +187,8 @@ struct PlayerPickerSheet: View {
             .background(Theme.background)
             .listRowBackground(Theme.surface)
             .searchable(text: $query, prompt: "Name or @username")
-            .onChange(of: query) { _, newValue in
-                Task { await store.searchProfiles(query: newValue) }
+            .task(id: query) {
+                await store.searchProfilesAfterTyping(query: query)
             }
             .navigationTitle("Add player")
             .navigationBarTitleDisplayMode(.inline)
@@ -198,4 +198,5 @@ struct PlayerPickerSheet: View {
             .onDisappear { store.searchResults = [] }
         }
     }
+
 }

@@ -298,26 +298,17 @@ struct AuthView: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("Search username")
+                Text("Search name or username")
                     .font(.headline)
                     .foregroundStyle(Theme.textPrimary)
-                HStack(spacing: 10) {
-                    AuthField(
-                        placeholder: "drew",
-                        text: $searchQuery,
-                        autocapitalize: false,
-                        textContentType: .username
-                    )
-                    Button {
-                        Task { await store.searchProfiles(query: searchQuery) }
-                    } label: {
-                        Image(systemName: "magnifyingglass")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(Theme.background)
-                            .frame(width: 52, height: 52)
-                            .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
-                    }
-                    .disabled(searchQuery.normalizedUsername.count < 2)
+                AuthField(
+                    placeholder: "Name or @username",
+                    text: $searchQuery,
+                    autocapitalize: false,
+                    textContentType: .username
+                )
+                .task(id: searchQuery) {
+                    await store.searchProfilesAfterTyping(query: searchQuery)
                 }
 
                 ForEach(store.searchResults) { profile in

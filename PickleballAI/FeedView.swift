@@ -101,23 +101,14 @@ struct FindFriendsSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    HStack(spacing: 10) {
-                        AuthField(
-                            placeholder: "Search username",
-                            text: $searchQuery,
-                            autocapitalize: false,
-                            textContentType: .username
-                        )
-                        Button {
-                            Task { await store.searchProfiles(query: searchQuery) }
-                        } label: {
-                            Image(systemName: "magnifyingglass")
-                                .font(.body.weight(.semibold))
-                                .foregroundStyle(Theme.background)
-                                .frame(width: 52, height: 52)
-                                .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
-                        }
-                        .disabled(searchQuery.normalizedUsername.count < 2)
+                    AuthField(
+                        placeholder: "Search name or @username",
+                        text: $searchQuery,
+                        autocapitalize: false,
+                        textContentType: .username
+                    )
+                    .task(id: searchQuery) {
+                        await store.searchProfilesAfterTyping(query: searchQuery)
                     }
 
                     if !store.searchResults.isEmpty {
@@ -146,6 +137,9 @@ struct FindFriendsSheet: View {
             .background(Theme.background.ignoresSafeArea())
             .navigationTitle("Find Friends")
             .navigationBarTitleDisplayMode(.inline)
+            .onDisappear {
+                store.searchResults = []
+            }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
