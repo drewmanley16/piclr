@@ -392,18 +392,22 @@ struct SettingsSheet: View {
 
     private func saveProfile() async {
         didSave = false
-        let profileSaved = await store.updateProfile(
+        // The two writes touch different columns, so run them concurrently to
+        // overlap their network round trips.
+        async let profileSaved = store.updateProfile(
             displayName: displayName,
             homeCourt: homeCourt,
             rating: Double(rating),
             preferredSide: preferredSide
         )
-        guard profileSaved else { return }
-        if let selectedPhotoData {
-            guard await store.uploadProfilePhoto(selectedPhotoData) else { return }
-            self.selectedPhotoData = nil
-            selectedPhoto = nil
-        }
+        async let photoSaved: Bool = {
+            guard let selectedPhotoData else { return true }
+            return await store.uploadProfilePhoto(selectedPhotoData)
+        }()
+
+        guard await profileSaved, await photoSaved else { return }
+        selectedPhotoData = nil
+        selectedPhoto = nil
         didSave = true
     }
 }

@@ -101,6 +101,15 @@ struct RemoteImage: View {
     @State private var image: UIImage?
     @State private var failed = false
 
+    /// Decoded-image cache shared across all instances so a URL that's already
+    /// been loaded renders instantly on re-appear (scrolling, navigation) with
+    /// no flash or re-download.
+    private static let cache: NSCache<NSURL, UIImage> = {
+        let cache = NSCache<NSURL, UIImage>()
+        cache.countLimit = 300
+        return cache
+    }()
+
     var body: some View {
         Group {
             if let image {
@@ -120,6 +129,12 @@ struct RemoteImage: View {
     }
 
     private func load() async {
+        // Cache hit → show immediately, skip the network entirely.
+        if let cached = Self.cache.object(forKey: url as NSURL) {
+            image = cached
+            failed = false
+            return
+        }
         image = nil
         failed = false
         for _ in 0..<4 {
@@ -127,6 +142,7 @@ struct RemoteImage: View {
             if let (data, response) = try? await URLSession.shared.data(from: url),
                (response as? HTTPURLResponse)?.statusCode == 200,
                let img = UIImage(data: data) {
+                Self.cache.setObject(img, forKey: url as NSURL)
                 image = img
                 return
             }

@@ -1004,8 +1004,13 @@ final class AppStore: ObservableObject {
                 preferredSide: preferredSide.isEmpty ? nil : preferredSide
             )
             try await supabase.from("profiles").update(update).eq("id", value: uid.uuidString).execute()
-            await loadProfile(userId: uid)
-            return errorMessage == nil
+            // Apply locally instead of re-fetching — saves a round trip and
+            // avoids clobbering a concurrent avatar update to the same row.
+            currentProfile?.displayName = displayName
+            currentProfile?.homeCourt = homeCourt.isEmpty ? nil : homeCourt
+            currentProfile?.rating = rating
+            currentProfile?.preferredSide = preferredSide.isEmpty ? nil : preferredSide
+            return true
         } catch {
             errorMessage = friendly(error)
             return false
@@ -1033,11 +1038,18 @@ final class AppStore: ObservableObject {
     }
 
     func uploadProfilePhoto(_ data: Data) async -> Bool {
-        guard let uid = currentProfile?.id, let image = UIImage(data: data),
-              let jpeg = profileJPEG(from: image) else { return false }
+        guard let uid = currentProfile?.id else { return false }
         isBusy = true
         errorMessage = nil
         defer { isBusy = false }
+        // Decode + downscale + encode off the main thread so the UI never hangs
+        // on a large camera photo. Avatars render in ≤96pt circles, so ~320px
+        // (3× retina) is plenty and keeps files tiny (~20–40 KB).
+        let jpeg = await Task.detached(priority: .userInitiated) { () -> Data? in
+            guard let image = UIImage(data: data) else { return nil }
+            return Self.downscaledJPEG(from: image, maxDimension: 320)
+        }.value
+        guard let jpeg else { return false }
         do {
             // Storage RLS checks the folder equals auth.uid()::text, which
             // Postgres renders lowercase — Swift's uuidString is uppercase, so
@@ -1046,15 +1058,26 @@ final class AppStore: ObservableObject {
             try await supabase.storage.from("avatars").upload(
                 path,
                 data: jpeg,
-                options: FileOptions(contentType: "image/jpeg")
+                // Unique immutable filename → safe to cache for a year.
+                options: FileOptions(cacheControl: "31536000", contentType: "image/jpeg")
             )
             let publicURL = try supabase.storage.from("avatars").getPublicURL(path: path)
             try await supabase.from("profiles")
                 .update(["avatar_url": publicURL.absoluteString])
                 .eq("id", value: uid.uuidString)
                 .execute()
-            await loadProfile(userId: uid)
-            return errorMessage == nil
+            // Apply locally instead of a full re-fetch — saves a round trip.
+            currentProfile?.avatarURL = publicURL.absoluteString
+            // My own posts in the feed / on my profile still embed the old
+            // avatar URL. Refresh that cached data so the new photo shows up
+            // everywhere for me. Fire-and-forget so Save stays snappy; other
+            // users' cached views update on their next natural reload.
+            Task { [weak self] in
+                guard let self else { return }
+                await self.loadFeed()
+                await self.loadMySessions(userId: uid)
+            }
+            return true
         } catch {
             errorMessage = friendly(error)
             return false
@@ -1198,13 +1221,19 @@ final class AppStore: ObservableObject {
     /// Uploads a post photo to the post-photos bucket under the user's
     /// (lowercase) uid folder and returns its public URL.
     func uploadPostPhoto(_ data: Data, sessionId: UUID, uid: UUID) async -> String? {
-        guard let image = UIImage(data: data), let jpeg = profileJPEG(from: image) else { return nil }
+        let jpeg = await Task.detached(priority: .userInitiated) { () -> Data? in
+            guard let image = UIImage(data: data) else { return nil }
+            return Self.downscaledJPEG(from: image, maxDimension: 1024)
+        }.value
+        guard let jpeg else { return nil }
         do {
             let path = "\(uid.uuidString.lowercased())/\(sessionId.uuidString.lowercased()).jpg"
             try await supabase.storage.from("post-photos").upload(
                 path,
                 data: jpeg,
-                options: FileOptions(contentType: "image/jpeg")
+                // Post filename is per-session (can be overwritten on edit), so
+                // cache for a day rather than a year.
+                options: FileOptions(cacheControl: "86400", contentType: "image/jpeg")
             )
             return try supabase.storage.from("post-photos").getPublicURL(path: path).absoluteString
         } catch {
@@ -1213,18 +1242,21 @@ final class AppStore: ObservableObject {
         }
     }
 
-    private func profileJPEG(from image: UIImage) -> Data? {
-        let maximumDimension: CGFloat = 1024
+    /// Downscales an image so its longest side is at most `maxDimension`, then
+    /// JPEG-encodes it. Avatars use a small dimension (they render in tiny
+    /// circles); post photos use a larger one. `nonisolated static` so callers
+    /// can run this CPU-heavy work off the main thread via `Task.detached`.
+    nonisolated private static func downscaledJPEG(from image: UIImage, maxDimension: CGFloat, quality: CGFloat = 0.82) -> Data? {
         let longestSide = max(image.size.width, image.size.height)
-        guard longestSide > maximumDimension else {
-            return image.jpegData(compressionQuality: 0.82)
+        guard longestSide > maxDimension else {
+            return image.jpegData(compressionQuality: quality)
         }
-        let scale = maximumDimension / longestSide
+        let scale = maxDimension / longestSide
         let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
         let resized = UIGraphicsImageRenderer(size: size).image { _ in
             image.draw(in: CGRect(origin: .zero, size: size))
         }
-        return resized.jpegData(compressionQuality: 0.82)
+        return resized.jpegData(compressionQuality: quality)
     }
 
     private func friendly(_ error: Error) -> String {
