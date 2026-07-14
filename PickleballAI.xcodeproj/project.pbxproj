@@ -14,21 +14,27 @@
 		16DD6B39109593928B5583A3 /* ContactsImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EC4FAB3BC7409E94B9F0E1 /* ContactsImporter.swift */; };
 		33C8ACB4E3D0F1DAE5FC4EEF /* CommentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F6C03EC3ED4D2A8C098B84F /* CommentsView.swift */; };
 		454F25CB28B5C41A3538D5E2 /* LogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3FA4363BCD03C413DB5D6C4 /* LogView.swift */; };
+		45F3DAAD89678FE23E7E8017 /* AppStore+Social.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1007C1118CBE0A4755BE164 /* AppStore+Social.swift */; };
+		47D67C0BEA142E3C53143B14 /* AppStore+Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 417ED5579B58CC67197FFB16 /* AppStore+Notifications.swift */; };
 		4C4D1BAB0ADC400DABD9541C /* ProfileSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = E57559D0A66C08920B1C67A3 /* ProfileSheets.swift */; };
 		5871B4D2606B7AC392C95451 /* OtherProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72609C0E290C1E3683A88921 /* OtherProfileView.swift */; };
 		664317151FD26AFB65FCFB64 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C2F55C19C493784AFEFC588 /* DesignSystem.swift */; };
 		80E343E6CCC9B13005C13F64 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 54014EB97F18D699B5E8FE5C /* Supabase */; };
 		82D712BA16C2330A23E44710 /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812326B10CE11A6D68558757 /* SupabaseService.swift */; };
+		87D01228FF06C0D2738B7AD4 /* AppStore+Profile.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4AD24F0F56C50EAF397CF74 /* AppStore+Profile.swift */; };
 		89FF47F0442F182F044AEB75 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A26F3CB239971947B6371E26 /* RootView.swift */; };
+		8C3EFF8CB712B5C7D9670B4B /* AppStore+Comments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B79D9A1A8FC0E949BBF88D6 /* AppStore+Comments.swift */; };
 		9068203395D5B18A6507DF1D /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1DA9EA8FD022D18FABEBD5A /* NotificationsView.swift */; };
 		95C8A46DA87219F98DD0A143 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38D466C6F8E7D2FD8E302914 /* AuthView.swift */; };
 		987C065BEC871C430815F0D5 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92AD1866882A183DAB69974D /* FeedView.swift */; };
 		A7AB3CB17285CB9C76938F9B /* SessionEditors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F3DE89404F54F718B1D071B /* SessionEditors.swift */; };
 		BACB683507C15BE288E50D3C /* FollowListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7854EB879EEA122DFA7E5FE1 /* FollowListView.swift */; };
+		C3DE8268C0AC0320C03A7380 /* AppStore+Realtime.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42C76AB4A636C3E1CF856C1 /* AppStore+Realtime.swift */; };
 		C4D639B6FB92C30CB2822077 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D656AFC1851F5D01BC4BB70 /* AppStore.swift */; };
 		C5338F649A3DC6D11AE71F0B /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528729889F780FEF8B81D160 /* ProfileView.swift */; };
 		D60B10153096A64D929AE1AC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */; };
 		F9D4FE283820E25A05692966 /* Supabase.plist in Resources */ = {isa = PBXBuildFile; fileRef = 110EB1A0604D9D68DD50D886 /* Supabase.plist */; };
+		FAAE8C4DF4AA21A371F4F0DF /* AppStore+Feed.swift in Sources */ = {isa = PBXBuildFile; fileRef = E027CA4D49372EC880E7A7BA /* AppStore+Feed.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -36,10 +42,12 @@
 		14EC4FAB3BC7409E94B9F0E1 /* ContactsImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsImporter.swift; sourceTree = "<group>"; };
 		2C2F55C19C493784AFEFC588 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		38D466C6F8E7D2FD8E302914 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
+		417ED5579B58CC67197FFB16 /* AppStore+Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Notifications.swift"; sourceTree = "<group>"; };
 		4F6C03EC3ED4D2A8C098B84F /* CommentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentsView.swift; sourceTree = "<group>"; };
 		528729889F780FEF8B81D160 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		5D656AFC1851F5D01BC4BB70 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
 		5F3DE89404F54F718B1D071B /* SessionEditors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionEditors.swift; sourceTree = "<group>"; };
+		6B79D9A1A8FC0E949BBF88D6 /* AppStore+Comments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Comments.swift"; sourceTree = "<group>"; };
 		6BAF5E29E3E19941F0F544FB /* PickleballAI.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PickleballAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6BF6725B8FBFB5A75FCF41BB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		72609C0E290C1E3683A88921 /* OtherProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherProfileView.swift; sourceTree = "<group>"; };
@@ -49,10 +57,14 @@
 		92AD1866882A183DAB69974D /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
 		A26F3CB239971947B6371E26 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		B3FA4363BCD03C413DB5D6C4 /* LogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogView.swift; sourceTree = "<group>"; };
+		C42C76AB4A636C3E1CF856C1 /* AppStore+Realtime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Realtime.swift"; sourceTree = "<group>"; };
 		C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D1DA9EA8FD022D18FABEBD5A /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		DD24443783672F30DD360A7A /* Supabase.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Supabase.example.plist; sourceTree = "<group>"; };
+		E027CA4D49372EC880E7A7BA /* AppStore+Feed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Feed.swift"; sourceTree = "<group>"; };
+		E4AD24F0F56C50EAF397CF74 /* AppStore+Profile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Profile.swift"; sourceTree = "<group>"; };
 		E57559D0A66C08920B1C67A3 /* ProfileSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSheets.swift; sourceTree = "<group>"; };
+		F1007C1118CBE0A4755BE164 /* AppStore+Social.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Social.swift"; sourceTree = "<group>"; };
 		F8FD3C96B80BD2A5C26D975D /* RemoteModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteModels.swift; sourceTree = "<group>"; };
 		FC7CF99A3E687EB8A86C623F /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -81,6 +93,12 @@
 			isa = PBXGroup;
 			children = (
 				5D656AFC1851F5D01BC4BB70 /* AppStore.swift */,
+				6B79D9A1A8FC0E949BBF88D6 /* AppStore+Comments.swift */,
+				E027CA4D49372EC880E7A7BA /* AppStore+Feed.swift */,
+				417ED5579B58CC67197FFB16 /* AppStore+Notifications.swift */,
+				E4AD24F0F56C50EAF397CF74 /* AppStore+Profile.swift */,
+				C42C76AB4A636C3E1CF856C1 /* AppStore+Realtime.swift */,
+				F1007C1118CBE0A4755BE164 /* AppStore+Social.swift */,
 				C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */,
 				38D466C6F8E7D2FD8E302914 /* AuthView.swift */,
 				4F6C03EC3ED4D2A8C098B84F /* CommentsView.swift */,
@@ -192,6 +210,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8C3EFF8CB712B5C7D9670B4B /* AppStore+Comments.swift in Sources */,
+				FAAE8C4DF4AA21A371F4F0DF /* AppStore+Feed.swift in Sources */,
+				47D67C0BEA142E3C53143B14 /* AppStore+Notifications.swift in Sources */,
+				87D01228FF06C0D2738B7AD4 /* AppStore+Profile.swift in Sources */,
+				C3DE8268C0AC0320C03A7380 /* AppStore+Realtime.swift in Sources */,
+				45F3DAAD89678FE23E7E8017 /* AppStore+Social.swift in Sources */,
 				C4D639B6FB92C30CB2822077 /* AppStore.swift in Sources */,
 				95C8A46DA87219F98DD0A143 /* AuthView.swift in Sources */,
 				33C8ACB4E3D0F1DAE5FC4EEF /* CommentsView.swift in Sources */,
