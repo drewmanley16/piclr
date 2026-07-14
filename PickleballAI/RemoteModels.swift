@@ -473,6 +473,30 @@ struct ContactMatch: Identifiable, Decodable, Hashable {
     let profile: Profile
 }
 
+/// The signed-in user's outgoing relationship to another profile, used to
+/// gate the public profile view (Instagram-style private accounts).
+enum FollowRelationship {
+    case isSelf       // it's your own profile
+    case none         // no outgoing edge → "Follow"
+    case requested    // pending outgoing request → "Requested"
+    case following    // accepted → you can see their content
+
+    /// Whether the signed-in user is allowed to see this profile's content
+    /// (sessions). Mirrors the `sessions_read` RLS policy.
+    var canViewContent: Bool { self == .isSelf || self == .following }
+}
+
+/// A snapshot of another user's profile as seen by the signed-in user.
+/// `sessions` is only populated when `relationship.canViewContent` is true;
+/// otherwise it's empty and the UI shows a "This profile is private" state.
+struct PublicProfile {
+    let profile: Profile
+    var relationship: FollowRelationship
+    let followerCount: Int
+    let followingCount: Int
+    var sessions: [FeedSession]
+}
+
 /// A raw row from the `follows` table (directional follow edge).
 struct FollowRow: Decodable, Hashable {
     let followerId: UUID

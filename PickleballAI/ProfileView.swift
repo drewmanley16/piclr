@@ -4,6 +4,7 @@ import Charts
 struct ProfileView: View {
     @EnvironmentObject private var store: AppStore
     @State private var showSettings = false
+    @State private var showFindFriends = false
     @State private var activeSheet: ProfileSheet?
     @State private var metric: ActivityMetric = .duration
     @State private var range: ActivityRange = .threeMonths
@@ -38,6 +39,9 @@ struct ProfileView: View {
                                 .foregroundStyle(Theme.textPrimary)
                         }
                         .accessibilityLabel("Share profile")
+                        HeaderIconButton(systemImage: "person.crop.circle.badge.plus", accessibilityTitle: "Find friends") {
+                            showFindFriends = true
+                        }
                         HeaderIconButton(systemImage: "gearshape", accessibilityTitle: "Settings") {
                             showSettings = true
                         }
@@ -47,6 +51,10 @@ struct ProfileView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showSettings) { SettingsSheet() }
+            .sheet(isPresented: $showFindFriends) {
+                FindFriendsSheet()
+                    .presentationDetents([.medium, .large])
+            }
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
                 case .stats: StatsSheet()
