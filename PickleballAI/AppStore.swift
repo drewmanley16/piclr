@@ -477,8 +477,16 @@ final class AppStore: ObservableObject {
     }
 
     func searchProfiles(query: String) async {
-        let cleaned = query.normalizedUsername
-        guard cleaned.count >= 2 else {
+        let usernameQuery = query.normalizedUsername
+        let displayNameQuery = Self.displayNameSearchTerm(from: query)
+        var filters: [String] = []
+        if usernameQuery.count >= 2 {
+            filters.append("username.ilike.*\(usernameQuery)*")
+        }
+        if displayNameQuery.count >= 2 {
+            filters.append("display_name.ilike.*\(displayNameQuery)*")
+        }
+        guard !filters.isEmpty else {
             searchResults = []
             return
         }
@@ -486,7 +494,7 @@ final class AppStore: ObservableObject {
             let results: [Profile] = try await supabase
                 .from("profiles")
                 .select()
-                .ilike("username", pattern: "%\(cleaned)%")
+                .or(filters.joined(separator: ","))
                 .limit(10)
                 .execute()
                 .value
@@ -495,6 +503,16 @@ final class AppStore: ObservableObject {
         } catch {
             errorMessage = friendly(error)
         }
+    }
+
+    func searchProfilesAfterTyping(query: String) async {
+        guard query.trimmed.count >= 2 else {
+            await searchProfiles(query: query)
+            return
+        }
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        guard !Task.isCancelled else { return }
+        await searchProfiles(query: query)
     }
 
     /// Sends a follow request: inserts a `pending` edge (me → profile).
@@ -1041,6 +1059,20 @@ final class AppStore: ObservableObject {
     private static func inFilter(for ids: [UUID]) -> String {
         let values = ids.map { #""\#($0.uuidString)""# }.joined(separator: ",")
         return "(\(values))"
+    }
+
+    private static func displayNameSearchTerm(from query: String) -> String {
+        let withoutHandle = query.trimmed.replacingOccurrences(of: "@", with: "")
+        let allowed = withoutHandle.filter { character in
+            character.isLetter
+                || character.isNumber
+                || character.isWhitespace
+                || character == "_"
+                || character == "."
+                || character == "-"
+                || character == "'"
+        }
+        return allowed.split(whereSeparator: \.isWhitespace).joined(separator: " ")
     }
 
     private func initials(from name: String) -> String {
