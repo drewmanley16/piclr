@@ -33,7 +33,7 @@ final class AppStore: ObservableObject {
     @Published var isBusy = false
     @Published var errorMessage: String?
 
-    private let selectWithCounts = "*, author:profiles(*), likes(count), comments(count), activities:session_activities(*, participants:activity_participants(*, profile:profiles(id,username,display_name,avatar_initials)))"
+    private let selectWithCounts = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(id,username,display_name,avatar_initials)))"
 
     private var realtimeChannel: RealtimeChannelV2?
     private var realtimeTask: Task<Void, Never>?

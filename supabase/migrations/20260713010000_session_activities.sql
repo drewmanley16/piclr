@@ -18,10 +18,22 @@ create table if not exists public.session_activities (
   team_score     int,
   opponent_score int,
   won            boolean,
-  created_at     timestamptz not null default now()
+  created_at     timestamptz not null default now(),
+  constraint session_activities_id_session_id_key unique (id, session_id)
 );
 create index if not exists session_activities_session_idx
   on public.session_activities (session_id, position);
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.session_activities'::regclass
+      and conname = 'session_activities_id_session_id_key'
+  ) then
+    alter table public.session_activities
+      add constraint session_activities_id_session_id_key unique (id, session_id);
+  end if;
+end $$;
 
 create table if not exists public.activity_participants (
   id          uuid primary key default gen_random_uuid(),
@@ -31,7 +43,11 @@ create table if not exists public.activity_participants (
   guest_name  text,
   role        text not null check (role in ('partner', 'opponent')),
   created_at  timestamptz not null default now(),
-  check (profile_id is not null or guest_name is not null)
+  check (profile_id is not null or guest_name is not null),
+  constraint activity_participants_activity_session_fkey
+    foreign key (activity_id, session_id)
+    references public.session_activities(id, session_id)
+    on delete cascade
 );
 create index if not exists activity_participants_activity_idx
   on public.activity_participants (activity_id);
@@ -39,6 +55,20 @@ create index if not exists activity_participants_profile_idx
   on public.activity_participants (profile_id);
 create index if not exists activity_participants_session_idx
   on public.activity_participants (session_id);
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.activity_participants'::regclass
+      and conname = 'activity_participants_activity_session_fkey'
+  ) then
+    alter table public.activity_participants
+      add constraint activity_participants_activity_session_fkey
+      foreign key (activity_id, session_id)
+      references public.session_activities(id, session_id)
+      on delete cascade;
+  end if;
+end $$;
 
 -- =========================================================
 -- RLS: children are readable like sessions; only the session owner writes them.
@@ -50,17 +80,48 @@ alter table public.activity_participants enable row level security;
 drop policy if exists "session_activities_read"   on public.session_activities;
 drop policy if exists "session_activities_write"  on public.session_activities;
 create policy "session_activities_read" on public.session_activities
-  for select to authenticated using (true);
+  for select to authenticated
+  using (exists (select 1 from public.sessions s where s.id = session_activities.session_id));
 create policy "session_activities_write" on public.session_activities
   for all to authenticated
-  using (exists (select 1 from public.sessions s where s.id = session_id and s.user_id = auth.uid()))
-  with check (exists (select 1 from public.sessions s where s.id = session_id and s.user_id = auth.uid()));
+  using (exists (
+    select 1 from public.sessions s
+    where s.id = session_activities.session_id and s.user_id = auth.uid()
+  ))
+  with check (exists (
+    select 1 from public.sessions s
+    where s.id = session_activities.session_id and s.user_id = auth.uid()
+  ));
 
 drop policy if exists "activity_participants_read"  on public.activity_participants;
 drop policy if exists "activity_participants_write" on public.activity_participants;
 create policy "activity_participants_read" on public.activity_participants
-  for select to authenticated using (true);
+  for select to authenticated
+  using (exists (select 1 from public.sessions s where s.id = activity_participants.session_id));
 create policy "activity_participants_write" on public.activity_participants
   for all to authenticated
-  using (exists (select 1 from public.sessions s where s.id = session_id and s.user_id = auth.uid()))
-  with check (exists (select 1 from public.sessions s where s.id = session_id and s.user_id = auth.uid()));
+  using (
+    exists (
+      select 1 from public.sessions s
+      where s.id = activity_participants.session_id and s.user_id = auth.uid()
+    )
+    and exists (
+      select 1 from public.session_activities a
+      where a.id = activity_participants.activity_id
+        and a.session_id = activity_participants.session_id
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.sessions s
+      where s.id = activity_participants.session_id and s.user_id = auth.uid()
+    )
+    and exists (
+      select 1 from public.session_activities a
+      where a.id = activity_participants.activity_id
+        and a.session_id = activity_participants.session_id
+    )
+  );
+
+grant select, insert, update, delete on public.session_activities to authenticated;
+grant select, insert, update, delete on public.activity_participants to authenticated;

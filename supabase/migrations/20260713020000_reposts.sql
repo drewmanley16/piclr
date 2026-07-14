@@ -4,6 +4,9 @@
 
 alter table public.sessions
   add column if not exists reposted_from uuid references public.sessions(id) on delete set null;
+create unique index if not exists sessions_repost_target_idx
+  on public.sessions (user_id, reposted_from)
+  where reposted_from is not null;
 
 create table if not exists public.repost_requests (
   id           uuid primary key default gen_random_uuid(),
@@ -32,15 +35,33 @@ create policy "repost_requests_read" on public.repost_requests
 create policy "repost_requests_insert" on public.repost_requests
   for insert to authenticated with check (
     requester_id = auth.uid()
+    and status = 'pending'
     and exists (
       select 1 from public.activity_participants ap
       where ap.session_id = repost_requests.session_id and ap.profile_id = auth.uid()
     )
+    and exists (
+      select 1 from public.sessions s
+      where s.id = repost_requests.session_id and s.user_id <> auth.uid()
+    )
   );
--- The session's author resolves the request (approve/decline).
+-- The session's author may decline directly. Approval must go through
+-- approve_repost so the copied session is created atomically.
 create policy "repost_requests_update" on public.repost_requests
-  for update to authenticated using (
-    exists (select 1 from public.sessions s where s.id = session_id and s.user_id = auth.uid())
+  for update to authenticated
+  using (
+    status = 'pending'
+    and exists (
+      select 1 from public.sessions s
+      where s.id = repost_requests.session_id and s.user_id = auth.uid()
+    )
+  )
+  with check (
+    status = 'declined'
+    and exists (
+      select 1 from public.sessions s
+      where s.id = repost_requests.session_id and s.user_id = auth.uid()
+    )
   );
 
 -- Approve + copy the session into the requester's log. SECURITY DEFINER so the
@@ -49,7 +70,7 @@ create or replace function public.approve_repost(request_id uuid)
 returns uuid
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   req  public.repost_requests;
@@ -58,19 +79,28 @@ declare
   act  public.session_activities;
   new_act_id uuid;
 begin
-  select * into req from public.repost_requests where id = request_id;
+  select * into req from public.repost_requests where id = request_id for update;
   if req.id is null then raise exception 'Repost request not found'; end if;
+  if req.status <> 'pending' then raise exception 'Repost request is not pending'; end if;
 
   select * into orig from public.sessions where id = req.session_id;
   if orig.user_id <> auth.uid() then raise exception 'Only the author can approve'; end if;
+  if orig.user_id = req.requester_id then raise exception 'You cannot repost your own session'; end if;
+  if not exists (
+    select 1 from public.activity_participants ap
+    where ap.session_id = req.session_id and ap.profile_id = req.requester_id
+  ) then
+    raise exception 'Requester is not tagged in this session';
+  end if;
 
   update public.repost_requests set status = 'approved', updated_at = now() where id = request_id;
 
   insert into public.sessions
-    (id, user_id, title, location, duration_minutes, focus, takeaway, posted, reposted_from, created_at)
+    (id, user_id, title, location, duration_minutes, focus, takeaway, posted,
+     started_at, ended_at, reposted_from, created_at)
   values
     (new_session_id, req.requester_id, orig.title, orig.location, orig.duration_minutes,
-     orig.focus, orig.takeaway, true, orig.id, now());
+     orig.focus, orig.takeaway, true, orig.started_at, orig.ended_at, orig.id, now());
 
   for act in
     select * from public.session_activities where session_id = orig.id order by position
@@ -92,3 +122,18 @@ $$;
 
 revoke all on function public.approve_repost(uuid) from public, anon;
 grant execute on function public.approve_repost(uuid) to authenticated;
+
+grant select, delete on public.sessions to authenticated;
+revoke insert, update on public.sessions from authenticated;
+revoke insert (reposted_from), update (reposted_from) on public.sessions from authenticated;
+grant insert (
+  id, user_id, title, location, duration_minutes, focus, takeaway, posted,
+  started_at, ended_at, created_at
+) on public.sessions to authenticated;
+grant update (
+  title, location, duration_minutes, focus, takeaway, posted, started_at, ended_at
+) on public.sessions to authenticated;
+
+grant select, insert on public.repost_requests to authenticated;
+revoke update, delete on public.repost_requests from authenticated;
+grant update (status) on public.repost_requests to authenticated;
