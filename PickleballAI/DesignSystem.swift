@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Theme Tokens
 
@@ -104,6 +105,48 @@ struct AvatarView: View {
             .background(Theme.surfaceElevated, in: Circle())
             .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
             .accessibilityHidden(true)
+    }
+}
+
+/// Loads a remote image with retries so a slow/blipped first load doesn't get
+/// stuck on the placeholder forever (AsyncImage never retries a failed load).
+struct RemoteImage: View {
+    let url: URL
+    @State private var image: UIImage?
+    @State private var failed = false
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else {
+                Rectangle().fill(Theme.surfaceElevated)
+                    .overlay {
+                        if failed {
+                            Image(systemName: "photo").foregroundStyle(Theme.textTertiary)
+                        } else {
+                            ProgressView().tint(Theme.textTertiary)
+                        }
+                    }
+            }
+        }
+        .task(id: url) { await load() }
+    }
+
+    private func load() async {
+        image = nil
+        failed = false
+        for _ in 0..<4 {
+            if Task.isCancelled { return }
+            if let (data, response) = try? await URLSession.shared.data(from: url),
+               (response as? HTTPURLResponse)?.statusCode == 200,
+               let img = UIImage(data: data) {
+                image = img
+                return
+            }
+            try? await Task.sleep(nanoseconds: 600_000_000)
+        }
+        failed = true
     }
 }
 
