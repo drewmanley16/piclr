@@ -905,7 +905,10 @@ final class AppStore: ObservableObject {
         errorMessage = nil
         defer { isBusy = false }
         do {
-            let path = "\(uid.uuidString)/\(UUID().uuidString).jpg"
+            // Storage RLS checks the folder equals auth.uid()::text, which
+            // Postgres renders lowercase — Swift's uuidString is uppercase, so
+            // it must be lowercased or the insert fails the policy.
+            let path = "\(uid.uuidString.lowercased())/\(UUID().uuidString.lowercased()).jpg"
             try await supabase.storage.from("avatars").upload(
                 path,
                 data: jpeg,
