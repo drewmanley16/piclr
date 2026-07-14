@@ -1,21 +1,38 @@
 import SwiftUI
 
+enum FeedMode {
+    case following, discover
+    var title: String { self == .following ? "Home" : "Discover" }
+}
+
 struct HomeView: View {
     @EnvironmentObject private var store: AppStore
     @State private var showFindFriends = false
     @State private var showNotifications = false
+    @State private var feedMode: FeedMode = .following
+    @State private var showFeedMenu = false
+
+    private var currentFeed: [FeedSession] {
+        feedMode == .following ? store.feed : store.discoverFeed
+    }
+    private var reachedEnd: Bool {
+        feedMode == .following ? store.feedReachedEnd : store.discoverReachedEnd
+    }
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
-                if store.feed.isEmpty {
-                    EmptyFeedState {
-                        showFindFriends = true
-                    }
-                        .padding(.top, 80)
+                if currentFeed.isEmpty {
+                    emptyState
                 } else {
-                    ForEach(store.feed) { session in
+                    ForEach(currentFeed) { session in
                         FeedCard(session: session)
+                            .onAppear { loadMoreIfNeeded(session) }
+                    }
+                    if !reachedEnd {
+                        ProgressView().tint(Theme.accent)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
                     }
                 }
             }
@@ -23,9 +40,16 @@ struct HomeView: View {
             .padding(.bottom, 24)
         }
         .background(Theme.background.ignoresSafeArea())
-        .refreshable { await store.loadFeed() }
+        .refreshable { await refresh() }
+        .confirmationDialog("Feed", isPresented: $showFeedMenu, titleVisibility: .visible) {
+            Button("Following") { feedMode = .following }
+            Button("Discover") { feedMode = .discover }
+        }
+        .task(id: feedMode) {
+            if feedMode == .discover && store.discoverFeed.isEmpty { await store.loadDiscover() }
+        }
         .safeAreaInset(edge: .top) {
-            AppHeader(title: "Home", showsChevron: true, onTitleTap: {}) {
+            AppHeader(title: feedMode.title, showsChevron: true, onTitleTap: { showFeedMenu = true }) {
                 HeaderPill {
                     HeaderIconButton(systemImage: "magnifyingglass", accessibilityTitle: "Find friends") {
                         showFindFriends = true
@@ -57,6 +81,49 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showNotifications) {
             NotificationsView()
+        }
+    }
+
+    @ViewBuilder
+    private var emptyState: some View {
+        if feedMode == .following {
+            EmptyFeedState { showFindFriends = true }
+                .padding(.top, 80)
+        } else {
+            VStack(spacing: 10) {
+                Image(systemName: "binoculars")
+                    .font(.largeTitle)
+                    .foregroundStyle(Theme.accent)
+                Text("Nothing to discover yet")
+                    .font(.headline)
+                    .foregroundStyle(Theme.textPrimary)
+                Text("New public sessions from the community will show up here.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 24)
+            .padding(.top, 80)
+        }
+    }
+
+    private func loadMoreIfNeeded(_ session: FeedSession) {
+        guard session.id == currentFeed.last?.id, !reachedEnd else { return }
+        Task {
+            if feedMode == .following {
+                await store.loadFeed(reset: false)
+            } else {
+                await store.loadDiscover(reset: false)
+            }
+        }
+    }
+
+    private func refresh() async {
+        if feedMode == .following {
+            await store.loadFeed()
+        } else {
+            await store.loadDiscover()
         }
     }
 }

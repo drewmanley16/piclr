@@ -15,6 +15,10 @@ final class AppStore: ObservableObject {
     @Published var authState: AuthState = .loading
     @Published var currentProfile: Profile?
     @Published var feed: [FeedSession] = []
+    @Published var discoverFeed: [FeedSession] = []
+    @Published var feedReachedEnd = false
+    @Published var discoverReachedEnd = false
+    private let feedPageSize = 20
     @Published var mySessions: [FeedSession] = []
     // Directional follow graph (the `follows` table). "Friend" naming is kept
     // on a few discovery-UI hooks for compatibility, but the model is a
@@ -281,6 +285,7 @@ final class AppStore: ObservableObject {
     private func refreshFeeds(userId: UUID) async {
         await loadFeed()
         await loadMySessions(userId: userId)
+        if !discoverFeed.isEmpty { await loadDiscover() }
     }
 
     private func reloadFollowGraph(userId: UUID, refreshFeed: Bool) async {
@@ -346,30 +351,64 @@ final class AppStore: ObservableObject {
         }
     }
 
-    func loadFeed() async {
+    /// Following feed: your posts + posts from people you follow (accepted).
+    /// Paginated — pass reset: false to append the next page.
+    func loadFeed(reset: Bool = true) async {
         guard let uid = currentProfile?.id else { return }
+        if reset { feedReachedEnd = false } else if feedReachedEnd { return }
         do {
-            // Directional: your feed shows your own sessions plus those of the
-            // people you follow (accepted).
             let followingIds = try await acceptedFollowingIds(for: uid)
             let visibleIds = [uid] + followingIds
             let idFilter = Self.inFilter(for: visibleIds)
-            let sessions: [FeedSession] = try await supabase
+            let from = reset ? 0 : feed.count
+            let page: [FeedSession] = try await supabase
                 .from("sessions")
                 .select(selectFeedPreview)
                 .eq("posted", value: true)
                 .filter("user_id", operator: "in", value: idFilter)
                 .order("created_at", ascending: false)
                 .order("created_at", ascending: true, referencedTable: "preview_comments")
-                .limit(50)
+                .range(from: from, to: from + feedPageSize - 1)
                 .limit(3, referencedTable: "preview_comments")
                 .execute()
                 .value
-            let likedIds = try await likedSessionIds(for: uid, sessionIds: sessions.map(\.id))
-            feed = sessions
-            likedSessionIds = likedIds
+            feed = reset ? page : feed + page
+            feedReachedEnd = page.count < feedPageSize
+            await refreshLikedState(for: page, uid: uid)
         } catch {
             errorMessage = friendly(error)
+        }
+    }
+
+    /// Discover feed: recent public posts from everyone (excluding your own).
+    func loadDiscover(reset: Bool = true) async {
+        guard let uid = currentProfile?.id else { return }
+        if reset { discoverReachedEnd = false } else if discoverReachedEnd { return }
+        do {
+            let from = reset ? 0 : discoverFeed.count
+            let page: [FeedSession] = try await supabase
+                .from("sessions")
+                .select(selectFeedPreview)
+                .eq("posted", value: true)
+                .neq("user_id", value: uid.uuidString)
+                .order("created_at", ascending: false)
+                .order("created_at", ascending: true, referencedTable: "preview_comments")
+                .range(from: from, to: from + feedPageSize - 1)
+                .limit(3, referencedTable: "preview_comments")
+                .execute()
+                .value
+            discoverFeed = reset ? page : discoverFeed + page
+            discoverReachedEnd = page.count < feedPageSize
+            await refreshLikedState(for: page, uid: uid)
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    private func refreshLikedState(for sessions: [FeedSession], uid: UUID) async {
+        guard !sessions.isEmpty else { return }
+        if let liked = try? await likedSessionIds(for: uid, sessionIds: sessions.map(\.id)) {
+            likedSessionIds.formUnion(liked)
         }
     }
 
