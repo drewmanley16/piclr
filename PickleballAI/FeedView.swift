@@ -254,16 +254,11 @@ struct FeedCard: View {
             }
 
             if let photo = session.photoUrl, let url = URL(string: photo) {
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFill()
-                    } else {
-                        Rectangle().fill(Theme.surfaceElevated)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 220)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                RemoteImage(url: url)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 220)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
 
             if !session.sortedActivities.isEmpty {
