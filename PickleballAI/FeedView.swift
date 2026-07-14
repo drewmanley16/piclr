@@ -231,43 +231,45 @@ struct FeedCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                AvatarView(initials: session.author.initials)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(session.author.displayName)
-                        .font(.headline)
-                        .foregroundStyle(Theme.textPrimary)
-                    Text("@\(session.author.username)")
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.textSecondary)
-                }
-                Spacer()
-                Text(session.date.relativeLabel)
-                    .font(.caption)
+            if session.isRepost {
+                Label("Reposted", systemImage: "arrow.2.squarepath")
+                    .font(.caption2.weight(.semibold))
                     .foregroundStyle(Theme.textTertiary)
             }
 
-            if session.isRepost {
-                Label("Reposted", systemImage: "arrow.2.squarepath")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Theme.accent)
+            HStack(spacing: 12) {
+                ProfileAvatar(profile: session.author, size: 44)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(session.author.displayName)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("@\(session.author.username) · \(session.date.relativeLabel)")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                Spacer()
             }
 
-            Text(session.displayTitle)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(Theme.textPrimary)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(session.displayTitle)
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(Theme.textPrimary)
+                Text(session.metaLine)
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+            }
 
-            HStack(spacing: 8) {
-                if let focus = session.focus, !focus.isEmpty {
-                    FocusChip(title: focus)
+            if let photo = session.photoUrl, let url = URL(string: photo) {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image.resizable().scaledToFill()
+                    } else {
+                        Rectangle().fill(Theme.surfaceElevated)
+                    }
                 }
-                FocusChip(title: "\(session.durationMinutes) min")
-                if let location = session.location, !location.isEmpty {
-                    Label(location, systemImage: "mappin.and.ellipse")
-                        .font(.caption)
-                        .foregroundStyle(Theme.textTertiary)
-                        .lineLimit(1)
-                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 220)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
 
             if !session.sortedActivities.isEmpty {
@@ -300,7 +302,12 @@ struct FeedCard: View {
                 }
                 .buttonStyle(.plain)
 
-                SocialAction(icon: "square.and.arrow.up", count: nil)
+                ShareLink(item: session.shareSummary) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(minHeight: 44)
+                }
 
                 if canRepost {
                     Button {

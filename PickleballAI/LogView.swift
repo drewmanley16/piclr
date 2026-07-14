@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 // MARK: - Workout Tab
 
@@ -128,6 +129,7 @@ struct ActiveSessionView: View {
     @State private var draft = SessionDraft()
     @State private var editor: ActivityEditorRoute?
     @State private var showDiscardConfirm = false
+    @State private var selectedPhoto: PhotosPickerItem?
 
     var body: some View {
         NavigationStack {
@@ -208,9 +210,43 @@ struct ActiveSessionView: View {
                 }
             }
             .frame(minHeight: 44)
+            Divider().overlay(Theme.hairline)
+            photoRow
         }
         .padding(.horizontal, 16)
         .cardStyle(padding: 0)
+        .onChange(of: selectedPhoto) { _, item in
+            Task {
+                draft.photoData = try? await item?.loadTransferable(type: Data.self)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var photoRow: some View {
+        if let data = draft.photoData, let image = UIImage(data: data) {
+            HStack(spacing: 12) {
+                Image(uiImage: image)
+                    .resizable().scaledToFill()
+                    .frame(width: 52, height: 52)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                Text("Photo added").font(.subheadline).foregroundStyle(Theme.textPrimary)
+                Spacer()
+                Button { draft.photoData = nil; selectedPhoto = nil } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.textTertiary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.vertical, 8)
+        } else {
+            PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                Label("Add a photo", systemImage: "photo.badge.plus")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.accent)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(minHeight: 44)
+            }
+        }
     }
 
     private var addButtons: some View {
