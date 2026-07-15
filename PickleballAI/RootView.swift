@@ -59,7 +59,7 @@ struct RootView: View {
 
             WorkoutView()
                 .tabItem {
-                    Label("Workout", systemImage: "figure.pickleball")
+                    Label("Play", systemImage: "figure.pickleball")
                 }
 
             ProfileView()

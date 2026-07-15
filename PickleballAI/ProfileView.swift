@@ -8,6 +8,7 @@ struct ProfileView: View {
     @State private var showNotifications = false
     @State private var activeSheet: ProfileSheet?
     @State private var metric: ActivityMetric = .duration
+    @AppStorage("dismissedProfileCompletion") private var dismissedCompletion = false
 
     private var profile: Profile? { store.currentProfile }
 
@@ -22,7 +23,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     profileRow
                     if !store.incomingFollowRequests.isEmpty { followRequestsBanner }
-                    if completion < 1 { completionBanner }
+                    if completion < 1 && !dismissedCompletion { completionBanner }
                     recordCard
                     activityCard
                     WorkoutCalendarCard(sessions: store.mySessions)
@@ -131,47 +132,55 @@ struct ProfileView: View {
 
     // MARK: Completion banner
 
+    /// Only the fields that actually shape the product (court, side, rating,
+    /// photo) count toward "finished" — measures are optional extras and were
+    /// nagging users forever over their shoe size.
     private var completion: Double {
         guard let p = profile else { return 1 }
         let checks = [
             p.homeCourt,
             p.preferredSide,
             p.rating.map { "\($0)" },
-            p.heightInches.map { "\($0)" },
-            p.weightPounds.map { "\($0)" },
-            p.shoeSize.map { "\($0)" }
+            p.avatarURL
         ]
         let filled = checks.filter { ($0 ?? "").isEmpty == false }.count
         return Double(filled) / Double(checks.count)
     }
 
-    private var measuresIncomplete: Bool {
-        profile?.heightInches == nil || profile?.weightPounds == nil || profile?.shoeSize == nil
-    }
-
     private var completionBanner: some View {
-        Button {
-            if measuresIncomplete {
-                activeSheet = .measures
-            } else {
+        HStack(spacing: 12) {
+            Button {
                 showSettings = true
-            }
-        } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Your profile is \(Int(completion * 100))% finished")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.textPrimary)
-                    Text("Add player details and measures")
-                        .font(.caption)
-                        .foregroundStyle(Theme.textSecondary)
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Your profile is \(Int(completion * 100))% finished")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.textPrimary)
+                        Text("Add your court, rating, side, and photo")
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                    Spacer()
+                    Image(systemName: "arrow.right").foregroundStyle(Theme.accent)
                 }
-                Spacer()
-                Image(systemName: "arrow.right").foregroundStyle(Theme.accent)
+                .contentShape(Rectangle())
             }
-            .cardStyle()
+            .buttonStyle(.plain)
+
+            Button {
+                withAnimation(.snappy) { dismissedCompletion = true }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.textTertiary)
+                    .frame(width: 28, height: 28)
+                    .background(Theme.surfaceElevated, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Dismiss")
         }
-        .buttonStyle(.plain)
+        .cardStyle()
     }
 
     // MARK: Record

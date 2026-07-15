@@ -448,6 +448,7 @@ struct AuthView: View {
             duprRating: parsedDUPR
         )
         if didComplete {
+            Haptics.success()
             contactStatus = nil
         }
     }
@@ -655,6 +656,7 @@ struct FriendCandidateRow: View {
 
     private var followButton: some View {
         Button {
+            Haptics.impact()
             Task { await store.sendFollowRequest(to: profile) }
         } label: {
             Image(systemName: store.requestedFollowIds.contains(profile.id) ? "checkmark" : "plus")

@@ -10,7 +10,6 @@ struct HomeView: View {
     @State private var showFindFriends = false
     @State private var showNotifications = false
     @State private var feedMode: FeedMode = .following
-    @State private var showFeedMenu = false
 
     private var currentFeed: [FeedSession] {
         feedMode == .following ? store.feed : store.discoverFeed
@@ -25,11 +24,7 @@ struct HomeView: View {
             LazyVStack(spacing: 12) {
                 if currentFeed.isEmpty {
                     if feedMode == .following && store.isInitialFeedLoading {
-                        ProgressView("Loading feed…")
-                            .tint(Theme.accent)
-                            .foregroundStyle(Theme.textSecondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 80)
+                        ForEach(0..<3, id: \.self) { _ in FeedCardSkeleton() }
                     } else {
                         emptyState
                     }
@@ -50,15 +45,12 @@ struct HomeView: View {
         }
         .background(Theme.background.ignoresSafeArea())
         .refreshable { await refresh() }
-        .confirmationDialog("Feed", isPresented: $showFeedMenu, titleVisibility: .visible) {
-            Button("Following") { feedMode = .following }
-            Button("Discover") { feedMode = .discover }
-        }
         .task(id: feedMode) {
             if feedMode == .discover && store.discoverFeed.isEmpty { await store.loadDiscover() }
         }
         .safeAreaInset(edge: .top) {
-            AppHeader(title: feedMode.title, showsChevron: true, onTitleTap: { showFeedMenu = true }) {
+            VStack(spacing: 12) {
+            AppHeader(title: "pickleball.ai") {
                 HeaderPill {
                     HeaderIconButton(systemImage: "magnifyingglass", accessibilityTitle: "Find friends") {
                         showFindFriends = true
@@ -81,6 +73,14 @@ struct HomeView: View {
                     }
                     .accessibilityLabel("Notifications")
                 }
+            }
+
+            SegmentedControl(
+                options: [(.following, "Following"), (.discover, "Discover")],
+                selection: $feedMode
+            )
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
             }
             .background(Theme.background)
         }
@@ -425,6 +425,7 @@ struct FeedCard: View {
             HStack(spacing: 20) {
                 let liked = store.likedSessionIds.contains(session.id)
                 Button {
+                    Haptics.impact()
                     Task { await store.toggleLike(session) }
                 } label: {
                     SocialLabel(

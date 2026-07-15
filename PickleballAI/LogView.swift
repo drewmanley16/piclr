@@ -33,7 +33,7 @@ struct WorkoutView: View {
             if let uid = store.currentProfile?.id { await store.loadMySessions(userId: uid) }
         }
         .safeAreaInset(edge: .top) {
-            AppHeader(title: "Workout") {
+            AppHeader(title: "Play") {
                 HeaderCircleButton(systemImage: "plus", accessibilityTitle: "Start session") {
                     startLive()
                 }
@@ -605,8 +605,12 @@ struct ActiveSessionView: View {
 
     private func save() async {
         if let existingSession {
-            if await store.updateSession(existingSession, draft: draft) { dismiss() }
+            if await store.updateSession(existingSession, draft: draft) {
+                Haptics.success()
+                dismiss()
+            }
         } else if await store.postSession(draft) {
+            Haptics.success()
             if isLive { store.discardLiveSession() }
             dismiss()
         }
