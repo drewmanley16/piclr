@@ -15,7 +15,10 @@
 		33C8ACB4E3D0F1DAE5FC4EEF /* CommentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F6C03EC3ED4D2A8C098B84F /* CommentsView.swift */; };
 		454F25CB28B5C41A3538D5E2 /* LogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3FA4363BCD03C413DB5D6C4 /* LogView.swift */; };
 		4C4D1BAB0ADC400DABD9541C /* ProfileSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = E57559D0A66C08920B1C67A3 /* ProfileSheets.swift */; };
+		4CD5BF0B95A969D397E3038D /* PickleballAIWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EE4100E53AC518E09293CA1 /* PickleballAIWidget.swift */; };
 		5871B4D2606B7AC392C95451 /* OtherProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72609C0E290C1E3683A88921 /* OtherProfileView.swift */; };
+		5E9F8ED09A2B926B38FFE0C8 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC1B8FB7392D5C5FC8C4D640 /* LiveActivityManager.swift */; };
+		63CF72EC30CBFEC89BF39639 /* LiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF3D5A5AC51AF989571223E /* LiveActivityAttributes.swift */; };
 		664317151FD26AFB65FCFB64 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C2F55C19C493784AFEFC588 /* DesignSystem.swift */; };
 		6903C7CFAC2D15228D2A4C59 /* SessionStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4ABDD948BF6204089C4CACF /* SessionStats.swift */; };
 		80E343E6CCC9B13005C13F64 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 54014EB97F18D699B5E8FE5C /* Supabase */; };
@@ -26,22 +29,51 @@
 		95C8A46DA87219F98DD0A143 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38D466C6F8E7D2FD8E302914 /* AuthView.swift */; };
 		987C065BEC871C430815F0D5 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92AD1866882A183DAB69974D /* FeedView.swift */; };
 		A7AB3CB17285CB9C76938F9B /* SessionEditors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F3DE89404F54F718B1D071B /* SessionEditors.swift */; };
+		A87ED053E1361D2193395A82 /* PickleballAIWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5BC068B87E22A474B35B0E61 /* PickleballAIWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B11B01B9A357B172C22B077E /* LocationPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60A7FE208AB50A6DC053231 /* LocationPicker.swift */; };
 		BACB683507C15BE288E50D3C /* FollowListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7854EB879EEA122DFA7E5FE1 /* FollowListView.swift */; };
 		C4D639B6FB92C30CB2822077 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D656AFC1851F5D01BC4BB70 /* AppStore.swift */; };
 		C5338F649A3DC6D11AE71F0B /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528729889F780FEF8B81D160 /* ProfileView.swift */; };
 		D60B10153096A64D929AE1AC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */; };
 		F9D4FE283820E25A05692966 /* Supabase.plist in Resources */ = {isa = PBXBuildFile; fileRef = 110EB1A0604D9D68DD50D886 /* Supabase.plist */; };
+		FD52FEB282F1D784FD37A351 /* LiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF3D5A5AC51AF989571223E /* LiveActivityAttributes.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		618AE303BA1AC3F3256B9909 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FB8FB6D41A0B6CE682CE30D0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EB2CCADB659EA66D1ADE192A;
+			remoteInfo = PickleballAIWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		926D0FED553244B7689481C3 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A87ED053E1361D2193395A82 /* PickleballAIWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		110EB1A0604D9D68DD50D886 /* Supabase.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Supabase.plist; sourceTree = "<group>"; };
 		14EC4FAB3BC7409E94B9F0E1 /* ContactsImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsImporter.swift; sourceTree = "<group>"; };
+		1DF3D5A5AC51AF989571223E /* LiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityAttributes.swift; sourceTree = "<group>"; };
 		212C7D515516C3E07230F457 /* PickleballAI.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PickleballAI.entitlements; sourceTree = "<group>"; };
 		2C2F55C19C493784AFEFC588 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
+		2EE4100E53AC518E09293CA1 /* PickleballAIWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickleballAIWidget.swift; sourceTree = "<group>"; };
 		38D466C6F8E7D2FD8E302914 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		4F6C03EC3ED4D2A8C098B84F /* CommentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentsView.swift; sourceTree = "<group>"; };
 		528729889F780FEF8B81D160 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		5BC068B87E22A474B35B0E61 /* PickleballAIWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = PickleballAIWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		5D656AFC1851F5D01BC4BB70 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
 		5F3DE89404F54F718B1D071B /* SessionEditors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionEditors.swift; sourceTree = "<group>"; };
 		6BAF5E29E3E19941F0F544FB /* PickleballAI.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PickleballAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -58,8 +90,10 @@
 		C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D1DA9EA8FD022D18FABEBD5A /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		D4ABDD948BF6204089C4CACF /* SessionStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStats.swift; sourceTree = "<group>"; };
+		DC1B8FB7392D5C5FC8C4D640 /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
 		DD24443783672F30DD360A7A /* Supabase.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Supabase.example.plist; sourceTree = "<group>"; };
 		E57559D0A66C08920B1C67A3 /* ProfileSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSheets.swift; sourceTree = "<group>"; };
+		EAB915786701A168499210BF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F8FD3C96B80BD2A5C26D975D /* RemoteModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteModels.swift; sourceTree = "<group>"; };
 		FC7CF99A3E687EB8A86C623F /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -80,8 +114,18 @@
 			isa = PBXGroup;
 			children = (
 				B6E970CBD13B44D059257F04 /* PickleballAI */,
+				25038B16655CE5BB0B77D87E /* PickleballAIWidget */,
 				E0D3ED6F956F4A18CE3AE724 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		25038B16655CE5BB0B77D87E /* PickleballAIWidget */ = {
+			isa = PBXGroup;
+			children = (
+				EAB915786701A168499210BF /* Info.plist */,
+				2EE4100E53AC518E09293CA1 /* PickleballAIWidget.swift */,
+			);
+			path = PickleballAIWidget;
 			sourceTree = "<group>";
 		};
 		B6E970CBD13B44D059257F04 /* PickleballAI */ = {
@@ -96,6 +140,8 @@
 				92AD1866882A183DAB69974D /* FeedView.swift */,
 				7854EB879EEA122DFA7E5FE1 /* FollowListView.swift */,
 				6BF6725B8FBFB5A75FCF41BB /* Info.plist */,
+				1DF3D5A5AC51AF989571223E /* LiveActivityAttributes.swift */,
+				DC1B8FB7392D5C5FC8C4D640 /* LiveActivityManager.swift */,
 				C60A7FE208AB50A6DC053231 /* LocationPicker.swift */,
 				B3FA4363BCD03C413DB5D6C4 /* LogView.swift */,
 				FC7CF99A3E687EB8A86C623F /* Models.swift */,
@@ -121,6 +167,7 @@
 			isa = PBXGroup;
 			children = (
 				6BAF5E29E3E19941F0F544FB /* PickleballAI.app */,
+				5BC068B87E22A474B35B0E61 /* PickleballAIWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -135,10 +182,12 @@
 				556E04E047908FECE0552F06 /* Sources */,
 				314ECEABAAD3C8C3337674C1 /* Resources */,
 				093F2A4AB07067E7B39F6177 /* Frameworks */,
+				926D0FED553244B7689481C3 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				DFD7684B83CF0D47C3F359F9 /* PBXTargetDependency */,
 			);
 			name = PickleballAI;
 			packageProductDependencies = (
@@ -147,6 +196,23 @@
 			productName = PickleballAI;
 			productReference = 6BAF5E29E3E19941F0F544FB /* PickleballAI.app */;
 			productType = "com.apple.product-type.application";
+		};
+		EB2CCADB659EA66D1ADE192A /* PickleballAIWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E3183EDA5466E707DCF72FEB /* Build configuration list for PBXNativeTarget "PickleballAIWidget" */;
+			buildPhases = (
+				29837EE47FFCC5ACA930E19E /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PickleballAIWidget;
+			packageProductDependencies = (
+			);
+			productName = PickleballAIWidget;
+			productReference = 5BC068B87E22A474B35B0E61 /* PickleballAIWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -158,6 +224,10 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					88C9B1CBCD349BD12AF28E51 = {
+						DevelopmentTeam = X9H68STU8F;
+						ProvisioningStyle = Automatic;
+					};
+					EB2CCADB659EA66D1ADE192A = {
 						DevelopmentTeam = X9H68STU8F;
 						ProvisioningStyle = Automatic;
 					};
@@ -181,6 +251,7 @@
 			projectRoot = "";
 			targets = (
 				88C9B1CBCD349BD12AF28E51 /* PickleballAI */,
+				EB2CCADB659EA66D1ADE192A /* PickleballAIWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -199,6 +270,15 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		29837EE47FFCC5ACA930E19E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				63CF72EC30CBFEC89BF39639 /* LiveActivityAttributes.swift in Sources */,
+				4CD5BF0B95A969D397E3038D /* PickleballAIWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		556E04E047908FECE0552F06 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -210,6 +290,8 @@
 				664317151FD26AFB65FCFB64 /* DesignSystem.swift in Sources */,
 				987C065BEC871C430815F0D5 /* FeedView.swift in Sources */,
 				BACB683507C15BE288E50D3C /* FollowListView.swift in Sources */,
+				FD52FEB282F1D784FD37A351 /* LiveActivityAttributes.swift in Sources */,
+				5E9F8ED09A2B926B38FFE0C8 /* LiveActivityManager.swift in Sources */,
 				B11B01B9A357B172C22B077E /* LocationPicker.swift in Sources */,
 				454F25CB28B5C41A3538D5E2 /* LogView.swift in Sources */,
 				076565ECFC5D40E2EDE1D5E1 /* Models.swift in Sources */,
@@ -228,6 +310,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		DFD7684B83CF0D47C3F359F9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EB2CCADB659EA66D1ADE192A /* PickleballAIWidget */;
+			targetProxy = 618AE303BA1AC3F3256B9909 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		63F5EDF15594A67046AD6184 /* Release */ = {
@@ -357,6 +447,24 @@
 			};
 			name = Debug;
 		};
+		BB706CDA020927BDBAB9C613 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				INFOPLIST_FILE = PickleballAIWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = pickleball.ai;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.pickleball.ai.widget;
+				PRODUCT_NAME = PickleballAIWidget;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 		BEBD835F2AC8891EDDE7977D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -378,6 +486,24 @@
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
+		};
+		BF092C06E463DAA086BEB061 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				INFOPLIST_FILE = PickleballAIWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = pickleball.ai;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.pickleball.ai.widget;
+				PRODUCT_NAME = PickleballAIWidget;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
 		};
 		F213B347262FDBA67E8C9ED6 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -418,6 +544,15 @@
 			buildConfigurations = (
 				F213B347262FDBA67E8C9ED6 /* Debug */,
 				BEBD835F2AC8891EDDE7977D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		E3183EDA5466E707DCF72FEB /* Build configuration list for PBXNativeTarget "PickleballAIWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BF092C06E463DAA086BEB061 /* Debug */,
+				BB706CDA020927BDBAB9C613 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
