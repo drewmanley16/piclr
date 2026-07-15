@@ -33,7 +33,7 @@ struct WorkoutView: View {
             if let uid = store.currentProfile?.id { await store.loadMySessions(userId: uid) }
         }
         .safeAreaInset(edge: .top) {
-            AppHeader(title: "Workout") {
+            AppHeader(title: "Play") {
                 HeaderCircleButton(systemImage: "plus", accessibilityTitle: "Start session") {
                     startLive()
                 }
@@ -347,6 +347,7 @@ struct ActiveSessionView: View {
     @State private var showDiscardConfirm = false
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var showLocationPicker = false
+    @State private var showCelebration = false
 
     init(existingSession: FeedSession? = nil, isLive: Bool = false) {
         self.existingSession = existingSession
@@ -410,6 +411,12 @@ struct ActiveSessionView: View {
                     dismiss()
                 }
                 Button("Keep Editing", role: .cancel) {}
+            }
+        }
+        .overlay {
+            if showCelebration {
+                CelebrationView(title: "Session posted")
+                    .transition(.opacity)
             }
         }
         .interactiveDismissDisabled(!isLive && (isEditing || !draft.activities.isEmpty))
@@ -605,9 +612,15 @@ struct ActiveSessionView: View {
 
     private func save() async {
         if let existingSession {
-            if await store.updateSession(existingSession, draft: draft) { dismiss() }
+            if await store.updateSession(existingSession, draft: draft) {
+                Haptics.success()
+                dismiss()
+            }
         } else if await store.postSession(draft) {
+            Haptics.success()
             if isLive { store.discardLiveSession() }
+            withAnimation { showCelebration = true }
+            try? await Task.sleep(nanoseconds: 1_050_000_000)
             dismiss()
         }
     }

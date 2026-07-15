@@ -10,7 +10,6 @@ struct HomeView: View {
     @State private var showFindFriends = false
     @State private var showNotifications = false
     @State private var feedMode: FeedMode = .following
-    @State private var showFeedMenu = false
 
     private var currentFeed: [FeedSession] {
         feedMode == .following ? store.feed : store.discoverFeed
@@ -25,11 +24,7 @@ struct HomeView: View {
             LazyVStack(spacing: 12) {
                 if currentFeed.isEmpty {
                     if feedMode == .following && store.isInitialFeedLoading {
-                        ProgressView("Loading feed…")
-                            .tint(Theme.accent)
-                            .foregroundStyle(Theme.textSecondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 80)
+                        ForEach(0..<3, id: \.self) { _ in FeedCardSkeleton() }
                     } else {
                         emptyState
                     }
@@ -50,15 +45,12 @@ struct HomeView: View {
         }
         .background(Theme.background.ignoresSafeArea())
         .refreshable { await refresh() }
-        .confirmationDialog("Feed", isPresented: $showFeedMenu, titleVisibility: .visible) {
-            Button("Following") { feedMode = .following }
-            Button("Discover") { feedMode = .discover }
-        }
         .task(id: feedMode) {
             if feedMode == .discover && store.discoverFeed.isEmpty { await store.loadDiscover() }
         }
         .safeAreaInset(edge: .top) {
-            AppHeader(title: feedMode.title, showsChevron: true, onTitleTap: { showFeedMenu = true }) {
+            VStack(spacing: 12) {
+            AppHeader(title: "pickleball.ai") {
                 HeaderPill {
                     HeaderIconButton(systemImage: "magnifyingglass", accessibilityTitle: "Find friends") {
                         showFindFriends = true
@@ -81,6 +73,14 @@ struct HomeView: View {
                     }
                     .accessibilityLabel("Notifications")
                 }
+            }
+
+            SegmentedControl(
+                options: [(.following, "Following"), (.discover, "Discover")],
+                selection: $feedMode
+            )
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
             }
             .background(Theme.background)
         }
@@ -305,6 +305,7 @@ struct FeedCard: View {
     @State private var confirmBlock = false
     @State private var confirmRemoveTag = false
     @State private var reportTarget: ReportTarget?
+    @State private var shareItem: ShareImage?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -425,6 +426,7 @@ struct FeedCard: View {
             HStack(spacing: 20) {
                 let liked = store.likedSessionIds.contains(session.id)
                 Button {
+                    Haptics.impact()
                     Task { await store.toggleLike(session) }
                 } label: {
                     SocialLabel(
@@ -441,12 +443,19 @@ struct FeedCard: View {
                 }
                 .buttonStyle(.plain)
 
-                ShareLink(item: session.shareSummary) {
+                Button {
+                    if let image = renderShareImage(for: session) {
+                        Haptics.tap()
+                        shareItem = ShareImage(image: image, caption: session.shareSummary)
+                    }
+                } label: {
                     Image(systemName: "square.and.arrow.up")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Theme.textSecondary)
                         .frame(minHeight: 44)
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Share session")
 
                 Spacer()
 
@@ -496,6 +505,9 @@ struct FeedCard: View {
         }
         .sheet(item: $reportTarget) { target in
             ReportSheet(target: target)
+        }
+        .sheet(item: $shareItem) { item in
+            ActivityShareSheet(payload: item)
         }
         .fullScreenCover(isPresented: $showEditor) {
             ActiveSessionView(existingSession: session)

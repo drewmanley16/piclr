@@ -8,6 +8,7 @@ struct ProfileView: View {
     @State private var showNotifications = false
     @State private var activeSheet: ProfileSheet?
     @State private var metric: ActivityMetric = .duration
+    @AppStorage("dismissedProfileCompletion") private var dismissedCompletion = false
 
     private var profile: Profile? { store.currentProfile }
 
@@ -22,8 +23,9 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     profileRow
                     if !store.incomingFollowRequests.isEmpty { followRequestsBanner }
-                    if completion < 1 { completionBanner }
+                    if completion < 1 && !dismissedCompletion { completionBanner }
                     recordCard
+                    rivalsCard
                     activityCard
                     WorkoutCalendarCard(sessions: store.mySessions)
                     dashboard
@@ -63,6 +65,7 @@ struct ProfileView: View {
                 case .stats: StatsSheet()
                 case .gear: GearSheet()
                 case .measures: MeasuresSheet()
+                case .rivals: RivalsSheet()
                 }
             }
         }
@@ -131,47 +134,55 @@ struct ProfileView: View {
 
     // MARK: Completion banner
 
+    /// Only the fields that actually shape the product (court, side, rating,
+    /// photo) count toward "finished" — measures are optional extras and were
+    /// nagging users forever over their shoe size.
     private var completion: Double {
         guard let p = profile else { return 1 }
         let checks = [
             p.homeCourt,
             p.preferredSide,
             p.rating.map { "\($0)" },
-            p.heightInches.map { "\($0)" },
-            p.weightPounds.map { "\($0)" },
-            p.shoeSize.map { "\($0)" }
+            p.avatarURL
         ]
         let filled = checks.filter { ($0 ?? "").isEmpty == false }.count
         return Double(filled) / Double(checks.count)
     }
 
-    private var measuresIncomplete: Bool {
-        profile?.heightInches == nil || profile?.weightPounds == nil || profile?.shoeSize == nil
-    }
-
     private var completionBanner: some View {
-        Button {
-            if measuresIncomplete {
-                activeSheet = .measures
-            } else {
+        HStack(spacing: 12) {
+            Button {
                 showSettings = true
-            }
-        } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Your profile is \(Int(completion * 100))% finished")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.textPrimary)
-                    Text("Add player details and measures")
-                        .font(.caption)
-                        .foregroundStyle(Theme.textSecondary)
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Your profile is \(Int(completion * 100))% finished")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.textPrimary)
+                        Text("Add your court, rating, side, and photo")
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                    Spacer()
+                    Image(systemName: "arrow.right").foregroundStyle(Theme.accent)
                 }
-                Spacer()
-                Image(systemName: "arrow.right").foregroundStyle(Theme.accent)
+                .contentShape(Rectangle())
             }
-            .cardStyle()
+            .buttonStyle(.plain)
+
+            Button {
+                withAnimation(.snappy) { dismissedCompletion = true }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.textTertiary)
+                    .frame(width: 28, height: 28)
+                    .background(Theme.surfaceElevated, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Dismiss")
         }
-        .buttonStyle(.plain)
+        .cardStyle()
     }
 
     // MARK: Record
@@ -224,6 +235,40 @@ struct ProfileView: View {
                             }
                         }
                     }
+                }
+                .cardStyle()
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: Rivals
+
+    /// A real rivalry needs at least two meetings — one game is not a rivalry.
+    private var topRivals: [Rivalry] {
+        stats.rivalries.filter { $0.games >= 2 }
+    }
+
+    @ViewBuilder
+    private var rivalsCard: some View {
+        if let top = topRivals.first {
+            Button { activeSheet = .rivals } label: {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Label("Rivals", systemImage: "flame.fill")
+                            .font(.headline)
+                            .foregroundStyle(Theme.textPrimary)
+                        Spacer()
+                        if topRivals.count > 1 {
+                            Text("See all")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Theme.accent)
+                        }
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Theme.accent)
+                    }
+                    RivalRow(rivalry: top, emphasized: true)
                 }
                 .cardStyle()
             }
@@ -691,6 +736,96 @@ struct RepostRequestRow: View {
 }
 
 enum ProfileSheet: String, Identifiable {
-    case stats, gear, measures
+    case stats, gear, measures, rivals
     var id: String { rawValue }
+}
+
+// MARK: - Rivals
+
+/// One head-to-head row: identity on the left, record + who's-hot streak on the
+/// right. `emphasized` is the hero variant used on the profile card.
+struct RivalRow: View {
+    let rivalry: Rivalry
+    var emphasized: Bool = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ProfileAvatar(url: nil, initials: rivalry.avatarInitials, size: emphasized ? 44 : 40)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(rivalry.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                Text(rivalry.streakLabel + " · last " + rivalry.lastPlayed.relativeLabel)
+                    .font(.caption)
+                    .foregroundStyle(streakColor)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(rivalry.recordLine)
+                    .font((emphasized ? Font.title3 : .subheadline).weight(.bold))
+                    .monospacedDigit()
+                    .foregroundStyle(rivalry.leadingYou ? Theme.accent : Theme.textPrimary)
+                Text("\(rivalry.winRate)% · \(rivalry.games) games")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+        }
+    }
+
+    private var streakColor: Color {
+        if rivalry.streak > 0 { return Theme.accent }
+        if rivalry.streak < 0 { return Theme.loss }
+        return Theme.textSecondary
+    }
+}
+
+struct RivalsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: AppStore
+
+    private var rivalries: [Rivalry] {
+        SessionStats(sessions: store.mySessions).rivalries.filter { $0.games >= 2 }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    if rivalries.isEmpty {
+                        VStack(spacing: 10) {
+                            Image(systemName: "flame")
+                                .font(.largeTitle)
+                                .foregroundStyle(Theme.accent)
+                            Text("No rivalries yet")
+                                .font(.headline)
+                                .foregroundStyle(Theme.textPrimary)
+                            Text("Play the same opponent twice and your head-to-head shows up here.")
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.textSecondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 80)
+                    } else {
+                        VStack(spacing: 0) {
+                            ForEach(Array(rivalries.enumerated()), id: \.element.id) { index, rivalry in
+                                if index > 0 {
+                                    Divider().overlay(Theme.hairline).padding(.leading, 56)
+                                }
+                                RivalRow(rivalry: rivalry)
+                                    .padding(.vertical, 12)
+                            }
+                        }
+                        .cardStyle(padding: 14)
+                    }
+                }
+                .padding(16)
+            }
+            .background(Theme.background.ignoresSafeArea())
+            .navigationTitle("Rivals")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        }
+    }
 }
