@@ -80,6 +80,17 @@ final class AppStore: ObservableObject {
     private let signedURLLifetime = 900
     private let signedURLRefreshLeeway: TimeInterval = 60
 
+    /// Default session title from the time of day, used when the user leaves the
+    /// title blank (e.g. "Morning Session").
+    static func timeOfDayTitle(for date: Date) -> String {
+        switch Calendar.current.component(.hour, from: date) {
+        case 5..<12:  return "Morning Session"
+        case 12..<17: return "Afternoon Session"
+        case 17..<21: return "Evening Session"
+        default:      return "Night Session"
+        }
+    }
+
     static let iso: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime]
@@ -1331,7 +1342,7 @@ final class AppStore: ObservableObject {
 
             let session = NewSession(
                 userId: uid,
-                title: draft.title.isEmpty ? nil : draft.title,
+                title: draft.title.isEmpty ? Self.timeOfDayTitle(for: draft.startedAt) : draft.title,
                 location: draft.location.isEmpty ? nil : draft.location,
                 durationMinutes: duration,
                 focus: firstFocus,
