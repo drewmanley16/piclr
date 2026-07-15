@@ -258,8 +258,81 @@ struct AddGearSheet: View {
 
 struct SettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var showSavedToast = false
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 14) {
+                    SettingsMenuRow(icon: "person.crop.circle", title: "Profile", subtitle: "Name, photo, rating, side") {
+                        SettingsProfileView(onSaved: { showSavedToast = true })
+                    }
+                    SettingsMenuRow(icon: "slider.horizontal.3", title: "Preferences", subtitle: "Notifications, blocked accounts") {
+                        SettingsPreferencesView()
+                    }
+                    SettingsMenuRow(icon: "person.crop.circle.badge.exclamationmark", title: "Account", subtitle: "Version, log out, delete account") {
+                        SettingsAccountView(onDismissAll: { dismiss() })
+                    }
+                }
+                .padding(16)
+            }
+            .background(Theme.background.ignoresSafeArea())
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    HeaderCircleButton(systemImage: "xmark", accessibilityTitle: "Close") { dismiss() }
+                }
+            }
+        }
+        .toast(isPresented: $showSavedToast, message: "Profile saved")
+    }
+}
+
+/// Root menu row for Settings: navigates to a category screen (Profile, Preferences, Account).
+private struct SettingsMenuRow<Destination: View>: View {
+    var icon: String
+    var title: String
+    var subtitle: String
+    @ViewBuilder var destination: () -> Destination
+
+    var body: some View {
+        NavigationLink {
+            destination()
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: 40, height: 40)
+                    .background(Theme.accentSoft, in: Circle())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.textTertiary)
+            }
+        }
+        .cardStyle()
+    }
+}
+
+// MARK: - Settings: Profile
+
+struct SettingsProfileView: View {
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: AppStore
-    @AppStorage("notificationsEnabled") private var notifications = true
+    var onSaved: () -> Void = {}
     @State private var displayName = ""
     @State private var homeCourt = ""
     @State private var rating = ""
@@ -268,10 +341,6 @@ struct SettingsSheet: View {
     @State private var birthdayDate = Calendar.current.date(byAdding: .year, value: -25, to: Date()) ?? Date()
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var selectedPhotoData: Data?
-    @State private var didSave = false
-    @State private var showBlockedAccounts = false
-    @State private var showDeleteAccount = false
-
     private let sides = ["Left", "Right", "Both"]
 
     private static let birthdayFormatter: DateFormatter = {
@@ -281,127 +350,138 @@ struct SettingsSheet: View {
         return f
     }()
 
-    private var appVersion: String {
-        let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-        return "\(v) (\(b))"
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                photoHeader
+
+                accountCard
+
+                playerDetailsSection
+
+                birthdayCard
+
+                saveButton
+
+                if let error = store.errorMessage {
+                    Label(error, systemImage: "exclamationmark.triangle.fill")
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                }
+            }
+            .padding(16)
+        }
+        .background(Theme.background.ignoresSafeArea())
+        .navigationTitle("Profile")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear { loadProfile() }
+        .onChange(of: selectedPhoto) { _, item in
+            Task {
+                selectedPhotoData = try? await item?.loadTransferable(type: Data.self)
+            }
+        }
     }
 
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Account") {
-                    HStack {
-                        Spacer()
-                        PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                            VStack(spacing: 8) {
-                                profilePhoto
-                                Text("Change Photo")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(Theme.accent)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        Spacer()
-                    }
-                    .listRowBackground(Color.clear)
-                    LabeledContent("Username", value: store.currentProfile.map { "@\($0.username)" } ?? "—")
-                    TextField("Display name", text: $displayName)
-                    TextField("Home court", text: $homeCourt)
-                }
+    // MARK: - Sections
 
-                Section("Player Details") {
-                    TextField("Rating (DUPR)", text: $rating)
-                        .keyboardType(.decimalPad)
-                    Picker("Preferred side", selection: $preferredSide) {
-                        ForEach(sides, id: \.self) { Text($0).tag($0) }
-                    }
-                }
-
-                Section("Birthday") {
-                    Toggle("Add birthday", isOn: $birthdaySet.animation())
-                        .tint(Theme.accent)
-                    if birthdaySet {
-                        DatePicker("Birthday", selection: $birthdayDate, in: ...Date(), displayedComponents: .date)
-                            .tint(Theme.accent)
-                    }
-                }
-
-                Section {
-                    Button {
-                        Task { await saveProfile() }
-                    } label: {
-                        Text(store.isBusy ? "Saving..." : "Save Profile")
-                            .font(.headline)
-                            .foregroundStyle(Theme.background)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                    .disabled(displayName.isEmpty || store.isBusy)
-                    .listRowBackground(Theme.accent)
-                }
-
-                if didSave {
-                    Section {
-                        Label("Profile saved", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(Theme.accent)
-                    }
-                } else if let error = store.errorMessage {
-                    Section {
-                        Label(error, systemImage: "exclamationmark.triangle.fill")
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                    }
-                }
-
-                Section("Preferences") {
-                    Toggle(isOn: $notifications) {
-                        Label("Push notifications", systemImage: "bell")
-                    }
-                    Button {
-                        showBlockedAccounts = true
-                    } label: {
-                        Label("Blocked Accounts", systemImage: "person.crop.circle.badge.xmark")
-                    }
-                }
-
-                Section {
-                    LabeledContent("Version", value: appVersion)
-                }
-
-                Section {
-                    Button(role: .destructive) {
-                        Task { await store.signOut(); dismiss() }
-                    } label: {
-                        Label("Log out", systemImage: "rectangle.portrait.and.arrow.right")
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    Button(role: .destructive) {
-                        showDeleteAccount = true
-                    } label: {
-                        Label("Delete Account", systemImage: "trash")
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
+    private var photoHeader: some View {
+        VStack(spacing: 10) {
+            PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                ZStack(alignment: .bottomTrailing) {
+                    profilePhoto
+                    Image(systemName: "pencil")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Theme.background)
+                        .frame(width: 28, height: 28)
+                        .background(Theme.accent, in: Circle())
+                        .overlay(Circle().strokeBorder(Theme.background, lineWidth: 3))
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(Theme.background)
-            .listRowBackground(Theme.surface)
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
-            .onAppear { loadProfile() }
-            .onChange(of: selectedPhoto) { _, item in
-                didSave = false
-                Task {
-                    selectedPhotoData = try? await item?.loadTransferable(type: Data.self)
-                }
+            .buttonStyle(.plain)
+
+            Text(store.currentProfile.map { "@\($0.username)" } ?? "—")
+                .font(.subheadline)
+                .foregroundStyle(Theme.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 4)
+    }
+
+    private var accountCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            fieldRow(label: "NAME") {
+                TextField("Display name", text: $displayName)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Theme.textPrimary)
             }
-            .sheet(isPresented: $showBlockedAccounts) {
-                BlockedAccountsView()
+            Divider().overlay(Theme.hairline)
+            fieldRow(label: "HOME COURT") {
+                TextField("Add your home court", text: $homeCourt)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Theme.textPrimary)
             }
-            .sheet(isPresented: $showDeleteAccount) {
-                DeleteAccountSheet()
+        }
+        .cardStyle()
+    }
+
+    private var playerDetailsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(title: "Player Details")
+
+            VStack(spacing: 6) {
+                Text("RATING (DUPR)")
+                    .font(.caption.weight(.bold))
+                    .tracking(0.6)
+                    .foregroundStyle(Theme.textTertiary)
+                TextField("0.00", text: $rating)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.center)
+                    .font(Theme.scoreboard(44))
+                    .foregroundStyle(Theme.accent)
             }
+            .frame(maxWidth: .infinity)
+            .cardStyle(padding: 20)
+
+            SideSelector(sides: sides, selection: $preferredSide)
+        }
+    }
+
+    private var birthdayCard: some View {
+        VStack(alignment: .leading, spacing: birthdaySet ? 14 : 0) {
+            Toggle("Add birthday", isOn: $birthdaySet.animation())
+                .tint(Theme.accent)
+                .foregroundStyle(Theme.textPrimary)
+            if birthdaySet {
+                DatePicker("Birthday", selection: $birthdayDate, in: ...Date(), displayedComponents: .date)
+                    .tint(Theme.accent)
+                    .foregroundStyle(Theme.textPrimary)
+            }
+        }
+        .cardStyle()
+    }
+
+    private var saveButton: some View {
+        Button {
+            Task { await saveProfile() }
+        } label: {
+            Text(store.isBusy ? "Saving..." : "Save Profile")
+                .font(.headline)
+                .foregroundStyle(Theme.background)
+                .frame(maxWidth: .infinity, minHeight: 50)
+        }
+        .background(Theme.accent, in: Capsule())
+        .disabled(displayName.isEmpty || store.isBusy)
+        .opacity(displayName.isEmpty || store.isBusy ? 0.5 : 1)
+    }
+
+    @ViewBuilder
+    private func fieldRow<Content: View>(label: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption.weight(.bold))
+                .tracking(0.6)
+                .foregroundStyle(Theme.textTertiary)
+            content()
         }
     }
 
@@ -435,7 +515,6 @@ struct SettingsSheet: View {
     }
 
     private func saveProfile() async {
-        didSave = false
         let photoData = selectedPhotoData
         // The two writes touch different columns, so run them concurrently to
         // overlap their network round trips.
@@ -454,7 +533,102 @@ struct SettingsSheet: View {
         guard await profileSaved, await photoSaved else { return }
         selectedPhotoData = nil
         selectedPhoto = nil
-        didSave = true
+        onSaved()
+        dismiss()
+    }
+}
+
+// MARK: - Settings: Preferences
+
+struct SettingsPreferencesView: View {
+    @AppStorage("notificationsEnabled") private var notifications = true
+    @State private var showBlockedAccounts = false
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 14) {
+                Toggle(isOn: $notifications) {
+                    Label("Push notifications", systemImage: "bell")
+                        .foregroundStyle(Theme.textPrimary)
+                }
+                .tint(Theme.accent)
+
+                Divider().overlay(Theme.hairline)
+
+                Button {
+                    showBlockedAccounts = true
+                } label: {
+                    HStack {
+                        Label("Blocked Accounts", systemImage: "person.crop.circle.badge.xmark")
+                            .foregroundStyle(Theme.textPrimary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.textTertiary)
+                    }
+                }
+            }
+            .cardStyle()
+            .padding(16)
+        }
+        .background(Theme.background.ignoresSafeArea())
+        .navigationTitle("Preferences")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showBlockedAccounts) {
+            BlockedAccountsView()
+        }
+    }
+}
+
+// MARK: - Settings: Account
+
+struct SettingsAccountView: View {
+    @EnvironmentObject private var store: AppStore
+    var onDismissAll: () -> Void
+
+    @State private var showDeleteAccount = false
+
+    private var appVersion: String {
+        let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "\(v) (\(b))"
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                HStack {
+                    Text("Version").foregroundStyle(Theme.textPrimary)
+                    Spacer()
+                    Text(appVersion).foregroundStyle(Theme.textSecondary)
+                }
+                .cardStyle()
+
+                VStack(spacing: 14) {
+                    Button(role: .destructive) {
+                        Task { await store.signOut(); onDismissAll() }
+                    } label: {
+                        Label("Log out", systemImage: "rectangle.portrait.and.arrow.right")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    Divider().overlay(Theme.hairline)
+                    Button(role: .destructive) {
+                        showDeleteAccount = true
+                    } label: {
+                        Label("Delete Account", systemImage: "trash")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .cardStyle()
+            }
+            .padding(16)
+        }
+        .background(Theme.background.ignoresSafeArea())
+        .navigationTitle("Account")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showDeleteAccount) {
+            DeleteAccountSheet()
+        }
     }
 }
 

@@ -211,6 +211,70 @@ struct ProfileAvatar: View {
     }
 }
 
+/// Capsule three-way selector styled after a court split down the middle —
+/// used for "Preferred side" instead of a native segmented Picker.
+struct SideSelector: View {
+    var sides: [String]
+    @Binding var selection: String
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(sides, id: \.self) { side in
+                Button {
+                    withAnimation(.snappy(duration: 0.2)) { selection = side }
+                } label: {
+                    Text(side)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(selection == side ? Theme.background : Theme.textSecondary)
+                        .frame(maxWidth: .infinity, minHeight: 40)
+                        .background(
+                            selection == side ? Theme.accent : Color.clear,
+                            in: Capsule()
+                        )
+                }
+            }
+        }
+        .padding(4)
+        .background(Theme.surface, in: Capsule())
+        .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: 1))
+    }
+}
+
+/// Bottom-anchored confirmation toast. Bind `isPresented` and it auto-dismisses
+/// itself after `duration` seconds — callers don't need their own timer.
+struct Toast: ViewModifier {
+    @Binding var isPresented: Bool
+    var message: String
+    var systemImage: String = "checkmark.circle.fill"
+    var duration: TimeInterval = 2.0
+
+    func body(content: Content) -> some View {
+        content.overlay(alignment: .bottom) {
+            if isPresented {
+                Label(message, systemImage: systemImage)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.background)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 12)
+                    .background(Theme.accent, in: Capsule())
+                    .padding(.bottom, 24)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .task(id: isPresented) {
+                        try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
+                        withAnimation { isPresented = false }
+                    }
+            }
+        }
+        .animation(.snappy, value: isPresented)
+    }
+}
+
+extension View {
+    func toast(isPresented: Binding<Bool>, message: String, systemImage: String = "checkmark.circle.fill") -> some View {
+        modifier(Toast(isPresented: isPresented, message: message, systemImage: systemImage))
+    }
+}
+
 struct SectionHeader: View {
     var title: String
     var actionTitle: String?
