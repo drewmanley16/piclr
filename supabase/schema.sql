@@ -56,13 +56,13 @@ create table if not exists public.sessions (
   posted           boolean not null default true,
   started_at       timestamptz,
   ended_at         timestamptz,
-  reposted_from    uuid references public.sessions(id) on delete set null,
+  reposted_from    uuid references public.sessions(id) on delete cascade,
   created_at       timestamptz not null default now()
 );
 -- Keep existing projects in sync when this schema is re-run.
 alter table public.sessions add column if not exists started_at timestamptz;
 alter table public.sessions add column if not exists ended_at   timestamptz;
-alter table public.sessions add column if not exists reposted_from uuid references public.sessions(id) on delete set null;
+alter table public.sessions add column if not exists reposted_from uuid references public.sessions(id) on delete cascade;
 create index if not exists sessions_user_created_idx on public.sessions (user_id, created_at desc);
 create unique index if not exists sessions_repost_target_idx
   on public.sessions (user_id, reposted_from)

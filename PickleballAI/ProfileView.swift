@@ -442,7 +442,11 @@ struct DashboardTile: View {
 }
 
 struct PostingRow: View {
+    @EnvironmentObject private var store: AppStore
     var session: FeedSession
+    @State private var showEditor = false
+    @State private var confirmDelete = false
+    @State private var reportTarget: ReportTarget?
 
     var body: some View {
         HStack(spacing: 14) {
@@ -467,9 +471,49 @@ struct PostingRow: View {
             Text(session.date.relativeLabel)
                 .font(.caption)
                 .foregroundStyle(Theme.textTertiary)
+
+            Menu {
+                if isOwner {
+                    Button {
+                        showEditor = true
+                    } label: {
+                        Label("Edit Session", systemImage: "pencil")
+                    }
+                    Button(role: .destructive) {
+                        confirmDelete = true
+                    } label: {
+                        Label("Delete Session", systemImage: "trash")
+                    }
+                } else {
+                    Button {
+                        reportTarget = .session(session.id)
+                    } label: {
+                        Label("Report Session", systemImage: "exclamationmark.bubble")
+                    }
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(width: 32, height: 32)
+            }
+            .accessibilityLabel("Session actions")
         }
         .cardStyle()
+        .fullScreenCover(isPresented: $showEditor) {
+            ActiveSessionView(existingSession: session)
+        }
+        .sheet(item: $reportTarget) { target in
+            ReportSheet(target: target)
+        }
+        .confirmationDialog("Delete this session?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete Session", role: .destructive) {
+                Task { _ = await store.deleteSession(session) }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
     }
+
+    private var isOwner: Bool { store.currentProfile?.id == session.userId }
 }
 
 struct FollowRequestRow: View {

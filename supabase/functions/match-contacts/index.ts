@@ -1,5 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+type PhoneLookupRow = {
+  phone_e164: string;
+  profile_id: string;
+};
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -51,7 +56,23 @@ Deno.serve(async (req) => {
     return json({ error: lookupError.message }, 400);
   }
 
-  const rows = (lookupRows ?? []).filter((row) => row.profile_id !== userData.user.id);
+  const { data: blockRows, error: blocksError } = await admin
+    .from("blocks")
+    .select("blocker_id, blocked_id")
+    .or(`blocker_id.eq.${userData.user.id},blocked_id.eq.${userData.user.id}`);
+
+  if (blocksError) {
+    return json({ error: blocksError.message }, 400);
+  }
+
+  const blockedIds = new Set(
+    (blockRows ?? []).map((row) =>
+      row.blocker_id === userData.user.id ? row.blocked_id : row.blocker_id
+    ),
+  );
+  const rows = ((lookupRows ?? []) as PhoneLookupRow[]).filter(
+    (row) => row.profile_id !== userData.user.id && !blockedIds.has(row.profile_id),
+  );
   const profileIds = [...new Set(rows.map((row) => row.profile_id))];
   if (profileIds.length === 0) {
     return json({ matches: [] });
@@ -59,7 +80,7 @@ Deno.serve(async (req) => {
 
   const { data: profiles, error: profilesError } = await admin
     .from("profiles")
-    .select("id, username, display_name, avatar_initials, home_court, rating, skill_level, onboarding_completed_at, paddle, preferred_side")
+    .select("id, username, display_name, avatar_initials, avatar_path, home_court, rating, skill_level, onboarding_completed_at, paddle, preferred_side")
     .in("id", profileIds)
     .not("onboarding_completed_at", "is", null);
 

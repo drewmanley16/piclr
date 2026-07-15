@@ -8,6 +8,7 @@ struct Profile: Identifiable, Decodable, Hashable {
     var displayName: String
     var avatarInitials: String?
     var avatarURL: String?
+    var avatarPath: String?
     var homeCourt: String?
     var rating: Double?
     var skillLevel: String?
@@ -24,6 +25,7 @@ struct Profile: Identifiable, Decodable, Hashable {
         case displayName = "display_name"
         case avatarInitials = "avatar_initials"
         case avatarURL = "avatar_url"
+        case avatarPath = "avatar_path"
         case homeCourt = "home_court"
         case rating
         case skillLevel = "skill_level"
@@ -44,6 +46,32 @@ struct Profile: Identifiable, Decodable, Hashable {
 
     var hasCompletedOnboarding: Bool {
         onboardingCompletedAt != nil
+    }
+
+    init(
+        id: UUID,
+        username: String,
+        displayName: String,
+        avatarInitials: String? = nil,
+        avatarURL: String? = nil,
+        avatarPath: String? = nil
+    ) {
+        self.id = id
+        self.username = username
+        self.displayName = displayName
+        self.avatarInitials = avatarInitials
+        self.avatarURL = avatarURL
+        self.avatarPath = avatarPath
+        homeCourt = nil
+        rating = nil
+        skillLevel = nil
+        onboardingCompletedAt = nil
+        paddle = nil
+        preferredSide = nil
+        heightInches = nil
+        weightPounds = nil
+        shoeSize = nil
+        birthday = nil
     }
 }
 
@@ -66,14 +94,18 @@ struct FeedSession: Identifiable, Decodable, Hashable {
     let durationMinutes: Int
     let focus: String?
     let takeaway: String?
+    let posted: Bool
     let createdAt: String
-    let author: Profile
+    let startedAt: String?
+    let endedAt: String?
+    var author: Profile
     let repostedFrom: UUID?
-    let photoUrl: String?
+    var photoUrl: String?
+    let photoPath: String?
     private let likes: [CountRow]?
     private let comments: [CountRow]?
-    private let previewComments: [Comment]?
-    private let activities: [SessionActivity]?
+    var previewComments: [Comment]?
+    var activities: [SessionActivity]?
 
     var isRepost: Bool { repostedFrom != nil }
 
@@ -105,6 +137,8 @@ struct FeedSession: Identifiable, Decodable, Hashable {
     }
 
     var date: Date { Self.parse(createdAt) }
+    var startedDate: Date { startedAt.map(Self.parse) ?? date }
+    var endedDate: Date { endedAt.map(Self.parse) ?? startedDate.addingTimeInterval(TimeInterval(durationMinutes * 60)) }
     var displayTitle: String {
         if let title, !title.isEmpty { return title }
         if let focus, !focus.isEmpty { return "\(focus) session" }
@@ -132,10 +166,13 @@ struct FeedSession: Identifiable, Decodable, Hashable {
         case userId = "user_id"
         case title, location
         case durationMinutes = "duration_minutes"
-        case focus, takeaway
+        case focus, takeaway, posted
         case createdAt = "created_at"
+        case startedAt = "started_at"
+        case endedAt = "ended_at"
         case repostedFrom = "reposted_from"
         case photoUrl = "photo_url"
+        case photoPath = "photo_path"
         case author, likes, comments, activities
         case previewComments = "preview_comments"
     }
@@ -167,7 +204,7 @@ struct SessionActivity: Identifiable, Decodable, Hashable {
     let teamScore: Int?
     let opponentScore: Int?
     let won: Bool?
-    let participants: [ActivityParticipant]?
+    var participants: [ActivityParticipant]?
 
     enum CodingKeys: String, CodingKey {
         case id, kind, position, focus, reps, notes
@@ -194,7 +231,7 @@ struct ActivityParticipant: Identifiable, Decodable, Hashable {
     let id: UUID
     let role: String
     let guestName: String?
-    let profile: ParticipantProfile?
+    var profile: ParticipantProfile?
 
     enum CodingKeys: String, CodingKey {
         case id, role
@@ -212,13 +249,15 @@ struct ParticipantProfile: Decodable, Hashable {
     let username: String
     let displayName: String
     let avatarInitials: String?
-    let avatarURL: String?
+    var avatarURL: String?
+    let avatarPath: String?
 
     enum CodingKeys: String, CodingKey {
         case id, username
         case displayName = "display_name"
         case avatarInitials = "avatar_initials"
         case avatarURL = "avatar_url"
+        case avatarPath = "avatar_path"
     }
 
     var initials: String {
@@ -253,6 +292,7 @@ struct NewSessionActivity: Encodable {
 }
 
 struct NewActivityParticipant: Encodable {
+    var id: UUID = UUID()
     let activityId: UUID
     let sessionId: UUID
     let profileId: UUID?
@@ -260,6 +300,7 @@ struct NewActivityParticipant: Encodable {
     let role: String
 
     enum CodingKeys: String, CodingKey {
+        case id
         case activityId = "activity_id"
         case sessionId = "session_id"
         case profileId = "profile_id"
@@ -276,6 +317,27 @@ struct DraftPlayer: Identifiable, Hashable {
     var id = UUID()
     var profile: Profile?
     var guestName: String?
+
+    init(id: UUID = UUID(), profile: Profile? = nil, guestName: String? = nil) {
+        self.id = id
+        self.profile = profile
+        self.guestName = guestName
+    }
+
+    init(participant: ActivityParticipant) {
+        id = participant.id
+        guestName = participant.guestName
+        if let member = participant.profile {
+            profile = Profile(
+                id: member.id,
+                username: member.username,
+                displayName: member.displayName,
+                avatarInitials: member.avatarInitials,
+                avatarURL: member.avatarURL,
+                avatarPath: member.avatarPath
+            )
+        }
+    }
 
     var displayName: String { profile?.displayName ?? guestName ?? "Player" }
     var handle: String? { profile.map { "@\($0.username)" } }
@@ -306,15 +368,111 @@ struct DraftActivity: Identifiable, Hashable {
         case .match: return "Match \(teamScore)–\(opponentScore)"
         }
     }
+
+    init(kind: ActivityKind) {
+        self.kind = kind
+    }
+
+    init(activity: SessionActivity) {
+        id = activity.id
+        kind = activity.isMatch ? .match : .practice
+        focus = activity.focus ?? ""
+        reps = activity.reps ?? ""
+        notes = activity.notes ?? ""
+        partners = activity.partners.map(DraftPlayer.init(participant:))
+        opponents = activity.opponents.map(DraftPlayer.init(participant:))
+        teamScore = activity.teamScore ?? 11
+        opponentScore = activity.opponentScore ?? 9
+    }
 }
 
 struct SessionDraft {
     var title: String = ""
     var location: String = ""
+    var takeaway: String = ""
     var startedAt: Date = Date()
+    var endedAt: Date?
     var activities: [DraftActivity] = []
     var postToFeed: Bool = true
     var photoData: Data? = nil
+    var existingPhotoPath: String?
+    var removePhoto = false
+
+    init() {}
+
+    init(session: FeedSession) {
+        title = session.title ?? ""
+        location = session.location ?? ""
+        takeaway = session.takeaway ?? ""
+        startedAt = session.startedDate
+        endedAt = session.endedDate
+        activities = session.sortedActivities.map(DraftActivity.init(activity:))
+        postToFeed = session.posted
+        existingPhotoPath = session.photoPath
+    }
+}
+
+struct SessionUpdateParticipant: Encodable {
+    let id: UUID
+    let profileId: UUID?
+    let guestName: String?
+    let role: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case profileId = "profile_id"
+        case guestName = "guest_name"
+        case role
+    }
+}
+
+struct SessionUpdateActivity: Encodable {
+    let id: UUID
+    let kind: String
+    let position: Int
+    let focus: String?
+    let reps: String?
+    let notes: String?
+    let teamScore: Int?
+    let opponentScore: Int?
+    let won: Bool?
+    let participants: [SessionUpdateParticipant]
+
+    enum CodingKeys: String, CodingKey {
+        case id, kind, position, focus, reps, notes, won, participants
+        case teamScore = "team_score"
+        case opponentScore = "opponent_score"
+    }
+}
+
+struct SessionUpdatePayload: Encodable {
+    let title: String
+    let location: String
+    let takeaway: String
+    let durationMinutes: Int
+    let posted: Bool
+    let startedAt: String
+    let endedAt: String
+    let photoPath: String
+    let activities: [SessionUpdateActivity]
+
+    enum CodingKeys: String, CodingKey {
+        case title, location, takeaway, posted, activities
+        case durationMinutes = "duration_minutes"
+        case startedAt = "started_at"
+        case endedAt = "ended_at"
+        case photoPath = "photo_path"
+    }
+}
+
+struct UpdateSessionRPCParams: Encodable {
+    let targetSessionId: UUID
+    let payload: SessionUpdatePayload
+
+    enum CodingKeys: String, CodingKey {
+        case targetSessionId = "target_session_id"
+        case payload
+    }
 }
 
 // MARK: - Reposts
@@ -324,7 +482,7 @@ struct RepostRequest: Identifiable, Decodable, Hashable {
     let sessionId: UUID
     let requesterId: UUID
     let status: String
-    let requester: ParticipantProfile?
+    var requester: ParticipantProfile?
     let session: RepostSessionInfo?
 
     enum CodingKeys: String, CodingKey {
@@ -364,7 +522,7 @@ struct AppNotification: Identifiable, Decodable, Hashable {
     let type: String
     let read: Bool
     let createdAt: String
-    let actor: ParticipantProfile?
+    var actor: ParticipantProfile?
     let session: NotifSessionRef?
     let comment: NotifCommentRef?
 
@@ -424,7 +582,7 @@ struct Comment: Identifiable, Decodable, Hashable {
     let userId: UUID
     let body: String
     let createdAt: String
-    let author: ParticipantProfile?
+    var author: ParticipantProfile?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -515,7 +673,7 @@ struct ContactMatch: Identifiable, Decodable, Hashable {
 
 /// The signed-in user's outgoing relationship to another profile, used to
 /// gate the public profile view (Instagram-style private accounts).
-enum FollowRelationship {
+enum FollowRelationship: Equatable {
     case isSelf       // it's your own profile
     case none         // no outgoing edge → "Follow"
     case requested    // pending outgoing request → "Requested"
@@ -561,6 +719,76 @@ struct FollowListEntry: Identifiable, Hashable {
     let isFollowedByMe: Bool
 
     var id: UUID { userId }
+}
+
+struct BlockedAccount: Identifiable, Decodable, Hashable {
+    let blockedId: UUID
+    let blockedUsername: String
+    let blockedDisplayName: String
+    let blockedAvatarPath: String?
+    let createdAt: String
+
+    var id: UUID { blockedId }
+    var initials: String {
+        let letters = blockedDisplayName.split(separator: " ").prefix(2).compactMap(\.first)
+        return letters.isEmpty ? "PB" : String(letters).uppercased()
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case blockedId = "blocked_id"
+        case blockedUsername = "blocked_username"
+        case blockedDisplayName = "blocked_display_name"
+        case blockedAvatarPath = "blocked_avatar_path"
+        case createdAt = "created_at"
+    }
+}
+
+enum ReportTarget: Identifiable, Hashable {
+    case user(UUID)
+    case session(UUID)
+    case comment(UUID)
+
+    var id: String { "\(type):\(targetId.uuidString)" }
+    var targetId: UUID {
+        switch self {
+        case .user(let id), .session(let id), .comment(let id): return id
+        }
+    }
+    var type: String {
+        switch self {
+        case .user: return "user"
+        case .session: return "session"
+        case .comment: return "comment"
+        }
+    }
+    var title: String {
+        switch self {
+        case .user: return "Report player"
+        case .session: return "Report session"
+        case .comment: return "Report comment"
+        }
+    }
+}
+
+enum ReportReason: String, CaseIterable, Identifiable {
+    case harassment
+    case spam
+    case impersonation
+    case inappropriate
+    case cheating
+    case other
+
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .harassment: return "Harassment or bullying"
+        case .spam: return "Spam"
+        case .impersonation: return "Impersonation"
+        case .inappropriate: return "Inappropriate content"
+        case .cheating: return "Cheating or fraud"
+        case .other: return "Other"
+        }
+    }
 }
 
 // MARK: - Write models
@@ -663,6 +891,35 @@ struct NewFollow: Encodable {
         case followeeId = "followee_id"
         case status
     }
+}
+
+struct NewBlock: Encodable {
+    let blockerId: UUID
+    let blockedId: UUID
+
+    enum CodingKeys: String, CodingKey {
+        case blockerId = "blocker_id"
+        case blockedId = "blocked_id"
+    }
+}
+
+struct NewReport: Encodable {
+    let reporterId: UUID
+    let targetType: String
+    let targetId: UUID
+    let reason: String
+    let details: String?
+
+    enum CodingKeys: String, CodingKey {
+        case reporterId = "reporter_id"
+        case targetType = "target_type"
+        case targetId = "target_id"
+        case reason, details
+    }
+}
+
+struct DeleteAccountResponse: Decodable {
+    let deleted: Bool
 }
 
 struct CompleteOnboardingRequest: Encodable {

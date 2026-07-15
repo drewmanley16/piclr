@@ -5,6 +5,7 @@ import SwiftUI
 /// shown only when the signed-in user follows them (accepted); otherwise an
 /// Instagram-style "This profile is private" state with a follow control.
 struct OtherProfileView: View {
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: AppStore
 
     let userId: UUID
@@ -15,6 +16,9 @@ struct OtherProfileView: View {
     @State private var loaded: PublicProfile?
     @State private var isLoading = true
     @State private var confirmUnfollow = false
+    @State private var confirmCancelRequest = false
+    @State private var confirmBlock = false
+    @State private var reportTarget: ReportTarget?
 
     private var profile: Profile? { loaded?.profile ?? placeholder }
     private var relationship: FollowRelationship { loaded?.relationship ?? .none }
@@ -41,7 +45,41 @@ struct OtherProfileView: View {
         .background(Theme.background.ignoresSafeArea())
         .navigationTitle(profile.map { "@\($0.username)" } ?? "Profile")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if relationship != .isSelf {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button {
+                            reportTarget = .user(userId)
+                        } label: {
+                            Label("Report Player", systemImage: "exclamationmark.bubble")
+                        }
+                        Button(role: .destructive) {
+                            confirmBlock = true
+                        } label: {
+                            Label("Block Player", systemImage: "person.crop.circle.badge.xmark")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                    .accessibilityLabel("Player actions")
+                }
+            }
+        }
         .task { await load() }
+        .sheet(item: $reportTarget) { target in
+            ReportSheet(target: target)
+        }
+        .confirmationDialog("Block this player?", isPresented: $confirmBlock, titleVisibility: .visible) {
+            Button("Block", role: .destructive) {
+                Task {
+                    if await store.blockUser(userId: userId) { dismiss() }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You will no longer be able to find, view, or interact with each other.")
+        }
     }
 
     // MARK: Header
@@ -117,7 +155,25 @@ struct OtherProfileView: View {
                 Button("Cancel", role: .cancel) {}
             }
         case .requested:
-            capsuleLabel("Requested", filled: false, muted: true)
+            Button {
+                confirmCancelRequest = true
+            } label: {
+                capsuleLabel("Requested", filled: false, muted: true)
+            }
+            .buttonStyle(.plain)
+            .confirmationDialog(
+                "Cancel this follow request?",
+                isPresented: $confirmCancelRequest,
+                titleVisibility: .visible
+            ) {
+                Button("Cancel Request", role: .destructive) {
+                    Task {
+                        await store.cancelFollowRequest(userId: userId)
+                        await load()
+                    }
+                }
+                Button("Keep Request", role: .cancel) {}
+            }
         case .none:
             Button {
                 guard let profile else { return }

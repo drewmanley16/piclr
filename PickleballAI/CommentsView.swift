@@ -33,7 +33,12 @@ struct CommentsView: View {
                                     .padding(.top, 40)
                             } else {
                                 ForEach(comments) { comment in
-                                    CommentRow(comment: comment).id(comment.id)
+                                    CommentRow(
+                                        comment: comment,
+                                        sessionOwnerId: session.userId,
+                                        onDeleted: { Task { await load() } }
+                                    )
+                                    .id(comment.id)
                                 }
                             }
                         }
@@ -127,7 +132,13 @@ struct CommentsView: View {
 }
 
 struct CommentRow: View {
+    @EnvironmentObject private var store: AppStore
     let comment: Comment
+    let sessionOwnerId: UUID
+    var onDeleted: () -> Void
+
+    @State private var confirmDelete = false
+    @State private var reportTarget: ReportTarget?
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -146,6 +157,30 @@ struct CommentRow: View {
                     Text(comment.date.relativeLabel)
                         .font(.caption)
                         .foregroundStyle(Theme.textTertiary)
+                    Spacer(minLength: 4)
+                    if canDelete || canReport {
+                        Menu {
+                            if canDelete {
+                                Button(role: .destructive) {
+                                    confirmDelete = true
+                                } label: {
+                                    Label("Delete Comment", systemImage: "trash")
+                                }
+                            }
+                            if canReport {
+                                Button {
+                                    reportTarget = .comment(comment.id)
+                                } label: {
+                                    Label("Report Comment", systemImage: "exclamationmark.bubble")
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .foregroundStyle(Theme.textSecondary)
+                                .frame(width: 30, height: 30)
+                        }
+                        .accessibilityLabel("Comment actions")
+                    }
                 }
                 Text(comment.body)
                     .font(.subheadline)
@@ -153,5 +188,26 @@ struct CommentRow: View {
             }
             Spacer(minLength: 0)
         }
+        .confirmationDialog("Delete this comment?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                Task {
+                    if await store.deleteComment(comment) { onDeleted() }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .sheet(item: $reportTarget) { target in
+            ReportSheet(target: target)
+        }
+    }
+
+    private var canDelete: Bool {
+        guard let uid = store.currentProfile?.id else { return false }
+        return comment.userId == uid || sessionOwnerId == uid
+    }
+
+    private var canReport: Bool {
+        guard let uid = store.currentProfile?.id else { return false }
+        return comment.userId != uid
     }
 }

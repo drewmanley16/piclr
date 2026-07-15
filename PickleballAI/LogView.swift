@@ -82,7 +82,10 @@ struct WorkoutView: View {
 }
 
 struct SessionSummaryRow: View {
+    @EnvironmentObject private var store: AppStore
     var session: FeedSession
+    @State private var showEditor = false
+    @State private var confirmDelete = false
 
     var body: some View {
         HStack(spacing: 14) {
@@ -107,8 +110,37 @@ struct SessionSummaryRow: View {
             Text(session.date.relativeLabel)
                 .font(.caption)
                 .foregroundStyle(Theme.textTertiary)
+
+            Menu {
+                Button {
+                    showEditor = true
+                } label: {
+                    Label("Edit Session", systemImage: "pencil")
+                }
+                Button(role: .destructive) {
+                    confirmDelete = true
+                } label: {
+                    Label("Delete Session", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(width: 32, height: 32)
+            }
+            .accessibilityLabel("Session actions")
         }
         .cardStyle()
+        .fullScreenCover(isPresented: $showEditor) {
+            ActiveSessionView(existingSession: session)
+        }
+        .confirmationDialog("Delete this session?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete Session", role: .destructive) {
+                Task { _ = await store.deleteSession(session) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Matches, practices, comments, and likes on this post will be removed.")
+        }
     }
 
     private var subtitle: String {
@@ -126,10 +158,19 @@ struct ActiveSessionView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: AppStore
 
-    @State private var draft = SessionDraft()
+    let existingSession: FeedSession?
+
+    @State private var draft: SessionDraft
     @State private var editor: ActivityEditorRoute?
     @State private var showDiscardConfirm = false
     @State private var selectedPhoto: PhotosPickerItem?
+
+    init(existingSession: FeedSession? = nil) {
+        self.existingSession = existingSession
+        _draft = State(initialValue: existingSession.map(SessionDraft.init(session:)) ?? SessionDraft())
+    }
+
+    private var isEditing: Bool { existingSession != nil }
 
     var body: some View {
         NavigationStack {
@@ -142,17 +183,17 @@ struct ActiveSessionView: View {
                 .padding(16)
             }
             .background(Theme.background.ignoresSafeArea())
-            .navigationTitle("New Session")
+            .navigationTitle(isEditing ? "Edit Session" : "New Session")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Discard", role: .destructive) {
-                        if draft.activities.isEmpty { dismiss() } else { showDiscardConfirm = true }
+                    Button(isEditing ? "Cancel" : "Discard", role: isEditing ? nil : .destructive) {
+                        if !isEditing && draft.activities.isEmpty { dismiss() } else { showDiscardConfirm = true }
                     }
-                    .tint(.red)
+                    .tint(isEditing ? Theme.accent : .red)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Post") { Task { await post() } }
+                    Button(isEditing ? "Save" : "Post") { Task { await save() } }
                         .disabled(draft.activities.isEmpty || store.isBusy)
                 }
             }
@@ -166,14 +207,18 @@ struct ActiveSessionView: View {
                     ActivityEditorView(activity: activity) { update($0) }
                 }
             }
-            .confirmationDialog("Discard this session?", isPresented: $showDiscardConfirm, titleVisibility: .visible) {
-                Button("Discard session", role: .destructive) { dismiss() }
-                Button("Keep editing", role: .cancel) {}
+            .confirmationDialog(
+                isEditing ? "Discard your changes?" : "Discard this session?",
+                isPresented: $showDiscardConfirm,
+                titleVisibility: .visible
+            ) {
+                Button(isEditing ? "Discard Changes" : "Discard Session", role: .destructive) { dismiss() }
+                Button("Keep Editing", role: .cancel) {}
             }
         }
-        .interactiveDismissDisabled(!draft.activities.isEmpty)
+        .interactiveDismissDisabled(isEditing || !draft.activities.isEmpty)
         .onAppear { store.errorMessage = nil }
-        .alert("Couldn't post session", isPresented: postErrorBinding) {
+        .alert(isEditing ? "Couldn't save session" : "Couldn't post session", isPresented: postErrorBinding) {
             Button("OK", role: .cancel) { store.errorMessage = nil }
         } message: {
             Text(store.errorMessage ?? "Please try again.")
@@ -198,18 +243,39 @@ struct ActiveSessionView: View {
             TextField("Location", text: $draft.location)
                 .frame(minHeight: 44)
             Divider().overlay(Theme.hairline)
-            HStack {
-                Label("In progress", systemImage: "clock")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textSecondary)
-                Spacer()
-                TimelineView(.periodic(from: draft.startedAt, by: 1)) { _ in
-                    Text(elapsed)
-                        .font(.subheadline.weight(.semibold).monospacedDigit())
-                        .foregroundStyle(Theme.accent)
+            if isEditing {
+                DatePicker("Started", selection: $draft.startedAt)
+                    .datePickerStyle(.compact)
+                    .frame(minHeight: 44)
+                Divider().overlay(Theme.hairline)
+                DatePicker(
+                    "Ended",
+                    selection: Binding(
+                        get: { draft.endedAt ?? draft.startedAt.addingTimeInterval(60) },
+                        set: { draft.endedAt = max($0, draft.startedAt.addingTimeInterval(60)) }
+                    ),
+                    in: draft.startedAt.addingTimeInterval(60)...
+                )
+                .datePickerStyle(.compact)
+                .frame(minHeight: 44)
+            } else {
+                HStack {
+                    Label("In progress", systemImage: "clock")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                    Spacer()
+                    TimelineView(.periodic(from: draft.startedAt, by: 1)) { _ in
+                        Text(elapsed)
+                            .font(.subheadline.weight(.semibold).monospacedDigit())
+                            .foregroundStyle(Theme.accent)
+                    }
                 }
+                .frame(minHeight: 44)
             }
-            .frame(minHeight: 44)
+            Divider().overlay(Theme.hairline)
+            TextField("Takeaway (optional)", text: $draft.takeaway, axis: .vertical)
+                .lineLimit(1...3)
+                .frame(minHeight: 44)
             Divider().overlay(Theme.hairline)
             photoRow
         }
@@ -218,6 +284,7 @@ struct ActiveSessionView: View {
         .onChange(of: selectedPhoto) { _, item in
             Task {
                 draft.photoData = try? await item?.loadTransferable(type: Data.self)
+                if draft.photoData != nil { draft.removePhoto = false }
             }
         }
     }
@@ -238,6 +305,22 @@ struct ActiveSessionView: View {
                 .buttonStyle(.plain)
             }
             .padding(.vertical, 8)
+        } else if draft.existingPhotoPath != nil && !draft.removePhoto {
+            HStack(spacing: 12) {
+                Label("Current photo", systemImage: "photo")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textPrimary)
+                Spacer()
+                Button {
+                    draft.removePhoto = true
+                } label: {
+                    Image(systemName: "trash")
+                        .foregroundStyle(.red)
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Remove photo")
+            }
         } else {
             PhotosPicker(selection: $selectedPhoto, matching: .images) {
                 Label("Add a photo", systemImage: "photo.badge.plus")
@@ -293,8 +376,12 @@ struct ActiveSessionView: View {
     }
     private func remove(_ activity: DraftActivity) { draft.activities.removeAll { $0.id == activity.id } }
 
-    private func post() async {
-        if await store.postSession(draft) { dismiss() }
+    private func save() async {
+        if let existingSession {
+            if await store.updateSession(existingSession, draft: draft) { dismiss() }
+        } else if await store.postSession(draft) {
+            dismiss()
+        }
     }
 }
 
