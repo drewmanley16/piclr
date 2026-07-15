@@ -305,6 +305,7 @@ struct FeedCard: View {
     @State private var confirmBlock = false
     @State private var confirmRemoveTag = false
     @State private var reportTarget: ReportTarget?
+    @State private var shareItem: ShareImage?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -442,12 +443,19 @@ struct FeedCard: View {
                 }
                 .buttonStyle(.plain)
 
-                ShareLink(item: session.shareSummary) {
+                Button {
+                    if let image = renderShareImage(for: session) {
+                        Haptics.tap()
+                        shareItem = ShareImage(image: image, caption: session.shareSummary)
+                    }
+                } label: {
                     Image(systemName: "square.and.arrow.up")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Theme.textSecondary)
                         .frame(minHeight: 44)
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Share session")
 
                 Spacer()
 
@@ -497,6 +505,9 @@ struct FeedCard: View {
         }
         .sheet(item: $reportTarget) { target in
             ReportSheet(target: target)
+        }
+        .sheet(item: $shareItem) { item in
+            ActivityShareSheet(payload: item)
         }
         .fullScreenCover(isPresented: $showEditor) {
             ActiveSessionView(existingSession: session)

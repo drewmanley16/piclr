@@ -71,16 +71,10 @@ struct ActivityEditorView: View {
 
     private var matchFields: some View {
         Group {
-            Section("Score") {
-                Stepper("You: \(activity.teamScore)", value: $activity.teamScore, in: 0...30)
-                Stepper("Them: \(activity.opponentScore)", value: $activity.opponentScore, in: 0...30)
-                HStack {
-                    Text("Result")
-                    Spacer()
-                    Text(activity.won ? "Win" : "Loss")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(activity.won ? Theme.accent : Theme.textSecondary)
-                }
+            Section {
+                ScorePad(teamScore: $activity.teamScore, opponentScore: $activity.opponentScore)
+                    .listRowInsets(EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12))
+                    .listRowBackground(Theme.surface)
             }
             Section("Partners") {
                 PlayerChips(players: $activity.partners)
@@ -99,6 +93,83 @@ struct ActivityEditorView: View {
 
     private var excludedMemberIds: Set<UUID> {
         Set((activity.partners + activity.opponents).compactMap { $0.profile?.id })
+    }
+}
+
+/// Courtside scoreboard for entering a match result: two big tap-to-score
+/// columns, the winner lit in accent. Replaces the old Steppers — this is the
+/// moment of primary value, so it should feel like a scoreboard, not a form.
+struct ScorePad: View {
+    @Binding var teamScore: Int
+    @Binding var opponentScore: Int
+
+    private var youWon: Bool { teamScore > opponentScore }
+    private var tied: Bool { teamScore == opponentScore }
+
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack(spacing: 12) {
+                column(label: "YOU", score: $teamScore, winning: youWon && !tied)
+                Text("–")
+                    .font(.title.weight(.light))
+                    .foregroundStyle(Theme.textTertiary)
+                column(label: "THEM", score: $opponentScore, winning: !youWon && !tied)
+            }
+
+            Text(tied ? "Tied" : (youWon ? "Win" : "Loss"))
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(tied ? Theme.textSecondary : (youWon ? Theme.win : Theme.loss))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background((tied ? Theme.surfaceElevated : (youWon ? Theme.win : Theme.loss).opacity(0.14)), in: Capsule())
+                .animation(.snappy, value: youWon)
+                .animation(.snappy, value: tied)
+        }
+    }
+
+    private func column(label: String, score: Binding<Int>, winning: Bool) -> some View {
+        VStack(spacing: 10) {
+            Text(label)
+                .font(.caption2.weight(.bold))
+                .tracking(1)
+                .foregroundStyle(winning ? Theme.accent : Theme.textTertiary)
+
+            Text("\(score.wrappedValue)")
+                .font(Theme.scoreboard(56))
+                .foregroundStyle(winning ? Theme.accent : Theme.textPrimary)
+                .frame(maxWidth: .infinity)
+                .contentTransition(.numericText(value: Double(score.wrappedValue)))
+                .animation(.snappy, value: score.wrappedValue)
+
+            HStack(spacing: 10) {
+                stepButton("minus", enabled: score.wrappedValue > 0) {
+                    if score.wrappedValue > 0 { Haptics.tap(); score.wrappedValue -= 1 }
+                }
+                stepButton("plus", enabled: score.wrappedValue < 30) {
+                    if score.wrappedValue < 30 { Haptics.tap(); score.wrappedValue += 1 }
+                }
+            }
+        }
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity)
+        .background(
+            winning ? Theme.accentSoft : Theme.surfaceElevated,
+            in: RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous)
+        )
+    }
+
+    private func stepButton(_ symbol: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.body.weight(.bold))
+                .foregroundStyle(enabled ? Theme.textPrimary : Theme.textTertiary)
+                .frame(width: 40, height: 40)
+                .background(Theme.surface, in: Circle())
+                .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .accessibilityLabel(symbol == "plus" ? "Add point" : "Remove point")
     }
 }
 
