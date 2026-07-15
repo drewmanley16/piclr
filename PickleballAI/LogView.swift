@@ -20,8 +20,8 @@ struct WorkoutView: View {
                     liveBanner
                 } else {
                     weekStrip
-                    quickLog
                     startLiveButton
+                    quickLog
                 }
                 recentSection
             }
@@ -150,24 +150,35 @@ struct WorkoutView: View {
 
     private var startLiveButton: some View {
         Button { startLive() } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "play.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(Theme.accent)
-                VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 16) {
+                Image(systemName: "play.fill")
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(Theme.background)
+                    .frame(width: 56, height: 56)
+                    .background(Theme.accent, in: Circle())
+
+                VStack(alignment: .leading, spacing: 4) {
                     Text("Start a live session")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.title3.weight(.bold))
                         .foregroundStyle(Theme.textPrimary)
                     Text("Log matches and practice as you play")
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundStyle(Theme.textSecondary)
                 }
+
                 Spacer()
+
                 Image(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
+                    .font(.body.weight(.bold))
                     .foregroundStyle(Theme.textTertiary)
             }
-            .cardStyle()
+            .padding(20)
+            .frame(maxWidth: .infinity)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .strokeBorder(Theme.accent.opacity(0.35), lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
     }
