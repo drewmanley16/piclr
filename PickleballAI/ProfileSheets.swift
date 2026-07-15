@@ -874,12 +874,7 @@ struct DeleteAccountSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: AppStore
 
-    @State private var phone = ""
-    @State private var code = ""
-    @State private var codeSent = false
     @State private var confirmDelete = false
-
-    private var codeDigits: String { String(code.filter(\.isNumber).prefix(6)) }
 
     var body: some View {
         NavigationStack {
@@ -889,35 +884,13 @@ struct DeleteAccountSheet: View {
                         .foregroundStyle(.red)
                 }
 
-                Section("Verify your account") {
-                    if !phone.isEmpty {
-                        LabeledContent("Phone", value: maskedPhone)
-                    }
-                    if codeSent {
-                        TextField("6-digit code", text: $code)
-                            .keyboardType(.numberPad)
-                            .textContentType(.oneTimeCode)
-                    } else {
-                        Button {
-                            Task {
-                                if await store.sendPhoneOTP(phone: phone) {
-                                    codeSent = true
-                                }
-                            }
-                        } label: {
-                            Label("Send Verification Code", systemImage: "message.fill")
-                        }
-                        .disabled(phone.isEmpty || store.isBusy)
-                    }
-                }
-
                 Section {
                     Button(role: .destructive) {
                         confirmDelete = true
                     } label: {
                         Label("Permanently Delete Account", systemImage: "trash.fill")
                     }
-                    .disabled(codeDigits.count != 6 || store.isBusy)
+                    .disabled(store.isBusy)
                 }
 
                 if let error = store.errorMessage {
@@ -937,7 +910,6 @@ struct DeleteAccountSheet: View {
                     Button("Cancel") { dismiss() }
                 }
             }
-            .task { phone = await store.accountPhone() ?? "" }
             .onAppear { store.errorMessage = nil }
             .confirmationDialog(
                 "Delete your account permanently?",
@@ -946,7 +918,7 @@ struct DeleteAccountSheet: View {
             ) {
                 Button("Delete Account", role: .destructive) {
                     Task {
-                        if await store.deleteAccount(phone: phone, token: codeDigits) {
+                        if await store.deleteAccount() {
                             dismiss()
                         }
                     }
@@ -956,10 +928,5 @@ struct DeleteAccountSheet: View {
                 Text("This cannot be undone.")
             }
         }
-    }
-
-    private var maskedPhone: String {
-        guard phone.count > 4 else { return phone }
-        return String(repeating: "•", count: max(0, phone.count - 4)) + phone.suffix(4)
     }
 }
