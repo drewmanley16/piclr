@@ -35,6 +35,7 @@ final class AppStore: ObservableObject {
     @Published var incomingRepostRequests: [RepostRequest] = []
     @Published var requestedRepostSessionIds: Set<UUID> = []
     @Published var likedSessionIds: Set<UUID> = []
+    @Published private var optimisticLikeCounts: [UUID: Int] = [:]
     @Published var notifications: [AppNotification] = []
     @Published var blockedAccounts: [BlockedAccount] = []
     @Published var isBusy = false
@@ -1496,6 +1497,7 @@ final class AppStore: ObservableObject {
     func toggleLike(_ session: FeedSession) async {
         guard let uid = currentProfile?.id else { return }
         let wasLiked = likedSessionIds.contains(session.id)
+        optimisticLikeCounts[session.id] = max(0, likeCount(for: session) + (wasLiked ? -1 : 1))
         if wasLiked {
             likedSessionIds.remove(session.id)
         } else {
@@ -1522,9 +1524,16 @@ final class AppStore: ObservableObject {
             } else {
                 likedSessionIds.remove(session.id)
             }
+            optimisticLikeCounts[session.id] = nil
             errorMessage = friendly(error)
+            return
         }
         await loadFeed()
+        optimisticLikeCounts[session.id] = nil
+    }
+
+    func likeCount(for session: FeedSession) -> Int {
+        optimisticLikeCounts[session.id] ?? session.likeCount
     }
 
     // MARK: - Helpers

@@ -407,7 +407,7 @@ struct FeedCard: View {
                 } label: {
                     SocialLabel(
                         icon: liked ? "hand.thumbsup.fill" : "hand.thumbsup",
-                        count: session.likeCount,
+                        count: store.likeCount(for: session),
                         isHighlighted: liked
                     )
                 }
