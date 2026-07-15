@@ -66,5 +66,7 @@ targets:
     info:
       path: PickleballAIWidget/Info.plist
       properties:
+        # App extensions must carry an explicit display name for App Store upload.
+        CFBundleDisplayName: "pickleball.ai"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
