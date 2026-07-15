@@ -45,3 +45,4 @@ targets:
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         NSContactsUsageDescription: "pickleball.ai uses your contacts to find friends already using the app. Contacts are matched once and are not stored."
+        NSLocationWhenInUseUsageDescription: "pickleball.ai uses your location to find pickleball courts near you when logging a session."

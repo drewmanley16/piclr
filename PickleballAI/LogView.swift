@@ -346,6 +346,7 @@ struct ActiveSessionView: View {
     @State private var editor: ActivityEditorRoute?
     @State private var showDiscardConfirm = false
     @State private var selectedPhoto: PhotosPickerItem?
+    @State private var showLocationPicker = false
 
     init(existingSession: FeedSession? = nil, isLive: Bool = false) {
         self.existingSession = existingSession
@@ -395,6 +396,9 @@ struct ActiveSessionView: View {
                 case .edit(let activity):
                     ActivityEditorView(activity: activity) { update($0) }
                 }
+            }
+            .sheet(isPresented: $showLocationPicker) {
+                LocationPickerSheet(location: $draft.location)
             }
             .confirmationDialog(
                 isEditing ? "Discard your changes?" : "Discard this session?",
@@ -468,8 +472,22 @@ struct ActiveSessionView: View {
                 .font(.headline)
                 .frame(minHeight: 44)
             Divider().overlay(Theme.hairline)
-            TextField("Location", text: $draft.location)
+            Button {
+                showLocationPicker = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "mappin.and.ellipse")
+                        .foregroundStyle(Theme.accent)
+                    Text(draft.location.isEmpty ? "Location" : draft.location)
+                        .foregroundStyle(draft.location.isEmpty ? Theme.textTertiary : Theme.textPrimary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Theme.textTertiary)
+                }
                 .frame(minHeight: 44)
+            }
+            .buttonStyle(.plain)
             Divider().overlay(Theme.hairline)
             TextField("Takeaway (optional)", text: $draft.takeaway, axis: .vertical)
                 .lineLimit(1...3)
