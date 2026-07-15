@@ -12,6 +12,27 @@ final class PushService: NSObject, ObservableObject {
     /// The most recent token, if registration has succeeded this launch.
     private(set) var latestToken: String?
 
+    /// Called when the user taps a push. If a tap arrives before a handler is
+    /// set (e.g. cold launch from the lock screen, before sign-in wires this
+    /// up), it's buffered and delivered as soon as `onTap` is assigned.
+    var onTap: (([AnyHashable: Any]) -> Void)? {
+        didSet {
+            if let pending = pendingTap, let handler = onTap {
+                pendingTap = nil
+                handler(pending)
+            }
+        }
+    }
+    private var pendingTap: [AnyHashable: Any]?
+
+    func handleTap(_ userInfo: [AnyHashable: Any]) {
+        if let handler = onTap {
+            handler(userInfo)
+        } else {
+            pendingTap = userInfo
+        }
+    }
+
     /// Prompts for notification permission (once) and registers with APNs if
     /// granted. Returns whether the app is authorized to show notifications.
     @discardableResult
@@ -74,5 +95,14 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
         [.banner, .sound, .badge]
+    }
+
+    // User tapped a push (lock screen, banner, or Notification Center).
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        let userInfo = response.notification.request.content.userInfo
+        await MainActor.run { PushService.shared.handleTap(userInfo) }
     }
 }
