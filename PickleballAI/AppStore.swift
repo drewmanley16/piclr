@@ -39,6 +39,8 @@ final class AppStore: ObservableObject {
     @Published private var optimisticLikeCounts: [UUID: Int] = [:]
     @Published var notifications: [AppNotification] = []
     @Published var blockedAccounts: [BlockedAccount] = []
+    /// Upcoming invites you're hosting or were tagged in, newest first.
+    @Published var activeInvites: [SessionInvite] = []
     /// Count of in-flight user-initiated operations. `isBusy` is *derived* from
     /// this so concurrent operations (e.g. saving profile fields and a photo at
     /// once) don't clobber each other — the UI reads idle only once every one of
@@ -61,6 +63,9 @@ final class AppStore: ObservableObject {
     private var followsOutTask: Task<Void, Never>?
     private var commentsChannel: RealtimeChannelV2?
     private var commentsTask: Task<Void, Never>?
+    private var invitesChannel: RealtimeChannelV2?
+    private var invitesTask: Task<Void, Never>?
+    private var inviteRecipientsTask: Task<Void, Never>?
     private var signedInBackgroundTask: Task<Void, Never>?
     private var isFeedRequestInFlight = false
     private var pendingFeedRefresh = false
@@ -308,7 +313,8 @@ final class AppStore: ObservableObject {
             async let reposts: Void = self.loadRepostRequests(userId: userId)
             async let notifications: Void = self.loadNotifications(userId: userId)
             async let blocks: Void = self.loadBlockedAccounts()
-            _ = await (followState, followLists, mySessions, gear, reposts, notifications, blocks)
+            async let invites: Void = self.loadActiveInvites(userId: userId)
+            _ = await (followState, followLists, mySessions, gear, reposts, notifications, blocks, invites)
             guard !Task.isCancelled, self.currentProfile?.id == userId else { return }
             await self.setUpPush()
         }
@@ -345,11 +351,14 @@ final class AppStore: ObservableObject {
         let type = userInfo["type"] as? String
         let sessionId = (userInfo["session_id"] as? String).flatMap(UUID.init(uuidString:))
         let actorId = (userInfo["actor_id"] as? String).flatMap(UUID.init(uuidString:))
+        let inviteId = (userInfo["invite_id"] as? String).flatMap(UUID.init(uuidString:))
         switch type {
         case "follow":
             if let actorId { pendingDeepLink = .profile(actorId) }
         case "comment":
             if let sessionId { pendingDeepLink = .comments(sessionId) }
+        case "invite_received", "invite_response":
+            if let inviteId { pendingDeepLink = .invite(inviteId) }
         default:
             if let sessionId { pendingDeepLink = .session(sessionId) }
         }
@@ -446,6 +455,33 @@ final class AppStore: ObservableObject {
                 // A request I sent was accepted → I now follow them, so their
                 // sessions belong in my feed.
                 await self?.reloadFollowGraph(userId: userId, refreshFeed: true)
+                if Task.isCancelled { break }
+            }
+        }
+
+        // Live invites: reload when an invite or an RSVP to one changes.
+        let iChannel = supabase.channel("public:session_invites:\(userId.uuidString)")
+        invitesChannel = iChannel
+        let inviteChanges = iChannel.postgresChange(
+            AnyAction.self,
+            schema: "public",
+            table: "session_invites"
+        )
+        let inviteRecipientChanges = iChannel.postgresChange(
+            AnyAction.self,
+            schema: "public",
+            table: "invite_recipients"
+        )
+        invitesTask = Task { [weak self] in
+            await iChannel.subscribe()
+            for await _ in inviteChanges {
+                await self?.loadActiveInvites(userId: userId)
+                if Task.isCancelled { break }
+            }
+        }
+        inviteRecipientsTask = Task { [weak self] in
+            for await _ in inviteRecipientChanges {
+                await self?.loadActiveInvites(userId: userId)
                 if Task.isCancelled { break }
             }
         }
@@ -548,6 +584,14 @@ final class AppStore: ObservableObject {
         followsInTask = nil
         followsOutTask?.cancel()
         followsOutTask = nil
+        invitesTask?.cancel()
+        invitesTask = nil
+        inviteRecipientsTask?.cancel()
+        inviteRecipientsTask = nil
+        if let channel = invitesChannel {
+            invitesChannel = nil
+            Task { await channel.unsubscribe() }
+        }
         if let channel = realtimeChannel {
             realtimeChannel = nil
             Task { await channel.unsubscribe() }
@@ -1540,7 +1584,7 @@ final class AppStore: ObservableObject {
         do {
             let rows: [AppNotification] = try await supabase
                 .from("notifications")
-                .select("id,type,read,created_at, actor:profiles!notifications_actor_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path), session:sessions!notifications_session_id_fkey(id,title), comment:comments!notifications_comment_id_fkey(id,body)")
+                .select("id,type,read,created_at, actor:profiles!notifications_actor_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path), session:sessions!notifications_session_id_fkey(id,title), comment:comments!notifications_comment_id_fkey(id,body), invite:session_invites!notifications_invite_id_fkey(id, court:courts(name))")
                 .eq("user_id", value: userId.uuidString)
                 .order("created_at", ascending: false)
                 .limit(50)
@@ -1869,6 +1913,116 @@ final class AppStore: ObservableObject {
 
     func likeCount(for session: FeedSession) -> Int {
         optimisticLikeCounts[session.id] ?? session.likeCount
+    }
+
+    // MARK: - Session invites (RSVP)
+
+    private let selectInvite = "*, host:profiles!session_invites_host_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path), court:courts(*), recipients:invite_recipients(*, user:profiles!invite_recipients_user_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path))"
+
+    /// Mutual followers only — the pool of people you're allowed to tag on an
+    /// invite (matches the `is_mutual_follow` RLS check on `invite_recipients`).
+    var mutualFriends: [FollowListEntry] {
+        followers.filter { $0.isFollowedByMe }
+    }
+
+    /// Invites visible to the signed-in user (hosted by them or tagged in),
+    /// newest first. RLS already scopes rows to what's visible.
+    func loadActiveInvites(userId: UUID) async {
+        do {
+            let rows: [SessionInvite] = try await supabase
+                .from("session_invites")
+                .select(selectInvite)
+                .order("scheduled_at", ascending: true)
+                .execute()
+                .value
+            guard currentProfile?.id == userId else { return }
+            var hydrated: [SessionInvite] = []
+            for var invite in rows {
+                if let host = invite.host { invite.host = await hydrateParticipantProfile(host) }
+                hydrated.append(invite)
+            }
+            activeInvites = hydrated
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    /// Finds an existing court within ~50m of the given coordinate, or creates
+    /// one. Dedupes repeat invites at the same place picked via MapKit search
+    /// without needing a separate search-or-create registry UI.
+    func findOrCreateCourt(name: String, latitude: Double, longitude: Double) async -> Court? {
+        guard let uid = currentProfile?.id else { return nil }
+        // ~50m in degrees of latitude; longitude tolerance widened slightly
+        // since a degree of longitude shrinks away from the equator.
+        let latDelta = 0.00045
+        let lonDelta = 0.0006
+        do {
+            let nearby: [Court] = try await supabase
+                .from("courts")
+                .select()
+                .gte("latitude", value: latitude - latDelta)
+                .lte("latitude", value: latitude + latDelta)
+                .gte("longitude", value: longitude - lonDelta)
+                .lte("longitude", value: longitude + lonDelta)
+                .limit(1)
+                .execute()
+                .value
+            if let existing = nearby.first { return existing }
+
+            let created: [Court] = try await supabase
+                .from("courts")
+                .insert(NewCourt(name: name, latitude: latitude, longitude: longitude, createdBy: uid))
+                .select()
+                .execute()
+                .value
+            return created.first
+        } catch {
+            errorMessage = friendly(error)
+            return nil
+        }
+    }
+
+    /// Creates an invite and tags the given mutual-follower friends (RLS
+    /// enforces the mutual-follow requirement per recipient).
+    @discardableResult
+    func createInvite(courtId: UUID, scheduledAt: Date, note: String?, recipientIds: [UUID]) async -> Bool {
+        guard let uid = currentProfile?.id else { return false }
+        let trimmedNote = note?.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            let created: [SessionInvite] = try await supabase
+                .from("session_invites")
+                .insert(NewSessionInvite(hostId: uid, courtId: courtId, scheduledAt: scheduledAt, note: (trimmedNote?.isEmpty ?? true) ? nil : trimmedNote))
+                .select()
+                .execute()
+                .value
+            guard let invite = created.first else { return false }
+            if !recipientIds.isEmpty {
+                try await supabase
+                    .from("invite_recipients")
+                    .insert(recipientIds.map { NewInviteRecipient(inviteId: invite.id, userId: $0) })
+                    .execute()
+            }
+            await loadActiveInvites(userId: uid)
+            return true
+        } catch {
+            errorMessage = friendly(error)
+            return false
+        }
+    }
+
+    func respondToInvite(_ invite: SessionInvite, status: RSVPStatus) async {
+        guard let uid = currentProfile?.id else { return }
+        do {
+            try await supabase
+                .from("invite_recipients")
+                .update(InviteRecipientUpdate(status: status.rawValue, respondedAt: Date()))
+                .eq("invite_id", value: invite.id.uuidString)
+                .eq("user_id", value: uid.uuidString)
+                .execute()
+            await loadActiveInvites(userId: uid)
+        } catch {
+            errorMessage = friendly(error)
+        }
     }
 
     // MARK: - Helpers

@@ -525,11 +525,12 @@ struct AppNotification: Identifiable, Decodable, Hashable {
     var actor: ParticipantProfile?
     let session: NotifSessionRef?
     let comment: NotifCommentRef?
+    let invite: NotifInviteRef?
 
     enum CodingKeys: String, CodingKey {
         case id, type, read
         case createdAt = "created_at"
-        case actor, session, comment
+        case actor, session, comment, invite
     }
 
     var date: Date { FeedSession.parse(createdAt) }
@@ -549,6 +550,8 @@ struct AppNotification: Identifiable, Decodable, Hashable {
         case "follow":          return "\(handle) started following you"
         case "tag":             return "\(handle) tagged you in a session"
         case "repost_approved": return "\(handle) approved your repost"
+        case "invite_received": return "\(handle) invited you to play at \(invite?.courtName ?? "a court")"
+        case "invite_response":  return "\(handle) responded to your invite"
         default:                return "\(handle) interacted with your post"
         }
     }
@@ -559,6 +562,7 @@ struct AppNotification: Identifiable, Decodable, Hashable {
         case "comment": return "bubble.right.fill"
         case "follow":  return "person.fill.badge.plus"
         case "tag":     return "flag.checkered"
+        case "invite_received", "invite_response": return "figure.pickleball"
         default:        return "bell.fill"
         }
     }
@@ -572,6 +576,16 @@ struct NotifSessionRef: Decodable, Hashable {
 struct NotifCommentRef: Decodable, Hashable {
     let id: UUID
     let body: String
+}
+
+struct NotifInviteRef: Decodable, Hashable {
+    let id: UUID
+    let court: NotifCourtRef?
+    var courtName: String? { court?.name }
+}
+
+struct NotifCourtRef: Decodable, Hashable {
+    let name: String
 }
 
 // MARK: - Comments
@@ -948,4 +962,123 @@ struct MatchContactsRequest: Encodable {
 
 struct MatchContactsResponse: Decodable {
     let matches: [ContactMatch]
+}
+
+// MARK: - Session invites (RSVP)
+
+struct Court: Identifiable, Decodable, Hashable {
+    let id: UUID
+    let name: String
+    let latitude: Double
+    let longitude: Double
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, latitude, longitude
+    }
+}
+
+struct NewCourt: Encodable {
+    let name: String
+    let latitude: Double
+    let longitude: Double
+    let createdBy: UUID
+
+    enum CodingKeys: String, CodingKey {
+        case name, latitude, longitude
+        case createdBy = "created_by"
+    }
+}
+
+enum RSVPStatus: String, Codable, CaseIterable {
+    case pending, yes, no, maybe
+
+    var label: String {
+        switch self {
+        case .pending: return "Pending"
+        case .yes:     return "Yes"
+        case .no:      return "No"
+        case .maybe:   return "Maybe"
+        }
+    }
+}
+
+struct SessionInvite: Identifiable, Decodable, Hashable {
+    let id: UUID
+    let hostId: UUID
+    let courtId: UUID
+    let scheduledAt: String
+    let note: String?
+    let createdAt: String
+    var host: ParticipantProfile?
+    var court: Court?
+    var recipients: [InviteRecipient]?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case hostId = "host_id"
+        case courtId = "court_id"
+        case scheduledAt = "scheduled_at"
+        case note
+        case createdAt = "created_at"
+        case host, court, recipients
+    }
+
+    var scheduledAtDate: Date { FeedSession.parse(scheduledAt) }
+    var createdAtDate: Date { FeedSession.parse(createdAt) }
+    var isPast: Bool { scheduledAtDate < Date() }
+
+    func myResponse(userId: UUID) -> RSVPStatus? {
+        recipients?.first { $0.userId == userId }.flatMap { RSVPStatus(rawValue: $0.status) }
+    }
+
+    var yesCount: Int { recipients?.filter { $0.status == "yes" }.count ?? 0 }
+}
+
+struct NewSessionInvite: Encodable {
+    let hostId: UUID
+    let courtId: UUID
+    let scheduledAt: Date
+    let note: String?
+
+    enum CodingKeys: String, CodingKey {
+        case hostId = "host_id"
+        case courtId = "court_id"
+        case scheduledAt = "scheduled_at"
+        case note
+    }
+}
+
+struct InviteRecipient: Identifiable, Decodable, Hashable {
+    let id: UUID
+    let inviteId: UUID
+    let userId: UUID
+    let status: String
+    var user: ParticipantProfile?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case inviteId = "invite_id"
+        case userId = "user_id"
+        case status, user
+    }
+}
+
+struct NewInviteRecipient: Encodable {
+    let inviteId: UUID
+    let userId: UUID
+
+    enum CodingKeys: String, CodingKey {
+        case inviteId = "invite_id"
+        case userId = "user_id"
+    }
+}
+
+struct InviteRecipientUpdate: Encodable {
+    let status: String
+    let respondedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case status
+        case respondedAt = "responded_at"
+    }
 }

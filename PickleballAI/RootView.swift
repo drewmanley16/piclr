@@ -80,6 +80,8 @@ struct RootView: View {
                         SessionDetailView(sessionId: id, openComments: true)
                     case .profile(let id):
                         OtherProfileView(userId: id, placeholder: nil)
+                    case .invite(let id):
+                        InviteDetailView(inviteId: id)
                     }
                 }
                 .toolbar {

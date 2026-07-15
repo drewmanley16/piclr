@@ -19,6 +19,7 @@ type NotificationRow = {
   type: string;
   session_id: string | null;
   comment_id: string | null;
+  invite_id: string | null;
 };
 
 Deno.serve(async (req) => {
@@ -43,7 +44,7 @@ Deno.serve(async (req) => {
   // Load the notification.
   const { data: notif, error: notifErr } = await admin
     .from("notifications")
-    .select("id, user_id, actor_id, type, session_id, comment_id")
+    .select("id, user_id, actor_id, type, session_id, comment_id, invite_id")
     .eq("id", notificationId)
     .single<NotificationRow>();
   if (notifErr || !notif) return json({ error: "Notification not found" }, 404);
@@ -75,7 +76,18 @@ Deno.serve(async (req) => {
     commentBody = c?.body ?? "";
   }
 
-  const { title, message } = buildMessage(notif.type, handle, commentBody);
+  let rsvpStatus = "";
+  if (notif.type === "invite_response" && notif.invite_id && notif.actor_id) {
+    const { data: r } = await admin
+      .from("invite_recipients")
+      .select("status")
+      .eq("invite_id", notif.invite_id)
+      .eq("user_id", notif.actor_id)
+      .single<{ status: string }>();
+    rsvpStatus = r?.status ?? "";
+  }
+
+  const { title, message } = buildMessage(notif.type, handle, commentBody, rsvpStatus);
 
   const jwt = await apnsJWT();
   const host = Deno.env.get("APNS_HOST") ?? "api.push.apple.com";
@@ -87,6 +99,7 @@ Deno.serve(async (req) => {
     type: notif.type,
     session_id: notif.session_id,
     actor_id: notif.actor_id,
+    invite_id: notif.invite_id,
   });
 
   let delivered = 0;
@@ -112,13 +125,18 @@ Deno.serve(async (req) => {
   return json({ delivered });
 });
 
-function buildMessage(type: string, handle: string, comment: string): { title: string; message: string } {
+function buildMessage(type: string, handle: string, comment: string, rsvpStatus: string): { title: string; message: string } {
   switch (type) {
     case "like":            return { title: "New like", message: `${handle} liked your session` };
     case "comment":         return { title: "New comment", message: `${handle} commented: ${comment}` };
     case "follow":          return { title: "New follower", message: `${handle} started following you` };
     case "tag":             return { title: "You were tagged", message: `${handle} tagged you in a session` };
     case "repost_approved": return { title: "Repost approved", message: `${handle} approved your repost` };
+    case "invite_received": return { title: "You're invited", message: `${handle} invited you to play` };
+    case "invite_response": {
+      const verb = rsvpStatus === "yes" ? "is in" : rsvpStatus === "no" ? "can't make it" : rsvpStatus === "maybe" ? "might join" : "responded";
+      return { title: "RSVP update", message: `${handle} ${verb} for your invite` };
+    }
     default:                return { title: "pickleball.ai", message: `${handle} interacted with your post` };
   }
 }

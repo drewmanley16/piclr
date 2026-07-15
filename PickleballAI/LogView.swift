@@ -7,6 +7,7 @@ struct WorkoutView: View {
     @EnvironmentObject private var store: AppStore
     @State private var showLiveSession = false
     @State private var quickEditor: ActivityEditorRoute?
+    @State private var showInviteComposer = false
 
     private var thisWeek: [FeedSession] {
         let weekStart = Calendar.current.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
@@ -14,6 +15,12 @@ struct WorkoutView: View {
     }
 
     var body: some View {
+        ProfileNavigationStack {
+            content
+        }
+    }
+
+    private var content: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 if store.activeDraft != nil {
@@ -22,6 +29,10 @@ struct WorkoutView: View {
                     weekStrip
                     startLiveButton
                     quickLog
+                    inviteButton
+                }
+                if !store.activeInvites.isEmpty {
+                    activeInvitesSection
                 }
                 recentSection
             }
@@ -42,6 +53,9 @@ struct WorkoutView: View {
         }
         .fullScreenCover(isPresented: $showLiveSession) {
             ActiveSessionView(isLive: true)
+        }
+        .sheet(isPresented: $showInviteComposer) {
+            InviteComposerSheet()
         }
         .sheet(item: $quickEditor) { route in
             switch route {
@@ -181,6 +195,48 @@ struct WorkoutView: View {
             )
         }
         .buttonStyle(.plain)
+    }
+
+    private var inviteButton: some View {
+        Button { showInviteComposer = true } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: 44, height: 44)
+                    .background(Theme.accentSoft, in: Circle())
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Invite friends to play")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("Tag friends with a court and time, they RSVP")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.textTertiary)
+            }
+            .cardStyle(padding: 14)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: Active invites
+
+    private var activeInvitesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Upcoming invites")
+                .font(.headline)
+                .foregroundStyle(Theme.textPrimary)
+            ForEach(store.activeInvites) { invite in
+                InviteCard(invite: invite)
+            }
+        }
     }
 
     // MARK: Recent
