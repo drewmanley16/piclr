@@ -22,6 +22,7 @@ targets:
     dependencies:
       - package: Supabase
         product: Supabase
+      - target: PickleballAIWidget
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.pickleball.ai
@@ -37,6 +38,8 @@ targets:
       properties:
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
+        # Enable Live Activities (session lock-screen timer).
+        NSSupportsLiveActivities: true
         # Required: without this iOS letterboxes the app to a legacy size.
         UILaunchScreen: {}
         # Skip the export-compliance prompt on every TestFlight upload.
@@ -46,3 +49,22 @@ targets:
           - UIInterfaceOrientationPortrait
         NSContactsUsageDescription: "pickleball.ai uses your contacts to find friends already using the app. Contacts are matched once and are not stored."
         NSLocationWhenInUseUsageDescription: "pickleball.ai uses your location to find pickleball courts near you when logging a session."
+
+  PickleballAIWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - PickleballAIWidget
+      - path: PickleballAI/LiveActivityAttributes.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.pickleball.ai.widget
+        PRODUCT_NAME: PickleballAIWidget
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_KEY_CFBundleDisplayName: "pickleball.ai"
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    info:
+      path: PickleballAIWidget/Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension

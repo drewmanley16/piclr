@@ -24,6 +24,8 @@
 	<string>pickleball.ai uses your contacts to find friends already using the app. Contacts are matched once and are not stored.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>pickleball.ai uses your location to find pickleball courts near you when logging a session.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

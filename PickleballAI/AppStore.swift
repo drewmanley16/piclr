@@ -1304,8 +1304,10 @@ final class AppStore: ObservableObject {
     /// unposted, writes activities + tagged participants, then flips `posted`
     /// last so realtime subscribers only see the completed post.
     /// An in-progress ("live") session that survives leaving the Workout tab.
-    /// nil means no session is currently open.
-    @Published var activeDraft: SessionDraft?
+    /// nil means no session is currently open. Mutations drive the Live Activity.
+    @Published var activeDraft: SessionDraft? {
+        didSet { LiveActivityManager.shared.sync(draft: activeDraft) }
+    }
 
     func startLiveSession() {
         if activeDraft == nil { activeDraft = SessionDraft() }
