@@ -29,7 +29,16 @@ struct NotificationsView: View {
                         }
                         if !store.notifications.isEmpty {
                             section(title: "Activity") {
-                                ForEach(store.notifications) { NotificationRow(notification: $0) }
+                                ForEach(store.notifications) { notification in
+                                    if let dest = destination(for: notification) {
+                                        NavigationLink(value: dest) {
+                                            NotificationRow(notification: notification)
+                                        }
+                                        .buttonStyle(.plain)
+                                    } else {
+                                        NotificationRow(notification: notification)
+                                    }
+                                }
                             }
                         }
                     }
@@ -39,11 +48,28 @@ struct NotificationsView: View {
             .background(Theme.background.ignoresSafeArea())
             .navigationTitle("Notifications")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(for: NotifDestination.self) { dest in
+                switch dest {
+                case .profile(let userId):
+                    OtherProfileView(userId: userId, placeholder: nil)
+                case .session(let sessionId):
+                    SessionDetailView(sessionId: sessionId)
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }
             .refreshable { await reload() }
             .task { await store.markNotificationsRead() }
+        }
+    }
+
+    /// Where a tapped activity notification navigates: follows open the actor's
+    /// profile, everything else opens the related session.
+    private func destination(for n: AppNotification) -> NotifDestination? {
+        switch n.type {
+        case "follow": return n.actor.map { .profile($0.id) }
+        default:       return n.session.map { .session($0.id) }
         }
     }
 
@@ -76,6 +102,53 @@ struct NotificationsView: View {
         await store.loadFollowState(userId: uid)
         await store.loadRepostRequests(userId: uid)
         await store.loadNotifications(userId: uid)
+    }
+}
+
+enum NotifDestination: Hashable {
+    case profile(UUID)
+    case session(UUID)
+}
+
+/// A single session opened from a notification. Fetches the post on demand
+/// since it may not be in the currently-loaded feed.
+struct SessionDetailView: View {
+    @EnvironmentObject private var store: AppStore
+    let sessionId: UUID
+
+    @State private var session: FeedSession?
+    @State private var isLoading = true
+
+    var body: some View {
+        ScrollView {
+            if let session {
+                FeedCard(session: session)
+                    .padding(16)
+            } else if isLoading {
+                ProgressView()
+                    .tint(Theme.accent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 100)
+            } else {
+                VStack(spacing: 10) {
+                    Image(systemName: "tray")
+                        .font(.largeTitle)
+                        .foregroundStyle(Theme.textTertiary)
+                    Text("This post is no longer available")
+                        .font(.headline)
+                        .foregroundStyle(Theme.textPrimary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 100)
+            }
+        }
+        .background(Theme.background.ignoresSafeArea())
+        .navigationTitle("Session")
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            session = await store.loadSession(id: sessionId)
+            isLoading = false
+        }
     }
 }
 

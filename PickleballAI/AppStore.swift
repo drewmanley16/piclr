@@ -476,6 +476,25 @@ final class AppStore: ObservableObject {
         }
     }
 
+    /// Fetches a single session by id (for opening a post from a notification).
+    func loadSession(id: UUID) async -> FeedSession? {
+        do {
+            let rows: [FeedSession] = try await supabase
+                .from("sessions")
+                .select(selectFeedPreview)
+                .eq("id", value: id.uuidString)
+                .limit(1)
+                .execute()
+                .value
+            let hydrated = await hydrateSessions(rows)
+            if let uid = currentProfile?.id { await refreshLikedState(for: hydrated, uid: uid) }
+            return hydrated.first
+        } catch {
+            errorMessage = friendly(error)
+            return nil
+        }
+    }
+
     func loadGear(userId: UUID) async {
         do {
             gear = try await supabase
