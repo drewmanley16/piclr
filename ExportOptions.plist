@@ -14,6 +14,8 @@
 	<dict>
 		<key>com.pickleball.ai</key>
 		<string>pickleball ai App Store</string>
+		<key>com.pickleball.ai.widget</key>
+		<string>pickleball ai widget App Store</string>
 	</dict>
 	<key>uploadSymbols</key>
 	<true/>
