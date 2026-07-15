@@ -289,6 +289,11 @@ struct FeedCard: View {
     @EnvironmentObject private var store: AppStore
     var session: FeedSession
     @State private var showComments = false
+    @State private var showEditor = false
+    @State private var confirmDelete = false
+    @State private var confirmBlock = false
+    @State private var confirmRemoveTag = false
+    @State private var reportTarget: ReportTarget?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -309,6 +314,43 @@ struct FeedCard: View {
                         .foregroundStyle(Theme.textSecondary)
                 }
                 Spacer()
+                Menu {
+                    if isOwner {
+                        Button {
+                            showEditor = true
+                        } label: {
+                            Label("Edit Session", systemImage: "pencil")
+                        }
+                        Button(role: .destructive) {
+                            confirmDelete = true
+                        } label: {
+                            Label("Delete Session", systemImage: "trash")
+                        }
+                    } else {
+                        Button {
+                            reportTarget = .session(session.id)
+                        } label: {
+                            Label("Report Session", systemImage: "exclamationmark.bubble")
+                        }
+                        if isTagged {
+                            Button(role: .destructive) {
+                                confirmRemoveTag = true
+                            } label: {
+                                Label("Remove Me from Session", systemImage: "person.badge.minus")
+                            }
+                        }
+                        Button(role: .destructive) {
+                            confirmBlock = true
+                        } label: {
+                            Label("Block Player", systemImage: "person.crop.circle.badge.xmark")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 32, height: 32)
+                }
+                .accessibilityLabel("Session actions")
             }
 
             VStack(alignment: .leading, spacing: 3) {
@@ -414,6 +456,44 @@ struct FeedCard: View {
         .sheet(isPresented: $showComments) {
             CommentsView(session: session)
         }
+        .sheet(item: $reportTarget) { target in
+            ReportSheet(target: target)
+        }
+        .fullScreenCover(isPresented: $showEditor) {
+            ActiveSessionView(existingSession: session)
+        }
+        .confirmationDialog("Delete this session?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete Session", role: .destructive) {
+                Task { _ = await store.deleteSession(session) }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .confirmationDialog("Block this player?", isPresented: $confirmBlock, titleVisibility: .visible) {
+            Button("Block", role: .destructive) {
+                Task { _ = await store.blockUser(userId: session.userId) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You will no longer be able to find, view, or interact with each other.")
+        }
+        .confirmationDialog(
+            "Remove yourself from this session?",
+            isPresented: $confirmRemoveTag,
+            titleVisibility: .visible
+        ) {
+            Button("Remove Me", role: .destructive) {
+                Task { _ = await store.removeSelfFromSession(session) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Your player tag will be removed from every match in this session.")
+        }
+    }
+
+    private var isOwner: Bool { store.currentProfile?.id == session.userId }
+    private var isTagged: Bool {
+        guard let uid = store.currentProfile?.id else { return false }
+        return session.isParticipant(uid)
     }
 
     private var canRepost: Bool {

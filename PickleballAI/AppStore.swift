@@ -36,11 +36,12 @@ final class AppStore: ObservableObject {
     @Published var requestedRepostSessionIds: Set<UUID> = []
     @Published var likedSessionIds: Set<UUID> = []
     @Published var notifications: [AppNotification] = []
+    @Published var blockedAccounts: [BlockedAccount] = []
     @Published var isBusy = false
     @Published var errorMessage: String?
 
-    private let selectWithCounts = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(id,username,display_name,avatar_initials,avatar_url)))"
-    private let selectFeedPreview = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), preview_comments:comments(*, author:profiles!comments_user_id_fkey(id,username,display_name,avatar_initials,avatar_url)), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(id,username,display_name,avatar_initials,avatar_url)))"
+    private let selectWithCounts = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path)))"
+    private let selectFeedPreview = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), preview_comments:comments(*, author:profiles!comments_user_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path)), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path)))"
 
     private var realtimeChannel: RealtimeChannelV2?
     private var realtimeTask: Task<Void, Never>?
@@ -93,6 +94,43 @@ final class AppStore: ObservableObject {
             try await supabase.auth.verifyOTP(phone: phone, token: token, type: .sms)
             let session = try await supabase.auth.session
             await handleSignedIn(userId: session.user.id)
+            return true
+        } catch {
+            errorMessage = friendly(error)
+            return false
+        }
+    }
+
+    func accountPhone() async -> String? {
+        guard let session = try? await supabase.auth.session else { return nil }
+        return session.user.phone
+    }
+
+    func deleteAccount(phone: String, token: String) async -> Bool {
+        guard let expectedUserId = currentProfile?.id else { return false }
+        isBusy = true
+        errorMessage = nil
+        defer { isBusy = false }
+        do {
+            try await supabase.auth.verifyOTP(phone: phone, token: token, type: .sms)
+            let session = try await supabase.auth.session
+            guard session.user.id == expectedUserId else {
+                throw NSError(
+                    domain: "PickleballAI.AccountDeletion",
+                    code: 1,
+                    userInfo: [NSLocalizedDescriptionKey: "Verification did not match this account."]
+                )
+            }
+            let response: DeleteAccountResponse = try await supabase.functions.invoke("delete-account")
+            guard response.deleted else {
+                throw NSError(
+                    domain: "PickleballAI.AccountDeletion",
+                    code: 2,
+                    userInfo: [NSLocalizedDescriptionKey: "The account could not be deleted."]
+                )
+            }
+            stopRealtime()
+            clearSignedInState()
             return true
         } catch {
             errorMessage = friendly(error)
@@ -153,8 +191,15 @@ final class AppStore: ObservableObject {
     func signOut() async {
         stopRealtime()
         try? await supabase.auth.signOut()
+        clearSignedInState()
+    }
+
+    private func clearSignedInState() {
         currentProfile = nil
         feed = []
+        discoverFeed = []
+        feedReachedEnd = false
+        discoverReachedEnd = false
         mySessions = []
         followerCount = 0
         followingCount = 0
@@ -169,6 +214,7 @@ final class AppStore: ObservableObject {
         requestedRepostSessionIds = []
         likedSessionIds = []
         notifications = []
+        blockedAccounts = []
         authState = .signedOut
     }
 
@@ -210,6 +256,7 @@ final class AppStore: ObservableObject {
         await loadGear(userId: userId)
         await loadRepostRequests(userId: userId)
         await loadNotifications(userId: userId)
+        await loadBlockedAccounts()
         startRealtime(userId: userId)
     }
 
@@ -343,7 +390,7 @@ final class AppStore: ObservableObject {
             guard let profile = rows.first else {
                 return .missing
             }
-            currentProfile = profile
+            currentProfile = await hydrateProfile(profile)
             return .loaded
         } catch {
             errorMessage = friendly(error)
@@ -372,7 +419,8 @@ final class AppStore: ObservableObject {
                 .limit(3, referencedTable: "preview_comments")
                 .execute()
                 .value
-            feed = reset ? page : feed + page
+            let hydratedPage = await hydrateSessions(page)
+            feed = reset ? hydratedPage : feed + hydratedPage
             feedReachedEnd = page.count < feedPageSize
             await refreshLikedState(for: page, uid: uid)
         } catch {
@@ -397,7 +445,8 @@ final class AppStore: ObservableObject {
                 .limit(3, referencedTable: "preview_comments")
                 .execute()
                 .value
-            discoverFeed = reset ? page : discoverFeed + page
+            let hydratedPage = await hydrateSessions(page)
+            discoverFeed = reset ? hydratedPage : discoverFeed + hydratedPage
             discoverReachedEnd = page.count < feedPageSize
             await refreshLikedState(for: page, uid: uid)
         } catch {
@@ -414,13 +463,14 @@ final class AppStore: ObservableObject {
 
     func loadMySessions(userId: UUID) async {
         do {
-            mySessions = try await supabase
+            let sessions: [FeedSession] = try await supabase
                 .from("sessions")
                 .select(selectWithCounts)
                 .eq("user_id", value: userId.uuidString)
                 .order("created_at", ascending: false)
                 .execute()
                 .value
+            mySessions = await hydrateSessions(sessions)
         } catch {
             errorMessage = friendly(error)
         }
@@ -590,13 +640,18 @@ final class AppStore: ObservableObject {
             }
             let ownId = currentProfile?.id
             var seenProfileIds: Set<UUID> = []
-            contactMatches = matches.filter { match in
+            let visibleMatches = matches.filter { match in
                 guard match.profile.id != ownId, !seenProfileIds.contains(match.profile.id) else {
                     return false
                 }
                 seenProfileIds.insert(match.profile.id)
                 return true
             }
+            var hydrated: [ContactMatch] = []
+            for match in visibleMatches {
+                hydrated.append(ContactMatch(phone: match.phone, profile: await hydrateProfile(match.profile)))
+            }
+            contactMatches = hydrated
         } catch {
             errorMessage = friendly(error)
         }
@@ -625,7 +680,11 @@ final class AppStore: ObservableObject {
                 .execute()
                 .value
             let ownId = currentProfile?.id
-            searchResults = results.filter { $0.id != ownId && $0.hasCompletedOnboarding }
+            var hydrated: [Profile] = []
+            for profile in results where profile.id != ownId && profile.hasCompletedOnboarding {
+                hydrated.append(await hydrateProfile(profile))
+            }
+            searchResults = hydrated
         } catch {
             errorMessage = friendly(error)
         }
@@ -706,6 +765,125 @@ final class AppStore: ObservableObject {
         }
     }
 
+    func cancelFollowRequest(userId: UUID) async {
+        await unfollow(userId: userId)
+    }
+
+    func removeFollower(userId: UUID) async {
+        guard let uid = currentProfile?.id, uid != userId else { return }
+        isBusy = true
+        errorMessage = nil
+        defer { isBusy = false }
+        do {
+            try await supabase
+                .from("follows")
+                .delete()
+                .eq("follower_id", value: userId.uuidString)
+                .eq("followee_id", value: uid.uuidString)
+                .execute()
+            await loadFollowState(userId: uid)
+            await loadFollowLists(userId: uid)
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    // MARK: - User safety
+
+    func loadBlockedAccounts() async {
+        guard let uid = currentProfile?.id else {
+            blockedAccounts = []
+            return
+        }
+        do {
+            blockedAccounts = try await supabase
+                .from("blocks")
+                .select("blocked_id,blocked_username,blocked_display_name,blocked_avatar_path,created_at")
+                .eq("blocker_id", value: uid.uuidString)
+                .order("created_at", ascending: false)
+                .execute()
+                .value
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    @discardableResult
+    func blockUser(userId: UUID) async -> Bool {
+        guard let uid = currentProfile?.id, uid != userId else { return false }
+        isBusy = true
+        errorMessage = nil
+        defer { isBusy = false }
+        do {
+            try await supabase.from("blocks")
+                .insert(NewBlock(blockerId: uid, blockedId: userId))
+                .execute()
+
+            feed.removeAll { $0.userId == userId }
+            discoverFeed.removeAll { $0.userId == userId }
+            followers.removeAll { $0.userId == userId }
+            following.removeAll { $0.userId == userId }
+            incomingFollowRequests.removeAll { $0.followerId == userId }
+            contactMatches.removeAll { $0.profile.id == userId }
+            searchResults.removeAll { $0.id == userId }
+            requestedFollowIds.remove(userId)
+            notifications.removeAll { $0.actor?.id == userId }
+
+            await loadBlockedAccounts()
+            await loadFollowState(userId: uid)
+            await loadFollowLists(userId: uid)
+            await loadFeed()
+            await loadDiscover()
+            await loadMySessions(userId: uid)
+            await loadRepostRequests(userId: uid)
+            await loadNotifications(userId: uid)
+            return true
+        } catch {
+            errorMessage = friendly(error)
+            return false
+        }
+    }
+
+    func unblockUser(userId: UUID) async {
+        guard let uid = currentProfile?.id else { return }
+        isBusy = true
+        errorMessage = nil
+        defer { isBusy = false }
+        do {
+            try await supabase.from("blocks")
+                .delete()
+                .eq("blocker_id", value: uid.uuidString)
+                .eq("blocked_id", value: userId.uuidString)
+                .execute()
+            await loadBlockedAccounts()
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    func submitReport(target: ReportTarget, reason: ReportReason, details: String) async -> Bool {
+        guard let uid = currentProfile?.id else { return false }
+        isBusy = true
+        errorMessage = nil
+        defer { isBusy = false }
+        do {
+            let trimmed = details.trimmingCharacters(in: .whitespacesAndNewlines)
+            try await supabase.from("reports")
+                .insert(NewReport(
+                    reporterId: uid,
+                    targetType: target.type,
+                    targetId: target.targetId,
+                    reason: reason.rawValue,
+                    details: trimmed.isEmpty ? nil : trimmed
+                ))
+                .execute()
+            return true
+        } catch {
+            errorMessage = friendly(error)
+            return false
+        }
+    }
+
     /// Loads another user's public profile. Basic fields + follower/following
     /// counts are always visible; sessions are fetched only when the signed-in
     /// user follows them (accepted). The `sessions` query is additionally
@@ -720,7 +898,8 @@ final class AppStore: ObservableObject {
                 .limit(1)
                 .execute()
                 .value
-            guard let profile = rows.first else { return nil }
+            guard let rawProfile = rows.first else { return nil }
+            let profile = await hydrateProfile(rawProfile)
 
             let relationship: FollowRelationship
             if userId == me {
@@ -758,7 +937,7 @@ final class AppStore: ObservableObject {
 
             var sessions: [FeedSession] = []
             if relationship.canViewContent {
-                sessions = try await supabase
+                let rows: [FeedSession] = try await supabase
                     .from("sessions")
                     .select(selectWithCounts)
                     .eq("user_id", value: userId.uuidString)
@@ -767,6 +946,7 @@ final class AppStore: ObservableObject {
                     .limit(50)
                     .execute()
                     .value
+                sessions = await hydrateSessions(rows)
             }
 
             return PublicProfile(
@@ -869,9 +1049,9 @@ final class AppStore: ObservableObject {
             }
 
             if let photoData = draft.photoData,
-               let photoURL = await uploadPostPhoto(photoData, sessionId: session.id, uid: uid) {
+               let photoPath = await uploadPostPhoto(photoData, sessionId: session.id, uid: uid) {
                 try await supabase.from("sessions")
-                    .update(["photo_url": photoURL])
+                    .update(["photo_path": photoPath])
                     .eq("id", value: session.id.uuidString)
                     .execute()
             }
@@ -883,6 +1063,124 @@ final class AppStore: ObservableObject {
 
             await loadMySessions(userId: uid)
             await loadFeed()
+            return true
+        } catch {
+            errorMessage = friendly(error)
+            return false
+        }
+    }
+
+    func updateSession(_ session: FeedSession, draft: SessionDraft) async -> Bool {
+        guard let uid = currentProfile?.id, session.userId == uid else { return false }
+        isBusy = true
+        errorMessage = nil
+        defer { isBusy = false }
+
+        do {
+            var photoPath = draft.removePhoto ? nil : draft.existingPhotoPath
+            if let photoData = draft.photoData {
+                guard let uploaded = await uploadPostPhoto(photoData, sessionId: session.id, uid: uid) else {
+                    return false
+                }
+                photoPath = uploaded
+            }
+
+            let endedAt = max(draft.endedAt ?? Date(), draft.startedAt.addingTimeInterval(60))
+            let activities = draft.activities.enumerated().map { index, activity in
+                let participants =
+                    activity.partners.map {
+                        SessionUpdateParticipant(
+                            id: $0.id,
+                            profileId: $0.profile?.id,
+                            guestName: $0.profile == nil ? $0.guestName : nil,
+                            role: "partner"
+                        )
+                    }
+                    + activity.opponents.map {
+                        SessionUpdateParticipant(
+                            id: $0.id,
+                            profileId: $0.profile?.id,
+                            guestName: $0.profile == nil ? $0.guestName : nil,
+                            role: "opponent"
+                        )
+                    }
+                let isMatch = activity.kind == .match
+                return SessionUpdateActivity(
+                    id: activity.id,
+                    kind: activity.kind.rawValue,
+                    position: index,
+                    focus: activity.focus.isEmpty ? nil : activity.focus,
+                    reps: activity.reps.isEmpty ? nil : activity.reps,
+                    notes: activity.notes.isEmpty ? nil : activity.notes,
+                    teamScore: isMatch ? activity.teamScore : nil,
+                    opponentScore: isMatch ? activity.opponentScore : nil,
+                    won: isMatch ? activity.won : nil,
+                    participants: participants
+                )
+            }
+            let payload = SessionUpdatePayload(
+                title: draft.title,
+                location: draft.location,
+                takeaway: draft.takeaway,
+                durationMinutes: max(1, Int(endedAt.timeIntervalSince(draft.startedAt) / 60)),
+                posted: draft.postToFeed,
+                startedAt: Self.iso.string(from: draft.startedAt),
+                endedAt: Self.iso.string(from: endedAt),
+                photoPath: photoPath ?? "",
+                activities: activities
+            )
+            try await supabase.rpc(
+                "update_own_session",
+                params: UpdateSessionRPCParams(targetSessionId: session.id, payload: payload)
+            ).execute()
+
+            if draft.removePhoto, let oldPath = session.photoPath {
+                try? await supabase.storage.from("post-photos").remove(paths: [oldPath])
+            }
+            await loadMySessions(userId: uid)
+            await loadFeed()
+            return true
+        } catch {
+            errorMessage = friendly(error)
+            return false
+        }
+    }
+
+    func deleteSession(_ session: FeedSession) async -> Bool {
+        guard let uid = currentProfile?.id, session.userId == uid else { return false }
+        isBusy = true
+        errorMessage = nil
+        defer { isBusy = false }
+        do {
+            try await supabase.from("sessions")
+                .delete()
+                .eq("id", value: session.id.uuidString)
+                .execute()
+            if let path = session.photoPath {
+                try? await supabase.storage.from("post-photos").remove(paths: [path])
+            }
+            await loadMySessions(userId: uid)
+            await loadFeed()
+            return true
+        } catch {
+            errorMessage = friendly(error)
+            return false
+        }
+    }
+
+    func removeSelfFromSession(_ session: FeedSession) async -> Bool {
+        guard let uid = currentProfile?.id, session.userId != uid else { return false }
+        isBusy = true
+        errorMessage = nil
+        defer { isBusy = false }
+        do {
+            try await supabase.rpc(
+                "remove_self_from_session",
+                params: ["target_session_id": session.id.uuidString]
+            ).execute()
+            requestedRepostSessionIds.remove(session.id)
+            await loadFeed()
+            await loadNotifications(userId: uid)
             return true
         } catch {
             errorMessage = friendly(error)
@@ -904,14 +1202,22 @@ final class AppStore: ObservableObject {
 
     func loadNotifications(userId: UUID) async {
         do {
-            notifications = try await supabase
+            let rows: [AppNotification] = try await supabase
                 .from("notifications")
-                .select("id,type,read,created_at, actor:profiles!notifications_actor_id_fkey(id,username,display_name,avatar_initials,avatar_url), session:sessions!notifications_session_id_fkey(id,title), comment:comments!notifications_comment_id_fkey(id,body)")
+                .select("id,type,read,created_at, actor:profiles!notifications_actor_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path), session:sessions!notifications_session_id_fkey(id,title), comment:comments!notifications_comment_id_fkey(id,body)")
                 .eq("user_id", value: userId.uuidString)
                 .order("created_at", ascending: false)
                 .limit(50)
                 .execute()
                 .value
+            var hydrated: [AppNotification] = []
+            for var notification in rows {
+                if let actor = notification.actor {
+                    notification.actor = await hydrateParticipantProfile(actor)
+                }
+                hydrated.append(notification)
+            }
+            notifications = hydrated
         } catch {
             errorMessage = friendly(error)
         }
@@ -935,13 +1241,18 @@ final class AppStore: ObservableObject {
 
     func fetchComments(sessionId: UUID) async -> [Comment] {
         do {
-            return try await supabase
+            let rows: [Comment] = try await supabase
                 .from("comments")
-                .select("*, author:profiles!comments_user_id_fkey(id,username,display_name,avatar_initials,avatar_url)")
+                .select("*, author:profiles!comments_user_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path)")
                 .eq("session_id", value: sessionId.uuidString)
                 .order("created_at", ascending: true)
                 .execute()
                 .value
+            var hydrated: [Comment] = []
+            for comment in rows {
+                hydrated.append(await hydrateComment(comment))
+            }
+            return hydrated
         } catch {
             errorMessage = friendly(error)
             return []
@@ -956,6 +1267,21 @@ final class AppStore: ObservableObject {
         do {
             try await supabase.from("comments")
                 .insert(NewComment(sessionId: sessionId, userId: uid, body: trimmed))
+                .execute()
+            await loadFeed()
+            return true
+        } catch {
+            errorMessage = friendly(error)
+            return false
+        }
+    }
+
+    @discardableResult
+    func deleteComment(_ comment: Comment) async -> Bool {
+        do {
+            try await supabase.from("comments")
+                .delete()
+                .eq("id", value: comment.id.uuidString)
                 .execute()
             await loadFeed()
             return true
@@ -986,11 +1312,18 @@ final class AppStore: ObservableObject {
         do {
             let rows: [RepostRequest] = try await supabase
                 .from("repost_requests")
-                .select("*, requester:profiles!requester_id(id,username,display_name,avatar_initials,avatar_url), session:sessions!session_id(id,user_id,title)")
+                .select("*, requester:profiles!requester_id(id,username,display_name,avatar_initials,avatar_url,avatar_path), session:sessions!session_id(id,user_id,title)")
                 .eq("status", value: "pending")
                 .execute()
                 .value
-            incomingRepostRequests = rows.filter { $0.session?.userId == userId }
+            var hydrated: [RepostRequest] = []
+            for var request in rows where request.session?.userId == userId {
+                if let requester = request.requester {
+                    request.requester = await hydrateParticipantProfile(requester)
+                }
+                hydrated.append(request)
+            }
+            incomingRepostRequests = hydrated
 
             // Track your own outstanding requests so the button reads "Requested".
             let mine: [RepostRequest] = try await supabase
@@ -1095,29 +1428,30 @@ final class AppStore: ObservableObject {
             // Postgres renders lowercase — Swift's uuidString is uppercase, so
             // it must be lowercased or the insert fails the policy.
             let path = "\(uid.uuidString.lowercased())/\(UUID().uuidString.lowercased()).jpg"
+            let oldPath = currentProfile?.avatarPath
             try await supabase.storage.from("avatars").upload(
                 path,
                 data: jpeg,
                 // Unique immutable filename → safe to cache for a year.
                 options: FileOptions(cacheControl: "31536000", contentType: "image/jpeg")
             )
-            let publicURL = try supabase.storage.from("avatars").getPublicURL(path: path)
             try await supabase.from("profiles")
-                .update(["avatar_url": publicURL.absoluteString])
+                .update(["avatar_path": path])
                 .eq("id", value: uid.uuidString)
                 .execute()
-            // Apply locally instead of a full re-fetch — saves a round trip.
-            currentProfile?.avatarURL = publicURL.absoluteString
-            // My own posts in the feed / on my profile still embed the old
-            // avatar URL. Refresh that cached data so the new photo shows up
-            // everywhere for me. Fire-and-forget so Save stays snappy; other
-            // users' cached views update on their next natural reload.
+            if let oldPath, oldPath != path {
+                try? await supabase.storage.from("avatars").remove(paths: [oldPath])
+            }
+            await loadProfile(userId: uid)
+            // Refresh embedded author rows so the new signed avatar appears
+            // everywhere without making photo selection wait on every feed.
             Task { [weak self] in
                 guard let self else { return }
                 await self.loadFeed()
+                if !self.discoverFeed.isEmpty { await self.loadDiscover() }
                 await self.loadMySessions(userId: uid)
             }
-            return true
+            return errorMessage == nil
         } catch {
             errorMessage = friendly(error)
             return false
@@ -1218,7 +1552,11 @@ final class AppStore: ObservableObject {
             .in("id", values: unique)
             .execute()
             .value
-        return Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
+        var hydrated: [UUID: Profile] = [:]
+        for profile in profiles {
+            hydrated[profile.id] = await hydrateProfile(profile)
+        }
+        return hydrated
     }
 
     private func likedSessionIds(for userId: UUID, sessionIds: [UUID]) async throws -> Set<UUID> {
@@ -1258,8 +1596,82 @@ final class AppStore: ObservableObject {
         return letters.isEmpty ? "PB" : String(letters).uppercased()
     }
 
+    private func hydrateProfile(_ profile: Profile) async -> Profile {
+        guard let path = profile.avatarPath else { return profile }
+        var hydrated = profile
+        if let url = try? await supabase.storage.from("avatars")
+            .createSignedURL(path: path, expiresIn: 900) {
+            hydrated.avatarURL = url.absoluteString
+        } else {
+            hydrated.avatarURL = nil
+        }
+        return hydrated
+    }
+
+    private func hydrateParticipantProfile(_ profile: ParticipantProfile) async -> ParticipantProfile {
+        guard let path = profile.avatarPath else { return profile }
+        var hydrated = profile
+        if let url = try? await supabase.storage.from("avatars")
+            .createSignedURL(path: path, expiresIn: 900) {
+            hydrated.avatarURL = url.absoluteString
+        } else {
+            hydrated.avatarURL = nil
+        }
+        return hydrated
+    }
+
+    private func hydrateComment(_ comment: Comment) async -> Comment {
+        var hydrated = comment
+        if let author = comment.author {
+            hydrated.author = await hydrateParticipantProfile(author)
+        }
+        return hydrated
+    }
+
+    private func hydrateSessions(_ sessions: [FeedSession]) async -> [FeedSession] {
+        var hydrated: [FeedSession] = []
+        hydrated.reserveCapacity(sessions.count)
+        for session in sessions {
+            var copy = session
+            copy.author = await hydrateProfile(session.author)
+            if let comments = session.previewComments {
+                var hydratedComments: [Comment] = []
+                for comment in comments {
+                    hydratedComments.append(await hydrateComment(comment))
+                }
+                copy.previewComments = hydratedComments
+            }
+            if let activities = session.activities {
+                var hydratedActivities: [SessionActivity] = []
+                for var activity in activities {
+                    if let participants = activity.participants {
+                        var hydratedParticipants: [ActivityParticipant] = []
+                        for var participant in participants {
+                            if let profile = participant.profile {
+                                participant.profile = await hydrateParticipantProfile(profile)
+                            }
+                            hydratedParticipants.append(participant)
+                        }
+                        activity.participants = hydratedParticipants
+                    }
+                    hydratedActivities.append(activity)
+                }
+                copy.activities = hydratedActivities
+            }
+            if let path = session.photoPath,
+               let url = try? await supabase.storage.from("post-photos")
+                .createSignedURL(path: path, expiresIn: 900) {
+                copy.photoUrl = url.absoluteString
+            } else if session.photoPath != nil {
+                copy.photoUrl = nil
+            }
+            hydrated.append(copy)
+        }
+        return hydrated
+    }
+
     /// Uploads a post photo to the post-photos bucket under the user's
-    /// (lowercase) uid folder and returns its public URL.
+    /// lowercase uid folder and returns its private object path.
     func uploadPostPhoto(_ data: Data, sessionId: UUID, uid: UUID) async -> String? {
         let jpeg = await Task.detached(priority: .userInitiated) { () -> Data? in
             guard let image = UIImage(data: data) else { return nil }
@@ -1273,9 +1685,9 @@ final class AppStore: ObservableObject {
                 data: jpeg,
                 // Post filename is per-session (can be overwritten on edit), so
                 // cache for a day rather than a year.
-                options: FileOptions(cacheControl: "86400", contentType: "image/jpeg")
+                options: FileOptions(cacheControl: "86400", contentType: "image/jpeg", upsert: true)
             )
-            return try supabase.storage.from("post-photos").getPublicURL(path: path).absoluteString
+            return path
         } catch {
             errorMessage = friendly(error)
             return nil

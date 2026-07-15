@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Which list to show — reached by tapping the Followers / Following counts.
-enum FollowListKind {
+enum FollowListKind: Equatable {
     case followers
     case following
 
@@ -41,12 +41,10 @@ struct FollowListView: View {
                         .padding(.top, 48)
                 } else {
                     ForEach(entries) { entry in
-                        NavigationLink {
-                            OtherProfileView(userId: entry.userId, placeholder: entry.profile)
-                        } label: {
-                            FollowEntryRow(entry: entry)
-                        }
-                        .buttonStyle(.plain)
+                        FollowEntryRow(
+                            entry: entry,
+                            allowsFollowerRemoval: kind == .followers
+                        )
                     }
                 }
             }
@@ -62,28 +60,70 @@ struct FollowListView: View {
 }
 
 struct FollowEntryRow: View {
+    @EnvironmentObject private var store: AppStore
     var entry: FollowListEntry
+    var allowsFollowerRemoval = false
+    @State private var confirmRemove = false
+    @State private var confirmBlock = false
 
     var body: some View {
         HStack(spacing: 14) {
-            ProfileAvatar(profile: entry.profile, size: 40)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(entry.profile?.displayName ?? "Unknown")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Theme.textPrimary)
-                if let username = entry.profile?.username {
-                    Text("@\(username)")
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.textSecondary)
+            NavigationLink {
+                OtherProfileView(userId: entry.userId, placeholder: entry.profile)
+            } label: {
+                HStack(spacing: 14) {
+                    ProfileAvatar(profile: entry.profile, size: 40)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(entry.profile?.displayName ?? "Unknown")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Theme.textPrimary)
+                        if let username = entry.profile?.username {
+                            Text("@\(username)")
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    }
                 }
             }
+            .buttonStyle(.plain)
 
             Spacer()
 
             FollowActionButton(entry: entry)
+
+            Menu {
+                if allowsFollowerRemoval {
+                    Button(role: .destructive) {
+                        confirmRemove = true
+                    } label: {
+                        Label("Remove Follower", systemImage: "person.badge.minus")
+                    }
+                }
+                Button(role: .destructive) {
+                    confirmBlock = true
+                } label: {
+                    Label("Block Player", systemImage: "person.crop.circle.badge.xmark")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(width: 32, height: 32)
+            }
+            .accessibilityLabel("Follower actions")
         }
         .cardStyle()
+        .confirmationDialog("Remove this follower?", isPresented: $confirmRemove, titleVisibility: .visible) {
+            Button("Remove Follower", role: .destructive) {
+                Task { await store.removeFollower(userId: entry.userId) }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .confirmationDialog("Block this player?", isPresented: $confirmBlock, titleVisibility: .visible) {
+            Button("Block", role: .destructive) {
+                Task { _ = await store.blockUser(userId: entry.userId) }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
     }
 }
 
@@ -96,6 +136,7 @@ struct FollowActionButton: View {
     @EnvironmentObject private var store: AppStore
     var entry: FollowListEntry
     @State private var confirmUnfollow = false
+    @State private var confirmCancelRequest = false
 
     var body: some View {
         if entry.userId == store.currentProfile?.id {
@@ -121,7 +162,22 @@ struct FollowActionButton: View {
             }
         } else if let profile = entry.profile {
             if store.requestedFollowIds.contains(entry.userId) {
-                capsule("Requested", filled: false, muted: true)
+                Button {
+                    confirmCancelRequest = true
+                } label: {
+                    capsule("Requested", filled: false, muted: true)
+                }
+                .buttonStyle(.plain)
+                .confirmationDialog(
+                    "Cancel this follow request?",
+                    isPresented: $confirmCancelRequest,
+                    titleVisibility: .visible
+                ) {
+                    Button("Cancel Request", role: .destructive) {
+                        Task { await store.cancelFollowRequest(userId: entry.userId) }
+                    }
+                    Button("Keep Request", role: .cancel) {}
+                }
             } else {
                 Button {
                     Task { await store.sendFollowRequest(to: profile) }
@@ -171,12 +227,7 @@ struct UserFollowListView: View {
                         .padding(.top, 48)
                 } else {
                     ForEach(entries) { entry in
-                        NavigationLink {
-                            OtherProfileView(userId: entry.userId, placeholder: entry.profile)
-                        } label: {
-                            FollowEntryRow(entry: entry)
-                        }
-                        .buttonStyle(.plain)
+                        FollowEntryRow(entry: entry)
                     }
                 }
             }
