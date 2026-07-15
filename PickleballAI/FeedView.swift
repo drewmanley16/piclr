@@ -24,7 +24,15 @@ struct HomeView: View {
         ScrollView {
             LazyVStack(spacing: 12) {
                 if currentFeed.isEmpty {
-                    emptyState
+                    if feedMode == .following && store.isInitialFeedLoading {
+                        ProgressView("Loading feed…")
+                            .tint(Theme.accent)
+                            .foregroundStyle(Theme.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 80)
+                    } else {
+                        emptyState
+                    }
                 } else {
                     ForEach(currentFeed) { session in
                         FeedCard(session: session)
@@ -394,6 +402,13 @@ struct FeedCard: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 200)
                     .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
+            } else if session.photoPath != nil {
+                Rectangle()
+                    .fill(Theme.surfaceElevated)
+                    .overlay { ProgressView().tint(Theme.textTertiary) }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 200)
                     .clipShape(RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
             }
 

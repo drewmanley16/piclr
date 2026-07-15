@@ -18,6 +18,7 @@ final class AppStore: ObservableObject {
     @Published var discoverFeed: [FeedSession] = []
     @Published var feedReachedEnd = false
     @Published var discoverReachedEnd = false
+    @Published private(set) var isInitialFeedLoading = false
     private let feedPageSize = 20
     @Published var mySessions: [FeedSession] = []
     // Directional follow graph (the `follows` table). "Friend" naming is kept
@@ -58,6 +59,24 @@ final class AppStore: ObservableObject {
     private var followsOutTask: Task<Void, Never>?
     private var commentsChannel: RealtimeChannelV2?
     private var commentsTask: Task<Void, Never>?
+    private var signedInBackgroundTask: Task<Void, Never>?
+    private var isFeedRequestInFlight = false
+    private var pendingFeedRefresh = false
+    private var initialFeedLoadStartedAt: Date?
+    private var acceptedFollowingUserIDs: Set<UUID> = []
+    private var sessionRefreshDebounceTask: Task<Void, Never>?
+    private var realtimeNeedsFeedRefresh = false
+    private var realtimeNeedsMySessionsRefresh = false
+    private var realtimeNeedsDiscoverRefresh = false
+
+    private struct CachedMediaURL {
+        let value: String
+        let validUntil: Date
+    }
+
+    private var mediaURLCache: [String: CachedMediaURL] = [:]
+    private let signedURLLifetime = 900
+    private let signedURLRefreshLeeway: TimeInterval = 60
 
     static let iso: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
@@ -190,6 +209,19 @@ final class AppStore: ObservableObject {
     }
 
     private func clearSignedInState() {
+        signedInBackgroundTask?.cancel()
+        signedInBackgroundTask = nil
+        isFeedRequestInFlight = false
+        pendingFeedRefresh = false
+        initialFeedLoadStartedAt = nil
+        acceptedFollowingUserIDs = []
+        sessionRefreshDebounceTask?.cancel()
+        sessionRefreshDebounceTask = nil
+        realtimeNeedsFeedRefresh = false
+        realtimeNeedsMySessionsRefresh = false
+        realtimeNeedsDiscoverRefresh = false
+        isInitialFeedLoading = false
+        mediaURLCache.removeAll()
         currentProfile = nil
         feed = []
         discoverFeed = []
@@ -244,16 +276,29 @@ final class AppStore: ObservableObject {
     }
 
     private func loadSignedInData(userId: UUID) async {
-        await loadFollowState(userId: userId)
-        await loadFollowLists(userId: userId)
-        await loadFeed()
-        await loadMySessions(userId: userId)
-        await loadGear(userId: userId)
-        await loadRepostRequests(userId: userId)
-        await loadNotifications(userId: userId)
-        await loadBlockedAccounts()
+        let startupBeganAt = Date()
+        initialFeedLoadStartedAt = startupBeganAt
+        isInitialFeedLoading = feed.isEmpty
         startRealtime(userId: userId)
-        await setUpPush()
+        await loadFeed()
+        debugFeedMetric("initial feed pipeline complete", since: startupBeganAt)
+
+        // None of this data is required to draw the Home feed. Let it populate
+        // the remaining tabs and badges without extending time-to-feed.
+        signedInBackgroundTask?.cancel()
+        signedInBackgroundTask = Task { [weak self] in
+            guard let self, self.currentProfile?.id == userId else { return }
+            async let followState: Void = self.loadFollowState(userId: userId)
+            async let followLists: Void = self.loadFollowLists(userId: userId)
+            async let mySessions: Void = self.loadMySessions(userId: userId)
+            async let gear: Void = self.loadGear(userId: userId)
+            async let reposts: Void = self.loadRepostRequests(userId: userId)
+            async let notifications: Void = self.loadNotifications(userId: userId)
+            async let blocks: Void = self.loadBlockedAccounts()
+            _ = await (followState, followLists, mySessions, gear, reposts, notifications, blocks)
+            guard !Task.isCancelled, self.currentProfile?.id == userId else { return }
+            await self.setUpPush()
+        }
     }
 
     // MARK: - Push notifications
@@ -309,10 +354,15 @@ final class AppStore: ObservableObject {
         let channel = supabase.channel("public:sessions")
         realtimeChannel = channel
         realtimeTask = Task { [weak self] in
-            let changes = channel.postgresChange(AnyAction.self, schema: "public", table: "sessions")
+            let changes = channel.postgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "sessions",
+                select: ["id", "user_id", "posted"]
+            )
             await channel.subscribe()
-            for await _ in changes {
-                await self?.refreshFeeds(userId: userId)
+            for await change in changes {
+                self?.handleSessionChange(change, userId: userId)
                 if Task.isCancelled { break }
             }
         }
@@ -369,10 +419,81 @@ final class AppStore: ObservableObject {
         }
     }
 
-    private func refreshFeeds(userId: UUID) async {
-        await loadFeed()
-        await loadMySessions(userId: userId)
-        if !discoverFeed.isEmpty { await loadDiscover() }
+    private func handleSessionChange(_ change: AnyAction, userId: UUID) {
+        let record: JSONObject
+        let isDelete: Bool
+        switch change {
+        case .insert(let action):
+            record = action.record
+            isDelete = false
+        case .update(let action):
+            record = action.record
+            isDelete = false
+        case .delete(let action):
+            record = action.oldRecord
+            isDelete = true
+        }
+
+        let sessionID = record["id"]?.stringValue.flatMap(UUID.init(uuidString:))
+        if isDelete, let sessionID {
+            feed.removeAll { $0.id == sessionID }
+            discoverFeed.removeAll { $0.id == sessionID }
+            mySessions.removeAll { $0.id == sessionID }
+            return
+        }
+
+        guard let authorID = record["user_id"]?.stringValue.flatMap(UUID.init(uuidString:)) else {
+            // Older Realtime payloads may omit selected columns. Coalesce one
+            // conservative refresh instead of reloading three datasets per event.
+            scheduleRealtimeRefresh(feed: true, mySessions: false, discover: !discoverFeed.isEmpty, userId: userId)
+            return
+        }
+
+        let posted = record["posted"]?.boolValue ?? true
+        let alreadyInFeed = sessionID.map { id in feed.contains { $0.id == id } } ?? false
+        let alreadyInDiscover = sessionID.map { id in discoverFeed.contains { $0.id == id } } ?? false
+        let alreadyInMySessions = sessionID.map { id in mySessions.contains { $0.id == id } } ?? false
+        let feedAuthorIsVisible = authorID == userId || acceptedFollowingUserIDs.contains(authorID)
+        let refreshFeed = feedAuthorIsVisible && (posted || alreadyInFeed)
+        let refreshMine = authorID == userId && (posted || alreadyInMySessions)
+        let refreshDiscover = !discoverFeed.isEmpty && authorID != userId && (posted || alreadyInDiscover)
+        scheduleRealtimeRefresh(
+            feed: refreshFeed,
+            mySessions: refreshMine,
+            discover: refreshDiscover,
+            userId: userId
+        )
+    }
+
+    private func scheduleRealtimeRefresh(
+        feed: Bool,
+        mySessions: Bool,
+        discover: Bool,
+        userId: UUID
+    ) {
+        guard feed || mySessions || discover else { return }
+        realtimeNeedsFeedRefresh = realtimeNeedsFeedRefresh || feed
+        realtimeNeedsMySessionsRefresh = realtimeNeedsMySessionsRefresh || mySessions
+        realtimeNeedsDiscoverRefresh = realtimeNeedsDiscoverRefresh || discover
+        sessionRefreshDebounceTask?.cancel()
+        sessionRefreshDebounceTask = Task { [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: 250_000_000)
+            } catch {
+                return
+            }
+            guard let self, self.currentProfile?.id == userId else { return }
+            let refreshFeed = self.realtimeNeedsFeedRefresh
+            let refreshMine = self.realtimeNeedsMySessionsRefresh
+            let refreshDiscover = self.realtimeNeedsDiscoverRefresh
+            self.realtimeNeedsFeedRefresh = false
+            self.realtimeNeedsMySessionsRefresh = false
+            self.realtimeNeedsDiscoverRefresh = false
+            async let feedLoad: Void = refreshFeed ? self.loadFeed() : ()
+            async let mySessionsLoad: Void = refreshMine ? self.loadMySessions(userId: userId) : ()
+            async let discoverLoad: Void = refreshDiscover ? self.loadDiscover() : ()
+            _ = await (feedLoad, mySessionsLoad, discoverLoad)
+        }
     }
 
     private func reloadFollowGraph(userId: UUID, refreshFeed: Bool) async {
@@ -382,6 +503,11 @@ final class AppStore: ObservableObject {
     }
 
     private func stopRealtime() {
+        sessionRefreshDebounceTask?.cancel()
+        sessionRefreshDebounceTask = nil
+        realtimeNeedsFeedRefresh = false
+        realtimeNeedsMySessionsRefresh = false
+        realtimeNeedsDiscoverRefresh = false
         realtimeTask?.cancel()
         realtimeTask = nil
         notifTask?.cancel()
@@ -475,6 +601,21 @@ final class AppStore: ObservableObject {
     func loadFeed(reset: Bool = true) async {
         guard let uid = currentProfile?.id else { return }
         if reset { feedReachedEnd = false } else if feedReachedEnd { return }
+        if isFeedRequestInFlight {
+            if reset { pendingFeedRefresh = true }
+            return
+        }
+
+        isFeedRequestInFlight = true
+        let requestBeganAt = Date()
+        defer {
+            isFeedRequestInFlight = false
+            if pendingFeedRefresh {
+                pendingFeedRefresh = false
+                Task { [weak self] in await self?.loadFeed() }
+            }
+        }
+
         do {
             let followingIds = try await acceptedFollowingIds(for: uid)
             let visibleIds = [uid] + followingIds
@@ -491,11 +632,40 @@ final class AppStore: ObservableObject {
                 .limit(3, referencedTable: "preview_comments")
                 .execute()
                 .value
-            let hydratedPage = await hydrateSessions(page)
-            feed = reset ? hydratedPage : feed + hydratedPage
+            guard currentProfile?.id == uid, !Task.isCancelled else { return }
+
+            // Text and activity data can render immediately. Private-media URL
+            // signing and liked-state lookup are enhancements, not prerequisites
+            // for showing the feed.
+            if reset {
+                feed = page
+            } else {
+                let existingIDs = Set(feed.map(\.id))
+                feed.append(contentsOf: page.filter { !existingIDs.contains($0.id) })
+            }
             feedReachedEnd = page.count < feedPageSize
-            await refreshLikedState(for: page, uid: uid)
+            isInitialFeedLoading = false
+            debugFeedMetric("feed query returned \(page.count) rows", since: requestBeganAt)
+            if let initialFeedLoadStartedAt {
+                debugFeedMetric("cold start to first feed rows", since: initialFeedLoadStartedAt)
+                self.initialFeedLoadStartedAt = nil
+            }
+
+            async let hydrated: [FeedSession] = hydrateSessions(page)
+            async let liked: Set<UUID>? = try? likedSessionIds(for: uid, sessionIds: page.map(\.id))
+            let (hydratedPage, likedPage) = await (hydrated, liked)
+            guard currentProfile?.id == uid, !Task.isCancelled else { return }
+
+            let hydratedByID = Dictionary(uniqueKeysWithValues: hydratedPage.map { ($0.id, $0) })
+            feed = feed.map { hydratedByID[$0.id] ?? $0 }
+            if let likedPage {
+                likedSessionIds.subtract(page.map(\.id))
+                likedSessionIds.formUnion(likedPage)
+            }
+            debugFeedMetric("feed media hydrated", since: requestBeganAt)
         } catch {
+            isInitialFeedLoading = false
+            initialFeedLoadStartedAt = nil
             errorMessage = friendly(error)
         }
     }
@@ -517,10 +687,24 @@ final class AppStore: ObservableObject {
                 .limit(3, referencedTable: "preview_comments")
                 .execute()
                 .value
-            let hydratedPage = await hydrateSessions(page)
-            discoverFeed = reset ? hydratedPage : discoverFeed + hydratedPage
+            guard currentProfile?.id == uid, !Task.isCancelled else { return }
+            if reset {
+                discoverFeed = page
+            } else {
+                let existingIDs = Set(discoverFeed.map(\.id))
+                discoverFeed.append(contentsOf: page.filter { !existingIDs.contains($0.id) })
+            }
             discoverReachedEnd = page.count < feedPageSize
-            await refreshLikedState(for: page, uid: uid)
+            async let hydrated: [FeedSession] = hydrateSessions(page)
+            async let liked: Set<UUID>? = try? likedSessionIds(for: uid, sessionIds: page.map(\.id))
+            let (hydratedPage, likedPage) = await (hydrated, liked)
+            guard currentProfile?.id == uid, !Task.isCancelled else { return }
+            let hydratedByID = Dictionary(uniqueKeysWithValues: hydratedPage.map { ($0.id, $0) })
+            discoverFeed = discoverFeed.map { hydratedByID[$0.id] ?? $0 }
+            if let likedPage {
+                likedSessionIds.subtract(page.map(\.id))
+                likedSessionIds.formUnion(likedPage)
+            }
         } catch {
             errorMessage = friendly(error)
         }
@@ -1637,7 +1821,11 @@ final class AppStore: ObservableObject {
             .eq("status", value: "accepted")
             .execute()
             .value
-        return Array(Set(edges.map(\.followeeId)))
+        let ids = Set(edges.map(\.followeeId))
+        if currentProfile?.id == userId {
+            acceptedFollowingUserIDs = ids
+        }
+        return Array(ids)
     }
 
     /// Fetches profiles for the given ids in one query, keyed by id. Ids that
@@ -1652,8 +1840,8 @@ final class AppStore: ObservableObject {
             .execute()
             .value
         var hydrated: [UUID: Profile] = [:]
-        for profile in profiles {
-            hydrated[profile.id] = await hydrateProfile(profile)
+        for profile in await hydrateProfiles(profiles) {
+            hydrated[profile.id] = profile
         }
         return hydrated
     }
@@ -1696,26 +1884,24 @@ final class AppStore: ObservableObject {
     }
 
     private func hydrateProfile(_ profile: Profile) async -> Profile {
-        guard let path = profile.avatarPath else { return profile }
-        var hydrated = profile
-        if let url = try? await supabase.storage.from("avatars")
-            .createSignedURL(path: path, expiresIn: 900) {
-            hydrated.avatarURL = url.absoluteString
-        } else {
-            hydrated.avatarURL = nil
+        await hydrateProfiles([profile]).first ?? profile
+    }
+
+    private func hydrateProfiles(_ profiles: [Profile]) async -> [Profile] {
+        let paths = Set(profiles.compactMap(\.avatarPath))
+        let urls = await signedMediaURLs(bucket: "avatars", paths: paths)
+        return profiles.map { profile in
+            guard let path = profile.avatarPath else { return profile }
+            var hydrated = profile
+            hydrated.avatarURL = urls[path]
+            return hydrated
         }
-        return hydrated
     }
 
     private func hydrateParticipantProfile(_ profile: ParticipantProfile) async -> ParticipantProfile {
         guard let path = profile.avatarPath else { return profile }
         var hydrated = profile
-        if let url = try? await supabase.storage.from("avatars")
-            .createSignedURL(path: path, expiresIn: 900) {
-            hydrated.avatarURL = url.absoluteString
-        } else {
-            hydrated.avatarURL = nil
-        }
+        hydrated.avatarURL = await signedMediaURLs(bucket: "avatars", paths: [path])[path]
         return hydrated
     }
 
@@ -1728,45 +1914,106 @@ final class AppStore: ObservableObject {
     }
 
     private func hydrateSessions(_ sessions: [FeedSession]) async -> [FeedSession] {
-        var hydrated: [FeedSession] = []
-        hydrated.reserveCapacity(sessions.count)
+        var avatarPaths = Set<String>()
+        var photoPaths = Set<String>()
         for session in sessions {
-            var copy = session
-            copy.author = await hydrateProfile(session.author)
-            if let comments = session.previewComments {
-                var hydratedComments: [Comment] = []
-                for comment in comments {
-                    hydratedComments.append(await hydrateComment(comment))
+            if let path = session.author.avatarPath { avatarPaths.insert(path) }
+            if let path = session.photoPath { photoPaths.insert(path) }
+            for comment in session.previewComments ?? [] {
+                if let path = comment.author?.avatarPath { avatarPaths.insert(path) }
+            }
+            for activity in session.activities ?? [] {
+                for participant in activity.participants ?? [] {
+                    if let path = participant.profile?.avatarPath { avatarPaths.insert(path) }
                 }
-                copy.previewComments = hydratedComments
             }
-            if let activities = session.activities {
-                var hydratedActivities: [SessionActivity] = []
-                for var activity in activities {
-                    if let participants = activity.participants {
-                        var hydratedParticipants: [ActivityParticipant] = []
-                        for var participant in participants {
-                            if let profile = participant.profile {
-                                participant.profile = await hydrateParticipantProfile(profile)
-                            }
-                            hydratedParticipants.append(participant)
-                        }
-                        activity.participants = hydratedParticipants
-                    }
-                    hydratedActivities.append(activity)
-                }
-                copy.activities = hydratedActivities
-            }
-            if let path = session.photoPath,
-               let url = try? await supabase.storage.from("post-photos")
-                .createSignedURL(path: path, expiresIn: 900) {
-                copy.photoUrl = url.absoluteString
-            } else if session.photoPath != nil {
-                copy.photoUrl = nil
-            }
-            hydrated.append(copy)
         }
-        return hydrated
+
+        let avatarPathsToSign = avatarPaths
+        let photoPathsToSign = photoPaths
+        async let avatarURLs = signedMediaURLs(bucket: "avatars", paths: avatarPathsToSign)
+        async let photoURLs = signedMediaURLs(bucket: "post-photos", paths: photoPathsToSign)
+        let (avatars, photos) = await (avatarURLs, photoURLs)
+
+        return sessions.map { session in
+            var copy = session
+            if let path = copy.author.avatarPath {
+                copy.author.avatarURL = avatars[path]
+            }
+            copy.previewComments = copy.previewComments?.map { comment in
+                var hydratedComment = comment
+                if var author = hydratedComment.author, let path = author.avatarPath {
+                    author.avatarURL = avatars[path]
+                    hydratedComment.author = author
+                }
+                return hydratedComment
+            }
+            copy.activities = copy.activities?.map { activity in
+                var hydratedActivity = activity
+                hydratedActivity.participants = hydratedActivity.participants?.map { participant in
+                    var hydratedParticipant = participant
+                    if var profile = hydratedParticipant.profile, let path = profile.avatarPath {
+                        profile.avatarURL = avatars[path]
+                        hydratedParticipant.profile = profile
+                    }
+                    return hydratedParticipant
+                }
+                return hydratedActivity
+            }
+            if let path = copy.photoPath {
+                copy.photoUrl = photos[path]
+            }
+            return copy
+        }
+    }
+
+    private func signedMediaURLs(bucket: String, paths: Set<String>) async -> [String: String] {
+        guard !paths.isEmpty else { return [:] }
+
+        let refreshAfter = Date().addingTimeInterval(signedURLRefreshLeeway)
+        var resolved: [String: String] = [:]
+        var missing: [String] = []
+        for path in paths.sorted() {
+            let key = "\(bucket):\(path)"
+            if let cached = mediaURLCache[key], cached.validUntil > refreshAfter {
+                resolved[path] = cached.value
+            } else {
+                missing.append(path)
+            }
+        }
+        guard !missing.isEmpty else { return resolved }
+
+        let signingBeganAt = Date()
+        do {
+            let results: [SignedURLResult] = try await supabase.storage
+                .from(bucket)
+                .createSignedURLs(paths: missing, expiresIn: signedURLLifetime)
+            let validUntil = Date().addingTimeInterval(
+                TimeInterval(signedURLLifetime) - signedURLRefreshLeeway
+            )
+            for result in results {
+                guard case .success(let path, let url) = result else { continue }
+                let value = url.absoluteString
+                resolved[path] = value
+                mediaURLCache["\(bucket):\(path)"] = CachedMediaURL(
+                    value: value,
+                    validUntil: validUntil
+                )
+            }
+            debugFeedMetric("signed \(missing.count) \(bucket) URLs in one request", since: signingBeganAt)
+        } catch {
+            #if DEBUG
+            print("[FeedPerformance] \(bucket) batch signing failed: \(error.localizedDescription)")
+            #endif
+        }
+        return resolved
+    }
+
+    private func debugFeedMetric(_ label: String, since start: Date) {
+        #if DEBUG
+        let milliseconds = Int(Date().timeIntervalSince(start) * 1_000)
+        print("[FeedPerformance] \(label): \(milliseconds) ms")
+        #endif
     }
 
     /// Uploads a post photo to the post-photos bucket under the user's
