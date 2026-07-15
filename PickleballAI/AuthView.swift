@@ -9,6 +9,14 @@ enum Legal {
     static let privacyURL = "https://pickleball-ai-web.vercel.app/privacy"
 }
 
+/// Shared app links used in more than one screen.
+enum AppLinks {
+    /// Destination of "Share invite link". Pre-launch this is the marketing site
+    /// (waitlist + "coming soon"), so shared invites always land somewhere real.
+    // TODO: swap to App Store URL at launch
+    static let invite = "https://pickleball-ai-web.vercel.app"
+}
+
 struct AuthView: View {
     @EnvironmentObject private var store: AppStore
     @AppStorage("hasSeenOnboardingSplash") private var hasSeenOnboardingSplash = false
@@ -356,9 +364,9 @@ struct AuthView: View {
             }
 
             ShareLink(
-                item: URL(string: "https://pickleball.ai/invite")!,
-                subject: Text("Join my pickleball crew"),
-                message: Text("Add me on pickleball.ai and log matches with the crew.")
+                item: URL(string: AppLinks.invite)!,
+                subject: Text("Get early access to pickleball.ai"),
+                message: Text("Get early access to pickleball.ai — log every match with your crew.")
             ) {
                 Label("Share invite link", systemImage: "square.and.arrow.up")
                     .font(.headline)
