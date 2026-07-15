@@ -434,13 +434,6 @@ struct ActiveSessionView: View {
 
     private var detailsCard: some View {
         VStack(spacing: 0) {
-            TextField("Session title (optional)", text: $draft.title)
-                .font(.headline)
-                .frame(minHeight: 44)
-            Divider().overlay(Theme.hairline)
-            TextField("Location", text: $draft.location)
-                .frame(minHeight: 44)
-            Divider().overlay(Theme.hairline)
             if isEditing {
                 DatePicker("Started", selection: $draft.startedAt)
                     .datePickerStyle(.compact)
@@ -459,17 +452,24 @@ struct ActiveSessionView: View {
             } else {
                 HStack {
                     Label("In progress", systemImage: "clock")
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.textSecondary)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.accent)
                     Spacer()
                     TimelineView(.periodic(from: draft.startedAt, by: 1)) { _ in
                         Text(elapsed)
-                            .font(.subheadline.weight(.semibold).monospacedDigit())
+                            .font(.title3.weight(.bold).monospacedDigit())
                             .foregroundStyle(Theme.accent)
                     }
                 }
-                .frame(minHeight: 44)
+                .frame(minHeight: 48)
             }
+            Divider().overlay(Theme.hairline)
+            TextField(AppStore.timeOfDayTitle(for: draft.startedAt), text: $draft.title)
+                .font(.headline)
+                .frame(minHeight: 44)
+            Divider().overlay(Theme.hairline)
+            TextField("Location", text: $draft.location)
+                .frame(minHeight: 44)
             Divider().overlay(Theme.hairline)
             TextField("Takeaway (optional)", text: $draft.takeaway, axis: .vertical)
                 .lineLimit(1...3)
