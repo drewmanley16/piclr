@@ -353,30 +353,41 @@ struct FeedCard: View {
                 .accessibilityLabel("Session actions")
             }
 
+            // Title + a quiet context line (focus / location — never duration; that
+            // lives in the stat strip, so it can't be mistaken for a timestamp).
             VStack(alignment: .leading, spacing: 3) {
                 Text(session.displayTitle)
-                    .font(.title3.weight(.bold))
+                    .font(.headline)
                     .foregroundStyle(Theme.textPrimary)
-                Text(session.metaLine)
-                    .font(.caption)
-                    .foregroundStyle(Theme.textSecondary)
+                if let subtitle = metaSubtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(Theme.textTertiary)
+                }
+            }
+
+            // Hevy-style summary strip: the session's substance in one scannable row.
+            SessionSummaryStrip(session: session)
+
+            // Activities as a clean itemized list (Hevy's exercise rows), score inline.
+            if !session.sortedActivities.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(Array(session.sortedActivities.enumerated()), id: \.element.id) { index, activity in
+                        if index > 0 {
+                            Divider().overlay(Theme.hairline)
+                        }
+                        ActivityRow(activity: activity)
+                            .padding(.vertical, 10)
+                    }
+                }
             }
 
             if let photo = session.photoUrl, let url = URL(string: photo) {
                 RemoteImage(url: url)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 220)
+                    .frame(height: 200)
                     .clipped()
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            }
-
-            if !session.sortedActivities.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    ForEach(session.sortedActivities) { activity in
-                        ActivityLine(activity: activity)
-                    }
-                }
-                .padding(.vertical, 2)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
             }
 
             if let takeaway = session.takeaway, !takeaway.isEmpty {
@@ -387,7 +398,9 @@ struct FeedCard: View {
 
             Divider().overlay(Theme.hairline)
 
-            HStack(spacing: 22) {
+            // Stable left cluster (like · comment · share) so tap targets never move
+            // card-to-card; the conditional Repost lives quietly on the trailing edge.
+            HStack(spacing: 20) {
                 let liked = store.likedSessionIds.contains(session.id)
                 Button {
                     Task { await store.toggleLike(session) }
@@ -413,22 +426,25 @@ struct FeedCard: View {
                         .frame(minHeight: 44)
                 }
 
+                Spacer()
+
                 if canRepost {
                     Button {
                         Task { await store.requestRepost(session) }
                     } label: {
                         HStack(spacing: 6) {
-                            Image(systemName: "arrow.2.squarepath").font(.body.weight(.semibold))
-                            Text(requested ? "Requested" : "Repost").font(.subheadline.weight(.semibold))
+                            Image(systemName: "arrow.2.squarepath").font(.footnote.weight(.bold))
+                            Text(requested ? "Requested" : "Repost").font(.caption.weight(.bold))
                         }
-                        .foregroundStyle(requested ? Theme.textTertiary : Theme.accent)
-                        .frame(minHeight: 44)
+                        .foregroundStyle(requested ? Theme.textTertiary : Theme.textSecondary)
+                        .padding(.horizontal, 12)
+                        .frame(height: 34)
+                        .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
                     .disabled(requested)
+                    .accessibilityLabel(requested ? "Repost requested" : "Repost")
                 }
-
-                Spacer()
             }
 
             if !session.inlineComments.isEmpty {
@@ -452,7 +468,7 @@ struct FeedCard: View {
                 .padding(.top, 2)
             }
         }
-        .cardStyle()
+        .cardStyle(bordered: false)
         .sheet(isPresented: $showComments) {
             CommentsView(session: session)
         }
@@ -490,6 +506,15 @@ struct FeedCard: View {
         }
     }
 
+    /// Focus · location — the quiet context under the title. Duration is deliberately
+    /// excluded (it's a labeled stat) so nothing reads like a second timestamp.
+    private var metaSubtitle: String? {
+        let parts = [session.focus, session.location]
+            .compactMap { $0 }
+            .filter { !$0.isEmpty }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
     private var isOwner: Bool { store.currentProfile?.id == session.userId }
     private var isTagged: Bool {
         guard let uid = store.currentProfile?.id else { return false }
@@ -511,47 +536,114 @@ struct InlineCommentRow: View {
         (
             Text(comment.authorName)
                 .font(.subheadline.weight(.semibold))
-            + Text(" \(comment.body)")
+                .foregroundColor(Theme.textPrimary)
+            + Text("  \(comment.body)")
                 .font(.subheadline)
+                .foregroundColor(Theme.textSecondary)
         )
-        .foregroundStyle(Theme.textPrimary)
         .lineLimit(2)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
-struct ActivityLine: View {
-    var activity: SessionActivity
+/// Hevy-style summary strip: the session's substance (duration, matches, record)
+/// as evenly-weighted stat columns, so a glance tells you what happened.
+struct SessionSummaryStrip: View {
+    let session: FeedSession
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: activity.isMatch ? "flag.checkered" : "figure.cooldown")
+        HStack(spacing: 0) {
+            ForEach(Array(stats.enumerated()), id: \.offset) { index, stat in
+                if index > 0 {
+                    Rectangle()
+                        .fill(Theme.hairline)
+                        .frame(width: 1, height: 26)
+                }
+                VStack(spacing: 3) {
+                    Text(stat.value)
+                        .font(.system(size: 17, weight: .bold))
+                        .monospacedDigit()
+                        .foregroundStyle(stat.emphasized ? Theme.accent : Theme.textPrimary)
+                    Text(stat.label)
+                        .font(.caption2.weight(.semibold))
+                        .textCase(.uppercase)
+                        .tracking(0.6)
+                        .foregroundStyle(Theme.textTertiary)
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .padding(.vertical, 10)
+    }
+
+    private struct Stat { let value: String; let label: String; var emphasized = false }
+
+    private var stats: [Stat] {
+        var result: [Stat] = [Stat(value: durationText, label: "Duration")]
+        let matches = session.matchCount
+        if matches > 0 {
+            result.append(Stat(value: "\(matches)", label: matches == 1 ? "Match" : "Matches"))
+            result.append(Stat(value: "\(wins)–\(losses)", label: "Record", emphasized: wins > 0 && losses == 0))
+        } else if session.practiceCount > 0 {
+            let drills = session.practiceCount
+            result.append(Stat(value: "\(drills)", label: drills == 1 ? "Drill" : "Drills"))
+        }
+        return result
+    }
+
+    private var wins: Int { session.sortedActivities.filter { $0.isMatch && $0.won == true }.count }
+    private var losses: Int { session.sortedActivities.filter { $0.isMatch && $0.won == false }.count }
+
+    private var durationText: String {
+        let m = session.durationMinutes
+        return m < 60 ? "\(m)m" : "\(m / 60)h \(m % 60)m"
+    }
+}
+
+/// A single activity in the itemized list (Hevy's exercise row). Leading tile,
+/// title + who-played, and — for matches — the score with a compact W/L badge.
+struct ActivityRow: View {
+    let activity: SessionActivity
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: activity.isMatch ? "flag.checkered" : "figure.pickleball")
                 .font(.footnote.weight(.bold))
-                .foregroundStyle(Theme.accent)
-                .frame(width: 22, height: 20)
+                .foregroundStyle(Theme.textSecondary)
+                .frame(width: 36, height: 36)
+                .background(Theme.surfaceElevated, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(activity.title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.textPrimary)
-                    if activity.isMatch, let won = activity.won {
-                        Text(won ? "W" : "L")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(won ? Theme.background : Theme.textSecondary)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 1)
-                            .background(won ? Theme.accent : Theme.surfaceElevated, in: Capsule())
-                    }
-                }
+                Text(activity.isMatch ? "Match" : activity.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.textPrimary)
                 if let detail {
                     Text(detail)
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(2)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            if activity.isMatch, let score = activity.scoreLine {
+                HStack(spacing: 8) {
+                    Text(score)
+                        .font(.callout.weight(.bold))
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.textPrimary)
+                    if let won = activity.won {
+                        Text(won ? "W" : "L")
+                            .font(.caption.weight(.heavy))
+                            .foregroundStyle(Theme.background)
+                            .frame(width: 22, height: 22)
+                            .background(won ? Theme.win : Theme.loss, in: Circle())
+                    }
                 }
             }
         }
+        .accessibilityElement(children: .combine)
     }
 
     private var detail: String? {
