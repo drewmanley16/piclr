@@ -23,6 +23,7 @@ struct ProfileView: View {
                     profileRow
                     if !store.incomingFollowRequests.isEmpty { followRequestsBanner }
                     if completion < 1 { completionBanner }
+                    recordCard
                     activityCard
                     WorkoutCalendarCard(sessions: store.mySessions)
                     dashboard
@@ -171,6 +172,75 @@ struct ProfileView: View {
             .cardStyle()
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: Record
+
+    private var stats: SessionStats { SessionStats(sessions: store.mySessions) }
+
+    @ViewBuilder
+    private var recordCard: some View {
+        let s = stats
+        if s.matches > 0 {
+            Button { activeSheet = .stats } label: {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Text("Record").font(.headline).foregroundStyle(Theme.textPrimary)
+                        Spacer()
+                        Text("Details")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.accent)
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Theme.accent)
+                    }
+
+                    HStack(spacing: 0) {
+                        recordStat("\(s.wins)–\(s.losses)", "Win–Loss", accent: true)
+                        Divider().frame(height: 30).overlay(Theme.hairline)
+                        recordStat("\(s.winRate)%", "Win rate")
+                        Divider().frame(height: 30).overlay(Theme.hairline)
+                        recordStat(s.streakLabel, "Streak")
+                    }
+
+                    if !s.partners.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("BEST PARTNERS")
+                                .font(.caption2.weight(.semibold))
+                                .tracking(1.2)
+                                .foregroundStyle(Theme.textSecondary)
+                            ForEach(s.partners.prefix(3)) { partner in
+                                HStack(spacing: 10) {
+                                    ProfileAvatar(url: nil, initials: partner.avatarInitials, size: 32)
+                                    Text(partner.name)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(Theme.textPrimary)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    Text(partner.recordLine)
+                                        .font(.subheadline.weight(.bold))
+                                        .foregroundStyle(partner.wins >= partner.losses ? Theme.accent : Theme.textPrimary)
+                                }
+                            }
+                        }
+                    }
+                }
+                .cardStyle()
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func recordStat(_ value: String, _ label: String, accent: Bool = false) -> some View {
+        VStack(spacing: 3) {
+            Text(value)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(accent ? Theme.accent : Theme.textPrimary)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(Theme.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: Activity chart

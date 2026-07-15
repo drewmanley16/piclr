@@ -191,6 +191,7 @@ final class AppStore: ObservableObject {
 
     func signOut() async {
         stopRealtime()
+        await removeDeviceToken()
         try? await supabase.auth.signOut()
         clearSignedInState()
     }
@@ -259,6 +260,51 @@ final class AppStore: ObservableObject {
         await loadNotifications(userId: userId)
         await loadBlockedAccounts()
         startRealtime(userId: userId)
+        await setUpPush()
+    }
+
+    // MARK: - Push notifications
+
+    /// Wires the token callback and registers with APNs. On first sign-in this
+    /// prompts for permission; on later launches it silently refreshes the token
+    /// if the user already granted it.
+    private func setUpPush() async {
+        PushService.shared.onToken = { [weak self] token in
+            Task { await self?.uploadDeviceToken(token) }
+        }
+        if await PushService.shared.authorizationStatus() == .notDetermined {
+            await PushService.shared.requestAuthorizationAndRegister()
+        } else {
+            await PushService.shared.registerIfAuthorized()
+        }
+    }
+
+    /// Prompts for permission and registers. Called from the Settings toggle.
+    @discardableResult
+    func enablePushNotifications() async -> Bool {
+        await PushService.shared.requestAuthorizationAndRegister()
+    }
+
+    private func uploadDeviceToken(_ token: String) async {
+        guard currentProfile != nil else { return }
+        do {
+            try await supabase
+                .rpc("register_device_token", params: ["p_token": token, "p_platform": "ios"])
+                .execute()
+        } catch {
+            // Non-fatal: worst case the device just won't get pushes this run.
+            print("[Push] token upload failed: \(error.localizedDescription)")
+        }
+    }
+
+    /// Removes this device's token so it stops receiving pushes (toggle off / sign out).
+    func removeDeviceToken() async {
+        guard let token = PushService.shared.latestToken else { return }
+        try? await supabase
+            .from("device_tokens")
+            .delete()
+            .eq("token", value: token)
+            .execute()
     }
 
     // MARK: - Realtime
@@ -474,6 +520,25 @@ final class AppStore: ObservableObject {
             mySessions = await hydrateSessions(sessions)
         } catch {
             errorMessage = friendly(error)
+        }
+    }
+
+    /// Fetches a single session by id (for opening a post from a notification).
+    func loadSession(id: UUID) async -> FeedSession? {
+        do {
+            let rows: [FeedSession] = try await supabase
+                .from("sessions")
+                .select(selectFeedPreview)
+                .eq("id", value: id.uuidString)
+                .limit(1)
+                .execute()
+                .value
+            let hydrated = await hydrateSessions(rows)
+            if let uid = currentProfile?.id { await refreshLikedState(for: hydrated, uid: uid) }
+            return hydrated.first
+        } catch {
+            errorMessage = friendly(error)
+            return nil
         }
     }
 
