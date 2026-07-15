@@ -3,29 +3,41 @@ import UIKit
 
 // MARK: - Theme Tokens
 
-/// Central design tokens for the premium dark look:
-/// pure-black base, raised charcoal surfaces, one electric-green accent.
+/// Central design tokens, rooted in a pickleball court at night:
+/// a deep blue-black base (not generic pure black), cool charcoal surfaces,
+/// and one optic-green accent kept in reserve for performance / wins.
 enum Theme {
-    // Surfaces
-    static let background = Color(hex: 0x000000)
-    static let surface = Color(hex: 0x121214)          // raised card
-    static let surfaceElevated = Color(hex: 0x1E1E22)  // chips / avatars / nested
+    // Surfaces — true black base with cards that sit just a whisper above it, so
+    // posts read as one seamless black surface (separated by spacing, not boxes).
+    static let background = Color(hex: 0x000000)        // true black
+    static let surface = Color(hex: 0x0F0F0F)          // card — barely lifted from black
+    static let surfaceElevated = Color(hex: 0x212121)  // chips / tiles / nested
 
-    // Accent
-    static let accent = Color(hex: 0xC5FF3D)           // electric court green
+    // Accent — the optic green of a pickleball. Reserved for wins/performance.
+    static let accent = Color(hex: 0xC5FF3D)
     static var accentSoft: Color { accent.opacity(0.14) }
+
+    // Semantic result colors (a match is won or lost — both must read at a glance).
+    static let win = Color(hex: 0xC5FF3D)              // optic green
+    static let loss = Color(hex: 0xF0785A)             // court clay
 
     // Text
     static let textPrimary = Color.white
     static let textSecondary = Color.white.opacity(0.62)
-    static let textTertiary = Color.white.opacity(0.38)
+    static let textTertiary = Color.white.opacity(0.40)
 
     // Lines
     static let hairline = Color.white.opacity(0.08)
+    static let courtLine = Color.white.opacity(0.14)   // chalk line on the scoreboard
 
     // Radii (continuous = Apple squircle)
-    static let radiusCard: CGFloat = 22
-    static let radiusControl: CGFloat = 14
+    static let radiusCard: CGFloat = 18
+    static let radiusControl: CGFloat = 12
+
+    /// Courtside scoreboard numerals: heavy, rounded, tabular so scores line up.
+    static func scoreboard(_ size: CGFloat) -> Font {
+        .system(size: size, weight: .heavy, design: .rounded).monospacedDigit()
+    }
 }
 
 extension Color {
@@ -45,6 +57,7 @@ extension Color {
 struct CardStyle: ViewModifier {
     var padding: CGFloat = 16
     var fill: Color = Theme.surface
+    var bordered: Bool = true
 
     func body(content: Content) -> some View {
         content
@@ -52,14 +65,14 @@ struct CardStyle: ViewModifier {
             .background(fill, in: RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous)
-                    .strokeBorder(Theme.hairline, lineWidth: 1)
+                    .strokeBorder(Theme.hairline, lineWidth: bordered ? 1 : 0)
             )
     }
 }
 
 extension View {
-    func cardStyle(padding: CGFloat = 16, fill: Color = Theme.surface) -> some View {
-        modifier(CardStyle(padding: padding, fill: fill))
+    func cardStyle(padding: CGFloat = 16, fill: Color = Theme.surface, bordered: Bool = true) -> some View {
+        modifier(CardStyle(padding: padding, fill: fill, bordered: bordered))
     }
 }
 
