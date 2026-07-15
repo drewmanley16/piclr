@@ -141,12 +141,39 @@ struct PlayerPickerSheet: View {
     var onPick: (DraftPlayer) -> Void
 
     @State private var query = ""
+    @FocusState private var searchFocused: Bool
 
     private var trimmed: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    /// Friends (people you follow), shown by default for one-tap adding.
+    private var friends: [Profile] {
+        store.following.compactMap(\.profile).filter { !exclude.contains($0.id) }
+    }
+
+    private var members: [Profile] {
+        trimmed.isEmpty ? friends : store.searchResults.filter { !exclude.contains($0.id) }
+    }
 
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    HStack(spacing: 10) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(Theme.textTertiary)
+                        TextField("Search by name or @username", text: $query)
+                            .focused($searchFocused)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
+                        if !query.isEmpty {
+                            Button { query = "" } label: {
+                                Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.textTertiary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+
                 if !trimmed.isEmpty {
                     Section {
                         Button {
@@ -159,14 +186,15 @@ struct PlayerPickerSheet: View {
                     }
                 }
 
-                Section("Members") {
-                    let results = store.searchResults.filter { !exclude.contains($0.id) }
-                    if results.isEmpty {
-                        Text(trimmed.isEmpty ? "Search by name or @username" : "No members found")
+                Section(trimmed.isEmpty ? "Friends" : "Members") {
+                    if members.isEmpty {
+                        Text(trimmed.isEmpty
+                             ? "Follow people to add them here, or search by name."
+                             : "No members found")
                             .font(.subheadline)
                             .foregroundStyle(Theme.textTertiary)
                     } else {
-                        ForEach(results) { profile in
+                        ForEach(members) { profile in
                             Button {
                                 onPick(DraftPlayer(profile: profile))
                                 dismiss()
@@ -177,6 +205,9 @@ struct PlayerPickerSheet: View {
                                         Text(profile.displayName).foregroundStyle(Theme.textPrimary)
                                         Text("@\(profile.username)").font(.caption).foregroundStyle(Theme.textSecondary)
                                     }
+                                    Spacer()
+                                    Image(systemName: "plus.circle.fill")
+                                        .foregroundStyle(Theme.accent)
                                 }
                             }
                         }
@@ -186,7 +217,6 @@ struct PlayerPickerSheet: View {
             .scrollContentBackground(.hidden)
             .background(Theme.background)
             .listRowBackground(Theme.surface)
-            .searchable(text: $query, prompt: "Name or @username")
             .task(id: query) {
                 await store.searchProfilesAfterTyping(query: query)
             }
