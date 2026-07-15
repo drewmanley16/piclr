@@ -10,7 +10,7 @@ packages:
 settings:
   base:
     MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "11"
+    CURRENT_PROJECT_VERSION: "12"
     DEVELOPMENT_TEAM: "X9H68STU8F"
     CODE_SIGN_STYLE: Automatic
 targets:
@@ -66,5 +66,7 @@ targets:
     info:
       path: PickleballAIWidget/Info.plist
       properties:
+        # App extensions must carry an explicit display name for App Store upload.
+        CFBundleDisplayName: "pickleball.ai"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
