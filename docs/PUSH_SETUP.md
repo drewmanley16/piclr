@@ -1,9 +1,28 @@
 # Push notifications (APNs) setup
 
+## Status (2026-07-14)
+
+Backend is **configured and live** on project `jdokoljojvrmaxhjjqbe`:
+- Edge-function secrets set (`APNS_KEY`/`APNS_KEY_ID=58JH7R76G9`/`APNS_TEAM_ID`/
+  `APNS_BUNDLE_ID`/`APNS_HOST=api.push.apple.com`/`PUSH_FUNCTION_SECRET`).
+- `send-push` deployed; `device_tokens` + RPC + dispatch trigger applied.
+- Function URL + shared secret stored in **Supabase Vault**
+  (`push_function_url`, `push_function_key`); the trigger reads them.
+- App entitlement set to `production` (matches TestFlight / `api.push.apple.com`).
+
+**Remaining (needs you):**
+1. Apple portal → enable **Push Notifications** on the `com.pickleball.ai` App ID.
+2. Rebuild + ship to TestFlight so the signed build carries the push entitlement.
+3. Install, tap **Allow**, then trigger a notification (e.g. have a friend like
+   your session) to confirm delivery on a real device.
+
+The sections below document the setup for reference / re-provisioning.
+
+---
+
 The app code, `device_tokens` table, dispatch trigger, and `send-push` edge
-function are all in the repo. To turn on real delivery you need to do the
-Apple-side config and set a few secrets. None of this can be tested end-to-end
-on the simulator — you need a real device.
+function are all in the repo. None of this can be tested end-to-end on the
+simulator — you need a real device.
 
 ## 1. Apple Developer
 
@@ -43,21 +62,21 @@ Deploy the function:
 supabase functions deploy send-push
 ```
 
-## 4. Wire the dispatch trigger
+## 4. Wire the dispatch trigger (Supabase Vault)
 
-The `on_notification_dispatch_push` trigger calls the function via `pg_net`. It
-reads two DB settings and no-ops until they're set. Point them at the function
-and the shared secret (same value as `PUSH_FUNCTION_SECRET`):
+The `on_notification_dispatch_push` trigger calls the function via `pg_net`,
+reading the endpoint + shared secret from **Vault** (the Management API SQL role
+can't set custom `app.settings.*` GUCs, so Vault is used instead). It no-ops
+until both secrets exist. Store them (secret must equal `PUSH_FUNCTION_SECRET`):
 
 ```sql
-alter database postgres set app.settings.push_function_url =
-  'https://jdokoljojvrmaxhjjqbe.functions.supabase.co/send-push';
-alter database postgres set app.settings.push_function_key =
-  '<same value as PUSH_FUNCTION_SECRET>';
+select vault.create_secret(
+  'https://jdokoljojvrmaxhjjqbe.supabase.co/functions/v1/send-push',
+  'push_function_url');
+select vault.create_secret('<same value as PUSH_FUNCTION_SECRET>',
+  'push_function_key');
+-- to rotate later: select vault.update_secret(<uuid>, '<new value>');
 ```
-
-(Run once via the SQL editor / Management API. Reconnect for the setting to
-take effect on new sessions.)
 
 ## 5. Apply the migration
 

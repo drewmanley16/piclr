@@ -58,12 +58,17 @@ create or replace function public.dispatch_push_notification()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, extensions
+set search_path = public, extensions, vault
 as $$
 declare
-    fn_url text := current_setting('app.settings.push_function_url', true);
-    fn_key text := current_setting('app.settings.push_function_key', true);
+    fn_url text;
+    fn_key text;
 begin
+    -- Read the endpoint + shared secret from Supabase Vault. The API SQL role
+    -- can't set custom database GUCs, so Vault is the supported store here.
+    select decrypted_secret into fn_url from vault.decrypted_secrets where name = 'push_function_url';
+    select decrypted_secret into fn_key from vault.decrypted_secrets where name = 'push_function_key';
+
     -- No-op until the project is configured with the function URL + key.
     if fn_url is null or fn_url = '' then
         return new;
