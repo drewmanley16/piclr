@@ -1271,6 +1271,33 @@ final class AppStore: ObservableObject {
     /// Write a full multi-activity session built on-device. Inserts the session
     /// unposted, writes activities + tagged participants, then flips `posted`
     /// last so realtime subscribers only see the completed post.
+    /// An in-progress ("live") session that survives leaving the Workout tab.
+    /// nil means no session is currently open.
+    @Published var activeDraft: SessionDraft?
+
+    func startLiveSession() {
+        if activeDraft == nil { activeDraft = SessionDraft() }
+    }
+
+    func discardLiveSession() { activeDraft = nil }
+
+    /// Posts the live session and clears it on success.
+    func postLiveSession() async -> Bool {
+        guard let draft = activeDraft else { return false }
+        let ok = await postSession(draft)
+        if ok { activeDraft = nil }
+        return ok
+    }
+
+    /// One-tap log: wraps a single activity in a fresh session and posts it.
+    func quickLog(_ activity: DraftActivity, postToFeed: Bool = true) async -> Bool {
+        var draft = SessionDraft()
+        draft.startedAt = Date()
+        draft.activities = [activity]
+        draft.postToFeed = postToFeed
+        return await postSession(draft)
+    }
+
     func postSession(_ draft: SessionDraft) async -> Bool {
         guard let uid = currentProfile?.id else { return false }
         busyCount += 1

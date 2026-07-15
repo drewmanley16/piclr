@@ -5,29 +5,25 @@ import PhotosUI
 
 struct WorkoutView: View {
     @EnvironmentObject private var store: AppStore
-    @State private var showSession = false
+    @State private var showLiveSession = false
+    @State private var quickEditor: ActivityEditorRoute?
+
+    private var thisWeek: [FeedSession] {
+        let weekStart = Calendar.current.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
+        return store.mySessions.filter { $0.date >= weekStart }
+    }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                startCTA
-
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Your Sessions")
-                        .font(.headline)
-                        .foregroundStyle(Theme.textPrimary)
-
-                    if store.mySessions.isEmpty {
-                        Text("No sessions yet — start one above.")
-                            .font(.subheadline)
-                            .foregroundStyle(Theme.textSecondary)
-                            .padding(.vertical, 8)
-                    } else {
-                        ForEach(store.mySessions) { session in
-                            SessionSummaryRow(session: session)
-                        }
-                    }
+            VStack(alignment: .leading, spacing: 20) {
+                if store.activeDraft != nil {
+                    liveBanner
+                } else {
+                    weekStrip
+                    quickLog
+                    startLiveButton
                 }
+                recentSection
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
@@ -39,43 +35,184 @@ struct WorkoutView: View {
         .safeAreaInset(edge: .top) {
             AppHeader(title: "Workout") {
                 HeaderCircleButton(systemImage: "plus", accessibilityTitle: "Start session") {
-                    showSession = true
+                    startLive()
                 }
             }
             .background(Theme.background)
         }
-        .fullScreenCover(isPresented: $showSession) {
-            ActiveSessionView()
+        .fullScreenCover(isPresented: $showLiveSession) {
+            ActiveSessionView(isLive: true)
+        }
+        .sheet(item: $quickEditor) { route in
+            switch route {
+            case .newMatch:
+                ActivityEditorView(activity: DraftActivity(kind: .match)) { activity in
+                    Task { await store.quickLog(activity) }
+                }
+            case .newPractice:
+                ActivityEditorView(activity: DraftActivity(kind: .practice)) { activity in
+                    Task { await store.quickLog(activity) }
+                }
+            case .edit:
+                EmptyView()
+            }
         }
     }
 
-    private var startCTA: some View {
-        Button {
-            showSession = true
-        } label: {
-            HStack(spacing: 14) {
-                Image(systemName: "play.fill")
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(Theme.background)
-                    .frame(width: 48, height: 48)
-                    .background(Theme.accent, in: Circle())
+    private func startLive() {
+        store.startLiveSession()
+        showLiveSession = true
+    }
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Start a session")
+    // MARK: Live session banner
+
+    private var liveBanner: some View {
+        Button { showLiveSession = true } label: {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 10) {
+                    Circle().fill(Theme.accent).frame(width: 10, height: 10)
+                    Text("Session in progress")
                         .font(.headline)
                         .foregroundStyle(Theme.textPrimary)
-                    Text("Log practices and matches as you play")
-                        .font(.subheadline)
+                    Spacer()
+                    if let start = store.activeDraft?.startedAt {
+                        TimelineView(.periodic(from: start, by: 1)) { _ in
+                            Text(elapsed(since: start))
+                                .font(.subheadline.weight(.semibold).monospacedDigit())
+                                .foregroundStyle(Theme.accent)
+                        }
+                    }
+                }
+                Text(liveSubtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+                HStack {
+                    Text("Tap to resume")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.accent)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Theme.accent)
+                }
+            }
+            .cardStyle()
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var liveSubtitle: String {
+        let count = store.activeDraft?.activities.count ?? 0
+        if count == 0 { return "No games logged yet — tap to add matches and practice." }
+        return count == 1 ? "1 activity logged" : "\(count) activities logged"
+    }
+
+    private func elapsed(since start: Date) -> String {
+        let s = max(0, Int(Date().timeIntervalSince(start)))
+        return String(format: "%d:%02d", s / 60, s % 60)
+    }
+
+    // MARK: This week
+
+    private var weekStrip: some View {
+        let hours = Double(thisWeek.reduce(0) { $0 + $1.durationMinutes }) / 60
+        let streak = SessionStats(sessions: store.mySessions).streakLabel
+        return HStack(spacing: 0) {
+            weekStat("\(thisWeek.count)", "sessions")
+            Divider().frame(height: 30).overlay(Theme.hairline)
+            weekStat(String(format: "%.1f", hours), "hours")
+            Divider().frame(height: 30).overlay(Theme.hairline)
+            weekStat(streak, "streak")
+        }
+        .cardStyle()
+    }
+
+    private func weekStat(_ value: String, _ label: String) -> some View {
+        VStack(spacing: 3) {
+            Text(value).font(.title3.weight(.bold)).foregroundStyle(Theme.textPrimary)
+            Text(label).font(.caption).foregroundStyle(Theme.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: Quick log
+
+    private var quickLog: some View {
+        HStack(spacing: 12) {
+            QuickLogButton(title: "Log a Match", systemImage: "flag.checkered", filled: true) {
+                quickEditor = .newMatch
+            }
+            QuickLogButton(title: "Log Practice", systemImage: "figure.cooldown", filled: false) {
+                quickEditor = .newPractice
+            }
+        }
+    }
+
+    private var startLiveButton: some View {
+        Button { startLive() } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "play.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(Theme.accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Start a live session")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("Log matches and practice as you play")
+                        .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
                 }
-
                 Spacer()
-
                 Image(systemName: "chevron.right")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.caption.weight(.bold))
                     .foregroundStyle(Theme.textTertiary)
             }
             .cardStyle()
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: Recent
+
+    private var recentSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Recent")
+                .font(.headline)
+                .foregroundStyle(Theme.textPrimary)
+            if store.mySessions.isEmpty {
+                Text("No sessions yet — log a match or start a session above.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+                    .padding(.vertical, 8)
+            } else {
+                ForEach(store.mySessions.prefix(10)) { session in
+                    SessionSummaryRow(session: session)
+                }
+            }
+        }
+    }
+}
+
+struct QuickLogButton: View {
+    let title: String
+    let systemImage: String
+    let filled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 10) {
+                Image(systemName: systemImage)
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(filled ? Theme.background : Theme.accent)
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(filled ? Theme.background : Theme.textPrimary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .frame(height: 104, alignment: .topLeading)
+            .background(filled ? Theme.accent : Theme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -89,27 +226,42 @@ struct SessionSummaryRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: "figure.pickleball")
-                .font(.title3)
+            Image(systemName: icon)
+                .font(.headline)
                 .foregroundStyle(Theme.accent)
-                .frame(width: 44, height: 44)
-                .background(Theme.accentSoft, in: Circle())
+                .frame(width: 46, height: 46)
+                .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(session.displayTitle)
                     .font(.headline)
                     .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
                 Text(subtitle)
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)
                     .lineLimit(1)
             }
 
-            Spacer()
+            Spacer(minLength: 8)
 
-            Text(session.date.relativeLabel)
-                .font(.caption)
-                .foregroundStyle(Theme.textTertiary)
+            VStack(alignment: .trailing, spacing: 6) {
+                if session.matchCount > 0 {
+                    let r = matchResults
+                    Text("\(r.wins)–\(r.losses)")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(r.wins >= r.losses ? Theme.accent : Theme.textSecondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(
+                            r.wins >= r.losses ? Theme.accentSoft : Theme.surfaceElevated,
+                            in: Capsule()
+                        )
+                }
+                Text(session.date.relativeLabel)
+                    .font(.caption)
+                    .foregroundStyle(Theme.textTertiary)
+            }
 
             Menu {
                 Button {
@@ -124,8 +276,8 @@ struct SessionSummaryRow: View {
                 }
             } label: {
                 Image(systemName: "ellipsis")
-                    .foregroundStyle(Theme.textSecondary)
-                    .frame(width: 32, height: 32)
+                    .foregroundStyle(Theme.textTertiary)
+                    .frame(width: 28, height: 40)
             }
             .accessibilityLabel("Session actions")
         }
@@ -143,11 +295,26 @@ struct SessionSummaryRow: View {
         }
     }
 
+    private var icon: String {
+        if session.matchCount > 0 && session.practiceCount == 0 { return "flag.checkered" }
+        if session.practiceCount > 0 && session.matchCount == 0 { return "figure.cooldown" }
+        return "figure.pickleball"
+    }
+
+    private var matchResults: (wins: Int, losses: Int) {
+        var wins = 0, losses = 0
+        for activity in session.sortedActivities where activity.isMatch {
+            if let won = activity.won { won ? (wins += 1) : (losses += 1) }
+        }
+        return (wins, losses)
+    }
+
     private var subtitle: String {
         var parts: [String] = []
         if session.matchCount > 0 { parts.append("\(session.matchCount) match\(session.matchCount == 1 ? "" : "es")") }
         if session.practiceCount > 0 { parts.append("\(session.practiceCount) practice") }
-        parts.append("\(session.durationMinutes) min")
+        if session.durationMinutes > 1 { parts.append("\(session.durationMinutes) min") }
+        if parts.isEmpty { parts.append("Session") }
         return parts.joined(separator: " · ")
     }
 }
@@ -159,14 +326,19 @@ struct ActiveSessionView: View {
     @EnvironmentObject private var store: AppStore
 
     let existingSession: FeedSession?
+    /// When true, this is the persistent "live" session — changes sync back to
+    /// store.activeDraft so it survives leaving the tab, and the sheet can be
+    /// dismissed freely to resume later.
+    let isLive: Bool
 
     @State private var draft: SessionDraft
     @State private var editor: ActivityEditorRoute?
     @State private var showDiscardConfirm = false
     @State private var selectedPhoto: PhotosPickerItem?
 
-    init(existingSession: FeedSession? = nil) {
+    init(existingSession: FeedSession? = nil, isLive: Bool = false) {
         self.existingSession = existingSession
+        self.isLive = isLive
         _draft = State(initialValue: existingSession.map(SessionDraft.init(session:)) ?? SessionDraft())
     }
 
@@ -187,10 +359,16 @@ struct ActiveSessionView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(isEditing ? "Cancel" : "Discard", role: isEditing ? nil : .destructive) {
-                        if !isEditing && draft.activities.isEmpty { dismiss() } else { showDiscardConfirm = true }
+                    if isLive {
+                        // Leaving keeps the session open; a separate Discard clears it.
+                        Button("Close") { dismiss() }
+                            .tint(Theme.accent)
+                    } else {
+                        Button(isEditing ? "Cancel" : "Discard", role: isEditing ? nil : .destructive) {
+                            if !isEditing && draft.activities.isEmpty { dismiss() } else { showDiscardConfirm = true }
+                        }
+                        .tint(isEditing ? Theme.accent : .red)
                     }
-                    .tint(isEditing ? Theme.accent : .red)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(isEditing ? "Save" : "Post") { Task { await save() } }
@@ -212,12 +390,21 @@ struct ActiveSessionView: View {
                 isPresented: $showDiscardConfirm,
                 titleVisibility: .visible
             ) {
-                Button(isEditing ? "Discard Changes" : "Discard Session", role: .destructive) { dismiss() }
+                Button(isEditing ? "Discard Changes" : "Discard Session", role: .destructive) {
+                    if isLive { store.discardLiveSession() }
+                    dismiss()
+                }
                 Button("Keep Editing", role: .cancel) {}
             }
         }
-        .interactiveDismissDisabled(isEditing || !draft.activities.isEmpty)
-        .onAppear { store.errorMessage = nil }
+        .interactiveDismissDisabled(!isLive && (isEditing || !draft.activities.isEmpty))
+        .onAppear {
+            store.errorMessage = nil
+            if isLive, let live = store.activeDraft { draft = live }
+        }
+        .onChange(of: draft) { _, newValue in
+            if isLive { store.activeDraft = newValue }
+        }
         .alert(isEditing ? "Couldn't save session" : "Couldn't post session", isPresented: postErrorBinding) {
             Button("OK", role: .cancel) { store.errorMessage = nil }
         } message: {
@@ -362,6 +549,17 @@ struct ActiveSessionView: View {
                     .tint(Theme.accent)
                     .padding(.top, 4)
             }
+
+            if isLive {
+                Button(role: .destructive) {
+                    showDiscardConfirm = true
+                } label: {
+                    Label("Discard session", systemImage: "trash")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .padding(.top, 8)
+            }
         }
     }
 
@@ -380,6 +578,7 @@ struct ActiveSessionView: View {
         if let existingSession {
             if await store.updateSession(existingSession, draft: draft) { dismiss() }
         } else if await store.postSession(draft) {
+            if isLive { store.discardLiveSession() }
             dismiss()
         }
     }

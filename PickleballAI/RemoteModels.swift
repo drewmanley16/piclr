@@ -386,7 +386,7 @@ struct DraftActivity: Identifiable, Hashable {
     }
 }
 
-struct SessionDraft {
+struct SessionDraft: Equatable {
     var title: String = ""
     var location: String = ""
     var takeaway: String = ""
