@@ -54,6 +54,8 @@ struct NotificationsView: View {
                     OtherProfileView(userId: userId, placeholder: nil)
                 case .session(let sessionId):
                     SessionDetailView(sessionId: sessionId)
+                case .comments(let sessionId):
+                    SessionDetailView(sessionId: sessionId, openComments: true)
                 }
             }
             .toolbar {
@@ -68,8 +70,9 @@ struct NotificationsView: View {
     /// profile, everything else opens the related session.
     private func destination(for n: AppNotification) -> NotifDestination? {
         switch n.type {
-        case "follow": return n.actor.map { .profile($0.id) }
-        default:       return n.session.map { .session($0.id) }
+        case "follow":  return n.actor.map { .profile($0.id) }
+        case "comment": return n.session.map { .comments($0.id) }
+        default:        return n.session.map { .session($0.id) }
         }
     }
 
@@ -108,16 +111,35 @@ struct NotificationsView: View {
 enum NotifDestination: Hashable {
     case profile(UUID)
     case session(UUID)
+    case comments(UUID)
+}
+
+/// A target the app navigates to when the user taps a push notification.
+enum DeepLink: Identifiable, Hashable {
+    case session(UUID)
+    case comments(UUID)
+    case profile(UUID)
+
+    var id: String {
+        switch self {
+        case .session(let id):  return "session-\(id)"
+        case .comments(let id): return "comments-\(id)"
+        case .profile(let id):  return "profile-\(id)"
+        }
+    }
 }
 
 /// A single session opened from a notification. Fetches the post on demand
-/// since it may not be in the currently-loaded feed.
+/// since it may not be in the currently-loaded feed. When `openComments` is
+/// set, the comment thread is presented as soon as the post loads.
 struct SessionDetailView: View {
     @EnvironmentObject private var store: AppStore
     let sessionId: UUID
+    var openComments: Bool = false
 
     @State private var session: FeedSession?
     @State private var isLoading = true
+    @State private var showComments = false
 
     var body: some View {
         ScrollView {
@@ -148,6 +170,12 @@ struct SessionDetailView: View {
         .task {
             session = await store.loadSession(id: sessionId)
             isLoading = false
+            if openComments && session != nil { showComments = true }
+        }
+        .sheet(isPresented: $showComments) {
+            if let session {
+                CommentsView(session: session)
+            }
         }
     }
 }

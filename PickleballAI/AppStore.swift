@@ -46,6 +46,8 @@ final class AppStore: ObservableObject {
     @Published private var busyCount = 0
     var isBusy: Bool { busyCount > 0 }
     @Published var errorMessage: String?
+    /// Set when the user taps a push notification; RootView presents the target.
+    @Published var pendingDeepLink: DeepLink?
 
     private let selectWithCounts = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path)))"
     private let selectFeedPreview = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), preview_comments:comments(*, author:profiles!comments_user_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path)), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path)))"
@@ -310,6 +312,9 @@ final class AppStore: ObservableObject {
         PushService.shared.onToken = { [weak self] token in
             Task { await self?.uploadDeviceToken(token) }
         }
+        PushService.shared.onTap = { [weak self] userInfo in
+            self?.handlePushTap(userInfo)
+        }
         if await PushService.shared.authorizationStatus() == .notDetermined {
             await PushService.shared.requestAuthorizationAndRegister()
         } else {
@@ -321,6 +326,22 @@ final class AppStore: ObservableObject {
     @discardableResult
     func enablePushNotifications() async -> Bool {
         await PushService.shared.requestAuthorizationAndRegister()
+    }
+
+    /// Routes a tapped push to its target. The payload carries `type`,
+    /// `session_id`, and `actor_id` (set by the send-push edge function).
+    private func handlePushTap(_ userInfo: [AnyHashable: Any]) {
+        let type = userInfo["type"] as? String
+        let sessionId = (userInfo["session_id"] as? String).flatMap(UUID.init(uuidString:))
+        let actorId = (userInfo["actor_id"] as? String).flatMap(UUID.init(uuidString:))
+        switch type {
+        case "follow":
+            if let actorId { pendingDeepLink = .profile(actorId) }
+        case "comment":
+            if let sessionId { pendingDeepLink = .comments(sessionId) }
+        default:
+            if let sessionId { pendingDeepLink = .session(sessionId) }
+        }
     }
 
     private func uploadDeviceToken(_ token: String) async {

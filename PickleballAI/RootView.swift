@@ -67,5 +67,27 @@ struct RootView: View {
                     Label("Profile", systemImage: "person.fill")
                 }
         }
+        .sheet(item: Binding(
+            get: { store.pendingDeepLink },
+            set: { store.pendingDeepLink = $0 }
+        )) { link in
+            NavigationStack {
+                Group {
+                    switch link {
+                    case .session(let id):
+                        SessionDetailView(sessionId: id)
+                    case .comments(let id):
+                        SessionDetailView(sessionId: id, openComments: true)
+                    case .profile(let id):
+                        OtherProfileView(userId: id, placeholder: nil)
+                    }
+                }
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Done") { store.pendingDeepLink = nil }
+                    }
+                }
+            }
+        }
     }
 }
