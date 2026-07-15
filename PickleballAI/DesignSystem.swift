@@ -17,9 +17,10 @@ enum Theme {
     static let accent = Color(hex: 0xC5FF3D)
     static var accentSoft: Color { accent.opacity(0.14) }
 
-    // Semantic result colors (a match is won or lost — both must read at a glance).
+    // Semantic result colors (a match is won, lost, or tied — all must read at a glance).
     static let win = Color(hex: 0xC5FF3D)              // optic green
     static let loss = Color(hex: 0xF0785A)             // court clay
+    static let tie = Color.white.opacity(0.55)         // neutral — no winner
 
     // Text
     static let textPrimary = Color.white
@@ -37,6 +38,17 @@ enum Theme {
     /// Courtside scoreboard numerals: heavy, rounded, tabular so scores line up.
     static func scoreboard(_ size: CGFloat) -> Font {
         .system(size: size, weight: .heavy, design: .rounded).monospacedDigit()
+    }
+}
+
+extension MatchResult {
+    /// Green win / red loss / neutral tie — the app's at-a-glance result colors.
+    var color: Color {
+        switch self {
+        case .win:  return Theme.win
+        case .loss: return Theme.loss
+        case .tie:  return Theme.tie
+        }
     }
 }
 

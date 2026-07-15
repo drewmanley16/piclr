@@ -9,8 +9,8 @@ struct SessionShareCard: View {
     let session: FeedSession
 
     private var matches: [SessionActivity] { session.sortedActivities.filter { $0.isMatch } }
-    private var wins: Int { matches.filter { $0.won == true }.count }
-    private var losses: Int { matches.filter { $0.won == false }.count }
+    private var wins: Int { matches.filter { $0.matchResult == .win }.count }
+    private var losses: Int { matches.filter { $0.matchResult == .loss }.count }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -77,13 +77,13 @@ struct SessionShareCard: View {
                             Spacer()
                             Text(m.scoreLine ?? "—")
                                 .font(.callout.weight(.bold).monospacedDigit())
-                                .foregroundStyle(Theme.textPrimary)
-                            if let won = m.won {
-                                Text(won ? "W" : "L")
+                                .foregroundStyle(m.matchResult?.color ?? Theme.textPrimary)
+                            if let result = m.matchResult {
+                                Text(result.badge)
                                     .font(.caption.weight(.heavy))
-                                    .foregroundStyle(Theme.background)
+                                    .foregroundStyle(result == .tie ? Theme.textPrimary : Theme.background)
                                     .frame(width: 22, height: 22)
-                                    .background(won ? Theme.win : Theme.loss, in: Circle())
+                                    .background(result.color, in: Circle())
                             }
                         }
                         .padding(.vertical, 10)

@@ -314,8 +314,12 @@ struct SessionSummaryRow: View {
 
     private var matchResults: (wins: Int, losses: Int) {
         var wins = 0, losses = 0
-        for activity in session.sortedActivities where activity.isMatch {
-            if let won = activity.won { won ? (wins += 1) : (losses += 1) }
+        for activity in session.sortedActivities {
+            switch activity.matchResult {
+            case .win:  wins += 1
+            case .loss: losses += 1
+            default:    break   // tie / not a match
+            }
         }
         return (wins, losses)
     }
@@ -686,7 +690,8 @@ struct DraftActivityRow: View {
             return activity.reps.isEmpty ? (activity.notes.isEmpty ? nil : activity.notes) : activity.reps
         case .match:
             let names = (activity.partners + activity.opponents).map(\.displayName)
-            return names.isEmpty ? (activity.won ? "Won" : "Lost") : names.joined(separator: ", ")
+            let outcome = activity.isTie ? "Tied" : (activity.won ? "Won" : "Lost")
+            return names.isEmpty ? outcome : names.joined(separator: ", ")
         }
     }
 }

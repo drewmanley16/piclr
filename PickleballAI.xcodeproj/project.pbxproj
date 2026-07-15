@@ -14,6 +14,7 @@
 		0E2AC177A194D8977E9C9DA3 /* RemoteModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8FD3C96B80BD2A5C26D975D /* RemoteModels.swift */; };
 		16DD6B39109593928B5583A3 /* ContactsImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EC4FAB3BC7409E94B9F0E1 /* ContactsImporter.swift */; };
 		33C8ACB4E3D0F1DAE5FC4EEF /* CommentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F6C03EC3ED4D2A8C098B84F /* CommentsView.swift */; };
+		3D6C3B86141C26738F80B2A1 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BCD8F33D0E442DCBB8E637F /* LeaderboardView.swift */; };
 		454F25CB28B5C41A3538D5E2 /* LogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3FA4363BCD03C413DB5D6C4 /* LogView.swift */; };
 		4C4D1BAB0ADC400DABD9541C /* ProfileSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = E57559D0A66C08920B1C67A3 /* ProfileSheets.swift */; };
 		4CD5BF0B95A969D397E3038D /* PickleballAIWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EE4100E53AC518E09293CA1 /* PickleballAIWidget.swift */; };
@@ -71,6 +72,7 @@
 		14EC4FAB3BC7409E94B9F0E1 /* ContactsImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsImporter.swift; sourceTree = "<group>"; };
 		1DF3D5A5AC51AF989571223E /* LiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityAttributes.swift; sourceTree = "<group>"; };
 		212C7D515516C3E07230F457 /* PickleballAI.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PickleballAI.entitlements; sourceTree = "<group>"; };
+		2BCD8F33D0E442DCBB8E637F /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
 		2C2F55C19C493784AFEFC588 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		2EE4100E53AC518E09293CA1 /* PickleballAIWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickleballAIWidget.swift; sourceTree = "<group>"; };
 		38D466C6F8E7D2FD8E302914 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
@@ -148,6 +150,7 @@
 				7854EB879EEA122DFA7E5FE1 /* FollowListView.swift */,
 				65F9240942A799CF19EF40AC /* Haptics.swift */,
 				6BF6725B8FBFB5A75FCF41BB /* Info.plist */,
+				2BCD8F33D0E442DCBB8E637F /* LeaderboardView.swift */,
 				1DF3D5A5AC51AF989571223E /* LiveActivityAttributes.swift */,
 				DC1B8FB7392D5C5FC8C4D640 /* LiveActivityManager.swift */,
 				C60A7FE208AB50A6DC053231 /* LocationPicker.swift */,
@@ -301,6 +304,7 @@
 				987C065BEC871C430815F0D5 /* FeedView.swift in Sources */,
 				BACB683507C15BE288E50D3C /* FollowListView.swift in Sources */,
 				DE6F84AD2314939D4E8C317C /* Haptics.swift in Sources */,
+				3D6C3B86141C26738F80B2A1 /* LeaderboardView.swift in Sources */,
 				FD52FEB282F1D784FD37A351 /* LiveActivityAttributes.swift in Sources */,
 				5E9F8ED09A2B926B38FFE0C8 /* LiveActivityManager.swift in Sources */,
 				B11B01B9A357B172C22B077E /* LocationPicker.swift in Sources */,

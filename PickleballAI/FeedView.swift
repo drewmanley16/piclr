@@ -9,6 +9,7 @@ struct HomeView: View {
     @EnvironmentObject private var store: AppStore
     @State private var showFindFriends = false
     @State private var showNotifications = false
+    @State private var showLeaderboard = false
     @State private var feedMode: FeedMode = .following
 
     private var currentFeed: [FeedSession] {
@@ -52,6 +53,9 @@ struct HomeView: View {
             VStack(spacing: 12) {
             AppHeader(title: "pickleball.ai") {
                 HeaderPill {
+                    HeaderIconButton(systemImage: "trophy", accessibilityTitle: "Leaderboard") {
+                        showLeaderboard = true
+                    }
                     HeaderIconButton(systemImage: "magnifyingglass", accessibilityTitle: "Find friends") {
                         showFindFriends = true
                     }
@@ -90,6 +94,9 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showNotifications) {
             NotificationsView()
+        }
+        .sheet(isPresented: $showLeaderboard) {
+            LeaderboardSheet()
         }
         .toolbar(.hidden, for: .navigationBar)
         }
@@ -617,7 +624,8 @@ struct SessionSummaryStrip: View {
         let matches = session.matchCount
         if matches > 0 {
             result.append(Stat(value: "\(matches)", label: matches == 1 ? "Match" : "Matches"))
-            result.append(Stat(value: "\(wins)–\(losses)", label: "Record", emphasized: wins > 0 && losses == 0))
+            let record = ties > 0 ? "\(wins)–\(losses)–\(ties)" : "\(wins)–\(losses)"
+            result.append(Stat(value: record, label: ties > 0 ? "W–L–T" : "Record", emphasized: wins > 0 && losses == 0 && ties == 0))
         } else if session.practiceCount > 0 {
             let drills = session.practiceCount
             result.append(Stat(value: "\(drills)", label: drills == 1 ? "Drill" : "Drills"))
@@ -625,8 +633,9 @@ struct SessionSummaryStrip: View {
         return result
     }
 
-    private var wins: Int { session.sortedActivities.filter { $0.isMatch && $0.won == true }.count }
-    private var losses: Int { session.sortedActivities.filter { $0.isMatch && $0.won == false }.count }
+    private var wins: Int { session.sortedActivities.filter { $0.matchResult == .win }.count }
+    private var losses: Int { session.sortedActivities.filter { $0.matchResult == .loss }.count }
+    private var ties: Int { session.sortedActivities.filter { $0.matchResult == .tie }.count }
 
     private var durationText: String {
         let m = session.durationMinutes
@@ -666,13 +675,13 @@ struct ActivityRow: View {
                     Text(score)
                         .font(.callout.weight(.bold))
                         .monospacedDigit()
-                        .foregroundStyle(Theme.textPrimary)
-                    if let won = activity.won {
-                        Text(won ? "W" : "L")
+                        .foregroundStyle(activity.matchResult?.color ?? Theme.textPrimary)
+                    if let result = activity.matchResult {
+                        Text(result.badge)
                             .font(.caption.weight(.heavy))
-                            .foregroundStyle(Theme.background)
+                            .foregroundStyle(result == .tie ? Theme.textPrimary : Theme.background)
                             .frame(width: 22, height: 22)
-                            .background(won ? Theme.win : Theme.loss, in: Circle())
+                            .background(result.color, in: Circle())
                     }
                 }
             }

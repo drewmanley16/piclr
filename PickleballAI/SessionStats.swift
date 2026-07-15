@@ -63,7 +63,9 @@ struct SessionStats {
 
         for session in sessions {
             for activity in session.sortedActivities where activity.isMatch {
-                guard let won = activity.won else { continue }
+                // Derive from the score so ties are excluded, not counted as losses.
+                guard let result = activity.matchResult, result != .tie else { continue }
+                let won = result == .win
                 results.append((won, session.date, activity.position))
                 for p in activity.opponents {
                     Self.bump(&opp, p, won: won)

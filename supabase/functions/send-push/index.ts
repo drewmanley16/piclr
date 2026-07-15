@@ -19,6 +19,7 @@ type NotificationRow = {
   type: string;
   session_id: string | null;
   comment_id: string | null;
+  detail: string | null;
 };
 
 Deno.serve(async (req) => {
@@ -43,7 +44,7 @@ Deno.serve(async (req) => {
   // Load the notification.
   const { data: notif, error: notifErr } = await admin
     .from("notifications")
-    .select("id, user_id, actor_id, type, session_id, comment_id")
+    .select("id, user_id, actor_id, type, session_id, comment_id, detail")
     .eq("id", notificationId)
     .single<NotificationRow>();
   if (notifErr || !notif) return json({ error: "Notification not found" }, 404);
@@ -75,7 +76,7 @@ Deno.serve(async (req) => {
     commentBody = c?.body ?? "";
   }
 
-  const { title, message } = buildMessage(notif.type, handle, commentBody);
+  const { title, message } = buildMessage(notif.type, handle, commentBody, notif.detail);
 
   const jwt = await apnsJWT();
   const host = Deno.env.get("APNS_HOST") ?? "api.push.apple.com";
@@ -112,13 +113,19 @@ Deno.serve(async (req) => {
   return json({ delivered });
 });
 
-function buildMessage(type: string, handle: string, comment: string): { title: string; message: string } {
+function buildMessage(
+  type: string,
+  handle: string,
+  comment: string,
+  detail: string | null,
+): { title: string; message: string } {
   switch (type) {
     case "like":            return { title: "New like", message: `${handle} liked your session` };
     case "comment":         return { title: "New comment", message: `${handle} commented: ${comment}` };
     case "follow":          return { title: "New follower", message: `${handle} started following you` };
     case "tag":             return { title: "You were tagged", message: `${handle} tagged you in a session` };
     case "repost_approved": return { title: "Repost approved", message: `${handle} approved your repost` };
+    case "rivalry":         return { title: "Rivalry update", message: detail ?? `${handle} played you` };
     default:                return { title: "pickleball.ai", message: `${handle} interacted with your post` };
   }
 }
