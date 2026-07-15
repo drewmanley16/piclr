@@ -602,14 +602,7 @@ struct FriendCandidateRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            if navigable {
-                NavigationLink {
-                    OtherProfileView(userId: profile.id, placeholder: profile)
-                } label: {
-                    identity
-                }
-                .buttonStyle(.plain)
-            } else {
+            ProfileLink(userId: navigable ? profile.id : nil, placeholder: profile) {
                 identity
             }
             followButton

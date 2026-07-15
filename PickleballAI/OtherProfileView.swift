@@ -1,5 +1,41 @@
 import SwiftUI
 
+/// Data-only description of a profile navigation target. Lives at the app layer
+/// (not the design system) so `ProfileAvatar`/`ProfileLink` stay decoupled from
+/// feature screens. Identity is the user id; the optional `placeholder` rides
+/// along for an instant header but doesn't affect equality/hashing.
+struct ProfileRoute: Hashable {
+    let id: UUID
+    var placeholder: Profile?
+
+    static func == (lhs: ProfileRoute, rhs: ProfileRoute) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
+/// A `NavigationStack` pre-wired to open user profiles: it registers the profile
+/// destination exactly once and binds the `openProfile` environment action to its
+/// own path. Use this in place of a bare `NavigationStack` on any screen where
+/// avatars/names should be tappable. The mapping route → screen lives here and
+/// nowhere else, so changing the profile destination is a one-line edit.
+struct ProfileNavigationStack<Root: View>: View {
+    @ViewBuilder var root: Root
+    /// Type-erased so this stack can also carry other value-based routes pushed
+    /// inside it (e.g. a notification's `NotifDestination`), not just profiles.
+    @State private var path = NavigationPath()
+
+    var body: some View {
+        NavigationStack(path: $path) {
+            root
+                .navigationDestination(for: ProfileRoute.self) { route in
+                    OtherProfileView(userId: route.id, placeholder: route.placeholder)
+                }
+        }
+        .environment(\.openProfile, OpenProfileAction { id, placeholder in
+            path.append(ProfileRoute(id: id, placeholder: placeholder))
+        })
+    }
+}
+
 /// Another user's profile, reached by tapping a name in a follower/following
 /// list. Header (name, avatar, counts) is always visible. Their sessions are
 /// shown only when the signed-in user follows them (accepted); otherwise an

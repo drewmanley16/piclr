@@ -17,7 +17,7 @@ struct ProfileView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        ProfileNavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     profileRow
@@ -592,15 +592,19 @@ struct FollowRequestRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ProfileAvatar(profile: request.follower, size: 44)
+            ProfileLink(userId: request.follower?.id, placeholder: request.follower) {
+                HStack(spacing: 12) {
+                    ProfileAvatar(profile: request.follower, size: 44)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(request.follower?.displayName ?? "Player")
-                    .font(.headline)
-                    .foregroundStyle(Theme.textPrimary)
-                Text(request.follower.map { "@\($0.username)" } ?? "Wants to follow you")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textSecondary)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(request.follower?.displayName ?? "Player")
+                            .font(.headline)
+                            .foregroundStyle(Theme.textPrimary)
+                        Text(request.follower.map { "@\($0.username)" } ?? "Wants to follow you")
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                }
             }
 
             Spacer()
@@ -637,16 +641,20 @@ struct RepostRequestRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ProfileAvatar(participant: request.requester, size: 40)
+            ProfileLink(userId: request.requester?.id) {
+                HStack(spacing: 12) {
+                    ProfileAvatar(participant: request.requester, size: 40)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(request.requester?.displayName ?? "Player")
-                    .font(.headline)
-                    .foregroundStyle(Theme.textPrimary)
-                Text("wants to repost \(sessionLabel)")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(1)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(request.requester?.displayName ?? "Player")
+                            .font(.headline)
+                            .foregroundStyle(Theme.textPrimary)
+                        Text("wants to repost \(sessionLabel)")
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(1)
+                    }
+                }
             }
 
             Spacer()

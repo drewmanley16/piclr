@@ -1,5 +1,4 @@
 import SwiftUI
-import Supabase
 
 struct CommentsView: View {
     @Environment(\.dismiss) private var dismiss
@@ -9,14 +8,13 @@ struct CommentsView: View {
     @State private var comments: [Comment] = []
     @State private var draft = ""
     @State private var loading = true
-    @State private var channel: RealtimeChannelV2?
 
     private var canSend: Bool {
         !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !store.isBusy
     }
 
     var body: some View {
-        NavigationStack {
+        ProfileNavigationStack {
             VStack(spacing: 0) {
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -61,9 +59,9 @@ struct CommentsView: View {
             }
             .task {
                 await load()
-                subscribe()
+                store.startCommentsRealtime(sessionId: session.id) { await load() }
             }
-            .onDisappear { unsubscribe() }
+            .onDisappear { store.stopCommentsRealtime() }
         }
     }
 
@@ -105,30 +103,6 @@ struct CommentsView: View {
             draft = body // restore on failure
         }
     }
-
-    private func subscribe() {
-        let ch = supabase.channel("comments:\(session.id.uuidString)")
-        channel = ch
-        Task {
-            let changes = ch.postgresChange(
-                InsertAction.self,
-                schema: "public",
-                table: "comments",
-                filter: "session_id=eq.\(session.id.uuidString)"
-            )
-            await ch.subscribe()
-            for await _ in changes {
-                await load()
-            }
-        }
-    }
-
-    private func unsubscribe() {
-        if let ch = channel {
-            channel = nil
-            Task { await ch.unsubscribe() }
-        }
-    }
 }
 
 struct CommentRow: View {
@@ -142,17 +116,23 @@ struct CommentRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            ProfileAvatar(participant: comment.author, size: 40)
+            ProfileLink(userId: comment.author?.id) {
+                ProfileAvatar(participant: comment.author, size: 40)
+            }
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text(comment.authorName)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.textPrimary)
-                    if let username = comment.author?.username {
-                        Text("@\(username)")
-                            .font(.caption)
-                            .foregroundStyle(Theme.textSecondary)
+                    ProfileLink(userId: comment.author?.id) {
+                        HStack(spacing: 6) {
+                            Text(comment.authorName)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Theme.textPrimary)
+                            if let username = comment.author?.username {
+                                Text("@\(username)")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.textSecondary)
+                            }
+                        }
                     }
                     Text(comment.date.relativeLabel)
                         .font(.caption)

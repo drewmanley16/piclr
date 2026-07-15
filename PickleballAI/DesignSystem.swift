@@ -173,22 +173,39 @@ struct ProfileAvatar: View {
     var url: String?
     var initials: String
     var size: CGFloat
+    /// The user this avatar represents, when known. Enables `linked`.
+    var userId: UUID?
+    /// When true (and `userId` is known), tapping the avatar pushes that user's
+    /// profile — routed through `ProfileLink` so navigation stays defined in one
+    /// place. Off by default so avatars in pickers, editors, or rows that are
+    /// already navigation links don't double-navigate.
+    var linked: Bool = false
 
-    init(url: String?, initials: String, size: CGFloat = 44) {
+    init(url: String?, initials: String, size: CGFloat = 44, userId: UUID? = nil, linked: Bool = false) {
         self.url = url
         self.initials = initials.isEmpty ? "PB" : initials
         self.size = size
+        self.userId = userId
+        self.linked = linked
     }
 
-    init(profile: Profile?, size: CGFloat = 44) {
-        self.init(url: profile?.avatarURL, initials: profile?.initials ?? "PB", size: size)
+    init(profile: Profile?, size: CGFloat = 44, linked: Bool = false) {
+        self.init(url: profile?.avatarURL, initials: profile?.initials ?? "PB", size: size, userId: profile?.id, linked: linked)
     }
 
-    init(participant: ParticipantProfile?, size: CGFloat = 44) {
-        self.init(url: participant?.avatarURL, initials: participant?.initials ?? "?", size: size)
+    init(participant: ParticipantProfile?, size: CGFloat = 44, linked: Bool = false) {
+        self.init(url: participant?.avatarURL, initials: participant?.initials ?? "?", size: size, userId: participant?.id, linked: linked)
     }
 
     var body: some View {
+        if linked, let userId {
+            ProfileLink(userId: userId) { circle }
+        } else {
+            circle
+        }
+    }
+
+    private var circle: some View {
         Group {
             if let url, let parsed = URL(string: url) {
                 RemoteImage(url: parsed)
@@ -272,6 +289,61 @@ struct Toast: ViewModifier {
 extension View {
     func toast(isPresented: Binding<Bool>, message: String, systemImage: String = "checkmark.circle.fill") -> some View {
         modifier(Toast(isPresented: isPresented, message: message, systemImage: systemImage))
+    }
+}
+
+/// Action for "open this user's profile," injected via the environment so the
+/// design system never imports a feature screen. The app wires the concrete
+/// destination once (see `ProfileNavigationStack`); here we only know a user was
+/// tapped. Also drives programmatic opens (deep links, notifications).
+struct OpenProfileAction {
+    let handler: (UUID, Profile?) -> Void
+    func callAsFunction(_ userId: UUID, placeholder: Profile? = nil) {
+        handler(userId, placeholder)
+    }
+}
+
+private struct OpenProfileKey: EnvironmentKey {
+    /// No-op default: a tap in a context that hasn't wired navigation simply does
+    /// nothing rather than crashing.
+    static let defaultValue = OpenProfileAction { _, _ in }
+}
+
+extension EnvironmentValues {
+    var openProfile: OpenProfileAction {
+        get { self[OpenProfileKey.self] }
+        set { self[OpenProfileKey.self] = newValue }
+    }
+}
+
+/// Wraps its content in a tap target that opens the tapped user's profile via the
+/// `openProfile` environment action, so avatars and names navigate consistently
+/// everywhere (Instagram-style). Pass a `nil` `userId` to render the content
+/// inert — e.g. selection UIs or your own rows where navigation isn't wanted.
+/// The enclosing screen must provide the action (use `ProfileNavigationStack`).
+struct ProfileLink<Content: View>: View {
+    @Environment(\.openProfile) private var openProfile
+    var userId: UUID?
+    var placeholder: Profile?
+    @ViewBuilder var content: Content
+
+    init(userId: UUID?, placeholder: Profile? = nil, @ViewBuilder content: () -> Content) {
+        self.userId = userId
+        self.placeholder = placeholder
+        self.content = content()
+    }
+
+    var body: some View {
+        if let userId {
+            Button {
+                openProfile(userId, placeholder: placeholder)
+            } label: {
+                content
+            }
+            .buttonStyle(.plain)
+        } else {
+            content
+        }
     }
 }
 

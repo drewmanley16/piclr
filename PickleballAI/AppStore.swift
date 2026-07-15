@@ -38,7 +38,12 @@ final class AppStore: ObservableObject {
     @Published private var optimisticLikeCounts: [UUID: Int] = [:]
     @Published var notifications: [AppNotification] = []
     @Published var blockedAccounts: [BlockedAccount] = []
-    @Published var isBusy = false
+    /// Count of in-flight user-initiated operations. `isBusy` is *derived* from
+    /// this so concurrent operations (e.g. saving profile fields and a photo at
+    /// once) don't clobber each other — the UI reads idle only once every one of
+    /// them has finished, not when the first to return flips a shared bool.
+    @Published private var busyCount = 0
+    var isBusy: Bool { busyCount > 0 }
     @Published var errorMessage: String?
 
     private let selectWithCounts = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path)))"
@@ -51,6 +56,8 @@ final class AppStore: ObservableObject {
     private var followsChannel: RealtimeChannelV2?
     private var followsInTask: Task<Void, Never>?
     private var followsOutTask: Task<Void, Never>?
+    private var commentsChannel: RealtimeChannelV2?
+    private var commentsTask: Task<Void, Never>?
 
     static let iso: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
@@ -75,9 +82,9 @@ final class AppStore: ObservableObject {
     // MARK: - Auth
 
     func sendPhoneOTP(phone: String) async -> Bool {
-        isBusy = true
+        busyCount += 1
         errorMessage = nil
-        defer { isBusy = false }
+        defer { busyCount -= 1 }
         do {
             try await supabase.auth.signInWithOTP(phone: phone)
             return true
@@ -88,9 +95,9 @@ final class AppStore: ObservableObject {
     }
 
     func verifyPhoneOTP(phone: String, token: String) async -> Bool {
-        isBusy = true
+        busyCount += 1
         errorMessage = nil
-        defer { isBusy = false }
+        defer { busyCount -= 1 }
         do {
             try await supabase.auth.verifyOTP(phone: phone, token: token, type: .sms)
             let session = try await supabase.auth.session
@@ -109,9 +116,9 @@ final class AppStore: ObservableObject {
 
     func deleteAccount(phone: String, token: String) async -> Bool {
         guard let expectedUserId = currentProfile?.id else { return false }
-        isBusy = true
+        busyCount += 1
         errorMessage = nil
-        defer { isBusy = false }
+        defer { busyCount -= 1 }
         do {
             try await supabase.auth.verifyOTP(phone: phone, token: token, type: .sms)
             let session = try await supabase.auth.session
@@ -145,9 +152,9 @@ final class AppStore: ObservableObject {
         skillLevel: SkillLevel,
         duprRating: Double?
     ) async -> Bool {
-        isBusy = true
+        busyCount += 1
         errorMessage = nil
-        defer { isBusy = false }
+        defer { busyCount -= 1 }
         do {
             let request = CompleteOnboardingRequest(
                 displayName: displayName.trimmed,
@@ -407,6 +414,38 @@ final class AppStore: ObservableObject {
         }
         if let channel = followsChannel {
             followsChannel = nil
+            Task { await channel.unsubscribe() }
+        }
+    }
+
+    // MARK: - Comments realtime
+
+    /// Subscribes to new comments on a session, invoking `onInsert` for each so
+    /// the view can reload. Keeps Supabase realtime plumbing (channels, filters,
+    /// subscribe lifecycle) out of the view layer. Pair with `stopCommentsRealtime()`.
+    func startCommentsRealtime(sessionId: UUID, onInsert: @escaping () async -> Void) {
+        stopCommentsRealtime()
+        let channel = supabase.channel("comments:\(sessionId.uuidString)")
+        commentsChannel = channel
+        commentsTask = Task {
+            let changes = channel.postgresChange(
+                InsertAction.self,
+                schema: "public",
+                table: "comments",
+                filter: "session_id=eq.\(sessionId.uuidString)"
+            )
+            await channel.subscribe()
+            for await _ in changes {
+                await onInsert()
+            }
+        }
+    }
+
+    func stopCommentsRealtime() {
+        commentsTask?.cancel()
+        commentsTask = nil
+        if let channel = commentsChannel {
+            commentsChannel = nil
             Task { await channel.unsubscribe() }
         }
     }
@@ -691,9 +730,9 @@ final class AppStore: ObservableObject {
             contactMatches = []
             return
         }
-        isBusy = true
+        busyCount += 1
         errorMessage = nil
-        defer { isBusy = false }
+        defer { busyCount -= 1 }
         do {
             var matches: [ContactMatch] = []
             for batch in uniquePhones.chunked(into: 500) {
@@ -769,9 +808,9 @@ final class AppStore: ObservableObject {
     /// Sends a follow request: inserts a `pending` edge (me → profile).
     func sendFollowRequest(to profile: Profile) async {
         guard let uid = currentProfile?.id, uid != profile.id else { return }
-        isBusy = true
+        busyCount += 1
         errorMessage = nil
-        defer { isBusy = false }
+        defer { busyCount -= 1 }
         do {
             let new = NewFollow(followerId: uid, followeeId: profile.id, status: "pending")
             try await supabase.from("follows").insert(new).execute()
@@ -837,9 +876,9 @@ final class AppStore: ObservableObject {
 
     func removeFollower(userId: UUID) async {
         guard let uid = currentProfile?.id, uid != userId else { return }
-        isBusy = true
+        busyCount += 1
         errorMessage = nil
-        defer { isBusy = false }
+        defer { busyCount -= 1 }
         do {
             try await supabase
                 .from("follows")
@@ -877,9 +916,9 @@ final class AppStore: ObservableObject {
     @discardableResult
     func blockUser(userId: UUID) async -> Bool {
         guard let uid = currentProfile?.id, uid != userId else { return false }
-        isBusy = true
+        busyCount += 1
         errorMessage = nil
-        defer { isBusy = false }
+        defer { busyCount -= 1 }
         do {
             try await supabase.from("blocks")
                 .insert(NewBlock(blockerId: uid, blockedId: userId))
@@ -912,9 +951,9 @@ final class AppStore: ObservableObject {
 
     func unblockUser(userId: UUID) async {
         guard let uid = currentProfile?.id else { return }
-        isBusy = true
+        busyCount += 1
         errorMessage = nil
-        defer { isBusy = false }
+        defer { busyCount -= 1 }
         do {
             try await supabase.from("blocks")
                 .delete()
@@ -929,9 +968,9 @@ final class AppStore: ObservableObject {
 
     func submitReport(target: ReportTarget, reason: ReportReason, details: String) async -> Bool {
         guard let uid = currentProfile?.id else { return false }
-        isBusy = true
+        busyCount += 1
         errorMessage = nil
-        defer { isBusy = false }
+        defer { busyCount -= 1 }
         do {
             let trimmed = details.trimmingCharacters(in: .whitespacesAndNewlines)
             try await supabase.from("reports")
@@ -1039,8 +1078,8 @@ final class AppStore: ObservableObject {
         postToFeed: Bool
     ) async {
         guard let uid = currentProfile?.id else { return }
-        isBusy = true
-        defer { isBusy = false }
+        busyCount += 1
+        defer { busyCount -= 1 }
         do {
             let new = NewSession(
                 userId: uid,
@@ -1064,9 +1103,9 @@ final class AppStore: ObservableObject {
     /// last so realtime subscribers only see the completed post.
     func postSession(_ draft: SessionDraft) async -> Bool {
         guard let uid = currentProfile?.id else { return false }
-        isBusy = true
+        busyCount += 1
         errorMessage = nil
-        defer { isBusy = false }
+        defer { busyCount -= 1 }
         do {
             let now = Date()
             let duration = max(1, Int(now.timeIntervalSince(draft.startedAt) / 60))
@@ -1138,9 +1177,9 @@ final class AppStore: ObservableObject {
 
     func updateSession(_ session: FeedSession, draft: SessionDraft) async -> Bool {
         guard let uid = currentProfile?.id, session.userId == uid else { return false }
-        isBusy = true
+        busyCount += 1
         errorMessage = nil
-        defer { isBusy = false }
+        defer { busyCount -= 1 }
 
         do {
             var photoPath = draft.removePhoto ? nil : draft.existingPhotoPath
@@ -1214,9 +1253,9 @@ final class AppStore: ObservableObject {
 
     func deleteSession(_ session: FeedSession) async -> Bool {
         guard let uid = currentProfile?.id, session.userId == uid else { return false }
-        isBusy = true
+        busyCount += 1
         errorMessage = nil
-        defer { isBusy = false }
+        defer { busyCount -= 1 }
         do {
             try await supabase.from("sessions")
                 .delete()
@@ -1236,9 +1275,9 @@ final class AppStore: ObservableObject {
 
     func removeSelfFromSession(_ session: FeedSession) async -> Bool {
         guard let uid = currentProfile?.id, session.userId != uid else { return false }
-        isBusy = true
+        busyCount += 1
         errorMessage = nil
-        defer { isBusy = false }
+        defer { busyCount -= 1 }
         do {
             try await supabase.rpc(
                 "remove_self_from_session",
@@ -1431,9 +1470,9 @@ final class AppStore: ObservableObject {
 
     func updateProfile(displayName: String, homeCourt: String, rating: Double?, preferredSide: String, birthday: String?) async -> Bool {
         guard let uid = currentProfile?.id else { return false }
-        isBusy = true
+        busyCount += 1
         errorMessage = nil
-        defer { isBusy = false }
+        defer { busyCount -= 1 }
         do {
             let update = ProfileUpdate(
                 displayName: displayName,
@@ -1458,9 +1497,9 @@ final class AppStore: ObservableObject {
 
     func updateMeasures(heightInches: Double?, weightPounds: Double?, shoeSize: Double?) async -> Bool {
         guard let uid = currentProfile?.id else { return false }
-        isBusy = true
+        busyCount += 1
         errorMessage = nil
-        defer { isBusy = false }
+        defer { busyCount -= 1 }
         do {
             let update = MeasuresUpdate(
                 heightInches: heightInches,
@@ -1478,9 +1517,9 @@ final class AppStore: ObservableObject {
 
     func uploadProfilePhoto(_ data: Data) async -> Bool {
         guard let uid = currentProfile?.id else { return false }
-        isBusy = true
+        busyCount += 1
         errorMessage = nil
-        defer { isBusy = false }
+        defer { busyCount -= 1 }
         // Decode + downscale + encode off the main thread so the UI never hangs
         // on a large camera photo. Avatars render in ≤96pt circles, so ~320px
         // (3× retina) is plenty and keeps files tiny (~20–40 KB).
@@ -1526,9 +1565,9 @@ final class AppStore: ObservableObject {
 
     func addGear(category: String, name: String, brand: String) async -> Bool {
         guard let uid = currentProfile?.id else { return false }
-        isBusy = true
+        busyCount += 1
         errorMessage = nil
-        defer { isBusy = false }
+        defer { busyCount -= 1 }
         do {
             let new = NewGear(
                 userId: uid,

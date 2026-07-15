@@ -20,6 +20,7 @@ struct HomeView: View {
     }
 
     var body: some View {
+        ProfileNavigationStack {
         ScrollView {
             LazyVStack(spacing: 12) {
                 if currentFeed.isEmpty {
@@ -81,6 +82,8 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showNotifications) {
             NotificationsView()
+        }
+        .toolbar(.hidden, for: .navigationBar)
         }
     }
 
@@ -165,7 +168,7 @@ struct FindFriendsSheet: View {
     @State private var contactStatus: String?
 
     var body: some View {
-        NavigationStack {
+        ProfileNavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     AuthField(
@@ -304,14 +307,18 @@ struct FeedCard: View {
             }
 
             HStack(spacing: 12) {
-                ProfileAvatar(profile: session.author, size: 44)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(session.author.displayName)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.textPrimary)
-                    Text("@\(session.author.username) · \(session.date.relativeLabel)")
-                        .font(.caption)
-                        .foregroundStyle(Theme.textSecondary)
+                ProfileLink(userId: session.author.id, placeholder: session.author) {
+                    HStack(spacing: 12) {
+                        ProfileAvatar(profile: session.author, size: 44)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(session.author.displayName)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Theme.textPrimary)
+                            Text("@\(session.author.username) · \(session.date.relativeLabel)")
+                                .font(.caption)
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    }
                 }
                 Spacer()
                 Menu {

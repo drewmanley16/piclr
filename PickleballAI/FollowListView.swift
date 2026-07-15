@@ -68,9 +68,7 @@ struct FollowEntryRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            NavigationLink {
-                OtherProfileView(userId: entry.userId, placeholder: entry.profile)
-            } label: {
+            ProfileLink(userId: entry.userId, placeholder: entry.profile) {
                 HStack(spacing: 14) {
                     ProfileAvatar(profile: entry.profile, size: 40)
                     VStack(alignment: .leading, spacing: 2) {
@@ -85,7 +83,6 @@ struct FollowEntryRow: View {
                     }
                 }
             }
-            .buttonStyle(.plain)
 
             Spacer()
 
