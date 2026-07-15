@@ -109,31 +109,17 @@ final class AppStore: ObservableObject {
         }
     }
 
-    func accountPhone() async -> String? {
-        guard let session = try? await supabase.auth.session else { return nil }
-        return session.user.phone
-    }
-
-    func deleteAccount(phone: String, token: String) async -> Bool {
-        guard let expectedUserId = currentProfile?.id else { return false }
+    func deleteAccount() async -> Bool {
+        guard currentProfile != nil else { return false }
         busyCount += 1
         errorMessage = nil
         defer { busyCount -= 1 }
         do {
-            try await supabase.auth.verifyOTP(phone: phone, token: token, type: .sms)
-            let session = try await supabase.auth.session
-            guard session.user.id == expectedUserId else {
-                throw NSError(
-                    domain: "PickleballAI.AccountDeletion",
-                    code: 1,
-                    userInfo: [NSLocalizedDescriptionKey: "Verification did not match this account."]
-                )
-            }
             let response: DeleteAccountResponse = try await supabase.functions.invoke("delete-account")
             guard response.deleted else {
                 throw NSError(
                     domain: "PickleballAI.AccountDeletion",
-                    code: 2,
+                    code: 1,
                     userInfo: [NSLocalizedDescriptionKey: "The account could not be deleted."]
                 )
             }

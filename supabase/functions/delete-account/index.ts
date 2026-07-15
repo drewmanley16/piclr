@@ -24,13 +24,6 @@ Deno.serve(async (req) => {
     return json({ error: "Supabase function is not configured" }, 500);
   }
 
-  const accessToken = authHeader.replace(/^Bearer\s+/i, "");
-  const issuedAt = jwtIssuedAt(accessToken);
-  const now = Math.floor(Date.now() / 1000);
-  if (!issuedAt || now - issuedAt > 10 * 60) {
-    return json({ error: "A fresh verification code is required" }, 403);
-  }
-
   const userClient = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
   });
@@ -83,19 +76,6 @@ async function emptyUserFolder(
     const { error: removeError } = await admin.storage.from(bucket).remove(paths);
     if (removeError) return removeError.message;
     if (paths.length < 1000) return null;
-  }
-}
-
-function jwtIssuedAt(token: string) {
-  try {
-    const encoded = token.split(".")[1];
-    if (!encoded) return null;
-    const normalized = encoded.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-    const payload = JSON.parse(atob(padded));
-    return typeof payload.iat === "number" ? payload.iat : null;
-  } catch {
-    return null;
   }
 }
 
