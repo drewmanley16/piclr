@@ -26,6 +26,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.pickleball.ai
         PRODUCT_NAME: PickleballAI
+        CODE_SIGN_ENTITLEMENTS: PickleballAI/PickleballAI.entitlements
         TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_KEY_CFBundleDisplayName: "pickleball.ai"
         INFOPLIST_KEY_UILaunchScreen_Generation: YES

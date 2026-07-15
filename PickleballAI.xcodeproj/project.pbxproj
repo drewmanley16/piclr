@@ -22,6 +22,7 @@
 		82D712BA16C2330A23E44710 /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812326B10CE11A6D68558757 /* SupabaseService.swift */; };
 		89FF47F0442F182F044AEB75 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A26F3CB239971947B6371E26 /* RootView.swift */; };
 		9068203395D5B18A6507DF1D /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1DA9EA8FD022D18FABEBD5A /* NotificationsView.swift */; };
+		91C1312E7498D846C328A74E /* PushService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49D15DAFAF823EF6B673ADE /* PushService.swift */; };
 		95C8A46DA87219F98DD0A143 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38D466C6F8E7D2FD8E302914 /* AuthView.swift */; };
 		987C065BEC871C430815F0D5 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92AD1866882A183DAB69974D /* FeedView.swift */; };
 		A7AB3CB17285CB9C76938F9B /* SessionEditors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F3DE89404F54F718B1D071B /* SessionEditors.swift */; };
@@ -35,6 +36,7 @@
 /* Begin PBXFileReference section */
 		110EB1A0604D9D68DD50D886 /* Supabase.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Supabase.plist; sourceTree = "<group>"; };
 		14EC4FAB3BC7409E94B9F0E1 /* ContactsImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsImporter.swift; sourceTree = "<group>"; };
+		212C7D515516C3E07230F457 /* PickleballAI.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PickleballAI.entitlements; sourceTree = "<group>"; };
 		2C2F55C19C493784AFEFC588 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		38D466C6F8E7D2FD8E302914 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		4F6C03EC3ED4D2A8C098B84F /* CommentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentsView.swift; sourceTree = "<group>"; };
@@ -50,6 +52,7 @@
 		92AD1866882A183DAB69974D /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
 		A26F3CB239971947B6371E26 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		B3FA4363BCD03C413DB5D6C4 /* LogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogView.swift; sourceTree = "<group>"; };
+		C49D15DAFAF823EF6B673ADE /* PushService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushService.swift; sourceTree = "<group>"; };
 		C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D1DA9EA8FD022D18FABEBD5A /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		D4ABDD948BF6204089C4CACF /* SessionStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStats.swift; sourceTree = "<group>"; };
@@ -95,9 +98,11 @@
 				FC7CF99A3E687EB8A86C623F /* Models.swift */,
 				D1DA9EA8FD022D18FABEBD5A /* NotificationsView.swift */,
 				72609C0E290C1E3683A88921 /* OtherProfileView.swift */,
+				212C7D515516C3E07230F457 /* PickleballAI.entitlements */,
 				81B8CE679ACD5A6F4E5DCB13 /* PickleballAIApp.swift */,
 				E57559D0A66C08920B1C67A3 /* ProfileSheets.swift */,
 				528729889F780FEF8B81D160 /* ProfileView.swift */,
+				C49D15DAFAF823EF6B673ADE /* PushService.swift */,
 				F8FD3C96B80BD2A5C26D975D /* RemoteModels.swift */,
 				A26F3CB239971947B6371E26 /* RootView.swift */,
 				5F3DE89404F54F718B1D071B /* SessionEditors.swift */,
@@ -209,6 +214,7 @@
 				09769653678BBE3A0E31E1CB /* PickleballAIApp.swift in Sources */,
 				4C4D1BAB0ADC400DABD9541C /* ProfileSheets.swift in Sources */,
 				C5338F649A3DC6D11AE71F0B /* ProfileView.swift in Sources */,
+				91C1312E7498D846C328A74E /* PushService.swift in Sources */,
 				0E2AC177A194D8977E9C9DA3 /* RemoteModels.swift in Sources */,
 				89FF47F0442F182F044AEB75 /* RootView.swift in Sources */,
 				A7AB3CB17285CB9C76938F9B /* SessionEditors.swift in Sources */,
@@ -352,6 +358,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = PickleballAI/PickleballAI.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = PickleballAI/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = pickleball.ai;
@@ -373,6 +380,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = PickleballAI/PickleballAI.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = PickleballAI/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = pickleball.ai;

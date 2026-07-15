@@ -479,6 +479,17 @@ struct SettingsSheet: View {
                     Toggle(isOn: $notifications) {
                         Label("Push notifications", systemImage: "bell")
                     }
+                    .onChange(of: notifications) { _, enabled in
+                        Task {
+                            if enabled {
+                                let granted = await store.enablePushNotifications()
+                                // If the user denied at the system level, reflect that.
+                                if !granted { notifications = false }
+                            } else {
+                                await store.removeDeviceToken()
+                            }
+                        }
+                    }
                     Button {
                         showBlockedAccounts = true
                     } label: {
