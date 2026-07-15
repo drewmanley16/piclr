@@ -116,12 +116,18 @@ struct AuthView: View {
     private var phoneStep: some View {
         VStack(alignment: .leading, spacing: 16) {
             AuthField(
-                placeholder: "+1 555 000 0000",
+                placeholder: "+1 123 456 6789",
                 text: $phone,
                 keyboard: .phonePad,
                 autocapitalize: false,
                 textContentType: .telephoneNumber
             )
+            .onChange(of: phone) { _, newValue in
+                let formatted = Self.formattedPhoneInput(newValue)
+                if formatted != phone {
+                    phone = formatted
+                }
+            }
 
             errorText
 
@@ -135,6 +141,27 @@ struct AuthView: View {
                 }
             }
         }
+    }
+
+    private static func formattedPhoneInput(_ raw: String) -> String {
+        if raw.contains("+") {
+            let digits = raw.filter(\.isNumber)
+            guard !digits.isEmpty else { return "+" }
+            return "+\(digits)"
+        }
+
+        var digits = raw.filter(\.isNumber)
+        if digits.hasPrefix("1"), digits.count > 10 {
+            digits.removeFirst()
+        }
+        digits = String(digits.prefix(10))
+        guard !digits.isEmpty else { return "" }
+        var result = "+1 "
+        for (i, d) in digits.enumerated() {
+            if i == 3 || i == 6 { result += " " }
+            result.append(d)
+        }
+        return result
     }
 
     private var codeStep: some View {
