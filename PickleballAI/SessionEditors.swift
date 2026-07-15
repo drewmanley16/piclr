@@ -96,12 +96,17 @@ struct ActivityEditorView: View {
     }
 }
 
-/// Courtside scoreboard for entering a match result: two big tap-to-score
-/// columns, the winner lit in accent. Replaces the old Steppers — this is the
-/// moment of primary value, so it should feel like a scoreboard, not a form.
+/// Courtside scoreboard for entering a match result: two big columns, the winner
+/// lit in accent. The score is both tap-to-type (tap the number, the number pad
+/// opens, type it) and tap-to-step (+/-), so logging is as fast as the user
+/// wants. This is the moment of primary value — it should feel like a
+/// scoreboard, not a form.
 struct ScorePad: View {
     @Binding var teamScore: Int
     @Binding var opponentScore: Int
+
+    enum Side { case you, them }
+    @FocusState private var focused: Side?
 
     private var youWon: Bool { teamScore > opponentScore }
     private var tied: Bool { teamScore == opponentScore }
@@ -109,11 +114,11 @@ struct ScorePad: View {
     var body: some View {
         VStack(spacing: 16) {
             HStack(spacing: 12) {
-                column(label: "YOU", score: $teamScore, winning: youWon && !tied)
+                ScoreColumn(label: "YOU", score: $teamScore, winning: youWon && !tied, side: .you, focused: $focused)
                 Text("–")
                     .font(.title.weight(.light))
                     .foregroundStyle(Theme.textTertiary)
-                column(label: "THEM", score: $opponentScore, winning: !youWon && !tied)
+                ScoreColumn(label: "THEM", score: $opponentScore, winning: !youWon && !tied, side: .them, focused: $focused)
             }
 
             Text(tied ? "Tied" : (youWon ? "Win" : "Loss"))
@@ -125,28 +130,70 @@ struct ScorePad: View {
                 .animation(.snappy, value: youWon)
                 .animation(.snappy, value: tied)
         }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                if focused != nil {
+                    Spacer()
+                    Button("Done") { focused = nil }
+                        .font(.body.weight(.semibold))
+                }
+            }
+        }
     }
+}
 
-    private func column(label: String, score: Binding<Int>, winning: Bool) -> some View {
-        VStack(spacing: 10) {
+/// One score column. Tapping the number focuses a hidden number-pad field (the
+/// current score shows as a solid prompt, so typing replaces it); the +/-
+/// buttons step it. Both paths write the same clamped 0…30 `score` binding.
+private struct ScoreColumn: View {
+    let label: String
+    @Binding var score: Int
+    let winning: Bool
+    let side: ScorePad.Side
+    @FocusState.Binding var focused: ScorePad.Side?
+
+    /// Only holds keystrokes while editing; idle it's empty and the prompt (the
+    /// real score) is what's shown, so the number always renders in full color.
+    @State private var text = ""
+
+    private var numberColor: Color { winning ? Theme.accent : Theme.textPrimary }
+
+    var body: some View {
+        VStack(spacing: 12) {
             Text(label)
                 .font(.caption2.weight(.bold))
                 .tracking(1)
                 .foregroundStyle(winning ? Theme.accent : Theme.textTertiary)
 
-            Text("\(score.wrappedValue)")
+            TextField("", text: $text, prompt: Text("\(score)").foregroundColor(numberColor))
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.center)
                 .font(Theme.scoreboard(56))
-                .foregroundStyle(winning ? Theme.accent : Theme.textPrimary)
+                .foregroundStyle(numberColor)
+                .tint(Theme.accent)
                 .frame(maxWidth: .infinity)
-                .contentTransition(.numericText(value: Double(score.wrappedValue)))
-                .animation(.snappy, value: score.wrappedValue)
-
-            HStack(spacing: 10) {
-                stepButton("minus", enabled: score.wrappedValue > 0) {
-                    if score.wrappedValue > 0 { Haptics.tap(); score.wrappedValue -= 1 }
+                .focused($focused, equals: side)
+                .onChange(of: text) { _, new in
+                    let digits = String(new.filter(\.isNumber).prefix(2))
+                    if digits != new { text = digits; return }
+                    if let value = Int(digits) {
+                        let clamped = min(value, 30)
+                        if clamped != score { Haptics.tap(); score = clamped }
+                        if clamped != value { text = "\(clamped)" }
+                    }
                 }
-                stepButton("plus", enabled: score.wrappedValue < 30) {
-                    if score.wrappedValue < 30 { Haptics.tap(); score.wrappedValue += 1 }
+                .onChange(of: focused) { _, now in
+                    // Clear on focus so the first keystroke replaces the score;
+                    // clear on blur so the prompt (score) shows again idle.
+                    text = ""
+                }
+
+            HStack(spacing: 14) {
+                stepButton("minus", enabled: score > 0) {
+                    if score > 0 { Haptics.tap(); score -= 1; text = "" }
+                }
+                stepButton("plus", enabled: score < 30) {
+                    if score < 30 { Haptics.tap(); score += 1; text = "" }
                 }
             }
         }
@@ -161,9 +208,9 @@ struct ScorePad: View {
     private func stepButton(_ symbol: String, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.body.weight(.bold))
+                .font(.title3.weight(.bold))
                 .foregroundStyle(enabled ? Theme.textPrimary : Theme.textTertiary)
-                .frame(width: 40, height: 40)
+                .frame(width: 52, height: 52)
                 .background(Theme.surface, in: Circle())
                 .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
         }
