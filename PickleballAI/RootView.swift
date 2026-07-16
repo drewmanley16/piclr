@@ -24,6 +24,7 @@ struct RootView: View {
     }
 
     @EnvironmentObject private var store: AppStore
+    @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var selectedTab = 0
 
     var body: some View {
@@ -48,6 +49,9 @@ struct RootView: View {
             if store.authState == .loading {
                 await store.start()
             }
+        }
+        .sheet(item: $subscriptions.paywallContext) { context in
+            PaywallView(context: context)
         }
     }
 

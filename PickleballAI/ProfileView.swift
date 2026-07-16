@@ -3,6 +3,7 @@ import Charts
 
 struct ProfileView: View {
     @EnvironmentObject private var store: AppStore
+    @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var showSettings = false
     @State private var showFindFriends = false
     @State private var showNotifications = false
@@ -23,6 +24,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     profileRow
                     if !store.incomingFollowRequests.isEmpty { followRequestsBanner }
+                    if !subscriptions.isPro { proBanner }
                     if completion < 1 && !dismissedCompletion { completionBanner }
                     recordCard
                     rivalsCard
@@ -132,6 +134,44 @@ struct ProfileView: View {
     private var followRequestsTitle: String {
         let count = store.incomingFollowRequests.count
         return count == 1 ? "1 follow request" : "\(count) follow requests"
+    }
+
+    // MARK: Pro upsell
+
+    private var proBanner: some View {
+        Button {
+            subscriptions.presentPaywall(.general)
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "bolt.fill")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(Theme.background)
+                    .frame(width: 44, height: 44)
+                    .background(Theme.accent, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text("pickleball.ai")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(Theme.textPrimary)
+                        Text("PRO")
+                            .font(.caption2.weight(.heavy))
+                            .foregroundStyle(Theme.background)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Theme.accent, in: Capsule())
+                    }
+                    Text("AI recaps, rivalry insights, and more")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.accent)
+            }
+            .cardStyle()
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: Completion banner
