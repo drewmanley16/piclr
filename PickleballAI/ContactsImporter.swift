@@ -48,21 +48,8 @@ enum ContactsImporter {
         return Array(phones)
     }
 
-    /// Normalizes a raw phone string to E.164-ish (`+1XXXXXXXXXX`). Returns nil
-    /// for values that can't plausibly be a phone number.
+    /// Normalizes a valid local or international phone number to E.164.
     static func normalizePhone(_ value: String) -> String? {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        let digits = trimmed.filter(\.isNumber)
-        guard digits.count >= 8, digits.count <= 15 else { return nil }
-        if trimmed.hasPrefix("+") {
-            return "+\(digits)"
-        }
-        if digits.count == 10 {
-            return "+1\(digits)"
-        }
-        if digits.count == 11, digits.hasPrefix("1") {
-            return "+\(digits)"
-        }
-        return "+\(digits)"
+        PhoneNumberFormatting.e164(value)
     }
 }

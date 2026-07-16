@@ -28,7 +28,7 @@ struct WorkoutView: View {
                     weekStrip
                     startLiveButton
                     quickLog
-                    inviteButton
+                    planGameButton
                 }
                 TimelineView(.periodic(from: .now, by: 60)) { context in
                     let upcoming = store.activeInvites.filter {
@@ -204,33 +204,33 @@ struct WorkoutView: View {
         .buttonStyle(.plain)
     }
 
-    private var inviteButton: some View {
+    private var planGameButton: some View {
         Button { showInviteComposer = true } label: {
-            HStack(spacing: 14) {
-                Image(systemName: "mappin.and.ellipse")
-                    .font(.title3.weight(.semibold))
+            HStack(spacing: 12) {
+                Image(systemName: "person.2.badge.plus")
+                    .font(.body.weight(.semibold))
                     .foregroundStyle(Theme.accent)
-                    .frame(width: 44, height: 44)
-                    .background(Theme.accentSoft, in: Circle())
+                    .frame(width: 24)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Invite friends to play")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.textPrimary)
-                    Text("Tag friends with a court and time, they RSVP")
-                        .font(.caption)
-                        .foregroundStyle(Theme.textSecondary)
-                }
+                Text("Plan a game")
+                    .font(.headline)
+                    .foregroundStyle(Theme.textPrimary)
 
                 Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(Theme.textTertiary)
             }
-            .cardStyle(padding: 14)
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, minHeight: 60)
+            .background(
+                Theme.surface,
+                in: RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous)
+                    .strokeBorder(Theme.hairline, lineWidth: 1)
+            }
         }
         .buttonStyle(.plain)
+        .accessibilityHint("Choose players, a court, and a time")
     }
 
     // MARK: Active invites

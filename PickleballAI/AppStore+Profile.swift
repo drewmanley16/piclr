@@ -37,13 +37,27 @@ extension AppStore {
         }
     }
 
-    func updateProfile(displayName: String, homeCourt: String, rating: Double?, preferredSide: String, birthday: String?) async -> Bool {
+    func updateProfile(firstName: String, lastName: String, homeCourt: String, rating: Double?, preferredSide: String, birthday: String?) async -> Bool {
         guard let uid = currentProfile?.id else { return false }
+        let cleanFirstName = ProfileIdentityValidator.normalizedName(firstName)
+        let cleanLastName = ProfileIdentityValidator.normalizedName(lastName)
+        let validations = [
+            ProfileIdentityValidator.firstName(cleanFirstName),
+            ProfileIdentityValidator.lastName(cleanLastName),
+            ProfileIdentityValidator.combinedName(firstName: cleanFirstName, lastName: cleanLastName),
+        ]
+        if let message = validations.compactMap(\.errorMessage).first {
+            errorMessage = message
+            return false
+        }
         busyCount += 1
         errorMessage = nil
         defer { busyCount -= 1 }
         do {
+            let displayName = [cleanFirstName, cleanLastName].joined(separator: " ")
             let update = ProfileUpdate(
+                firstName: cleanFirstName,
+                lastName: cleanLastName,
                 displayName: displayName,
                 homeCourt: homeCourt.isEmpty ? nil : homeCourt,
                 rating: rating,
@@ -53,6 +67,8 @@ extension AppStore {
             try await supabase.from("profiles").update(update).eq("id", value: uid.uuidString).execute()
             // Apply locally instead of re-fetching — saves a round trip and
             // avoids clobbering a concurrent avatar update to the same row.
+            currentProfile?.firstName = cleanFirstName
+            currentProfile?.lastName = cleanLastName
             currentProfile?.displayName = displayName
             currentProfile?.homeCourt = homeCourt.isEmpty ? nil : homeCourt
             currentProfile?.rating = rating

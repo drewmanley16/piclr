@@ -57,7 +57,8 @@ extension AppStore {
     }
 
     func completeOnboarding(
-        displayName: String,
+        firstName: String,
+        lastName: String,
         username: String,
         skillLevel: SkillLevel,
         duprRating: Double?
@@ -67,9 +68,11 @@ extension AppStore {
         defer { busyCount -= 1 }
         do {
             let request = CompleteOnboardingRequest(
-                displayName: displayName.trimmed,
+                firstName: firstName.trimmed,
+                lastName: lastName.trimmed,
+                displayName: [firstName.trimmed, lastName.trimmed].joined(separator: " "),
                 username: username.normalizedUsername,
-                avatarInitials: initials(from: displayName),
+                avatarInitials: initials(from: [firstName.trimmed, lastName.trimmed].joined(separator: " ")),
                 skillLevel: skillLevel.rawValue,
                 duprRating: skillLevel == .dupr ? duprRating : nil
             )
@@ -93,6 +96,27 @@ extension AppStore {
                 reportError(error)
             }
             return false
+        }
+    }
+
+    /// A lightweight, debounced hint for the onboarding form. The unique
+    /// database index remains authoritative when onboarding is completed.
+    func checkUsernameAvailability(username: String) async -> Bool? {
+        guard ProfileIdentityValidator.username(username).isValid else { return nil }
+        do {
+            let response: UsernameAvailabilityResponse = try await supabase.functions
+                .invoke(
+                    "complete-onboarding",
+                    options: FunctionInvokeOptions(
+                        body: UsernameAvailabilityRequest(
+                            username: username,
+                            checkUsernameOnly: true
+                        )
+                    )
+                )
+            return response.available
+        } catch {
+            return nil
         }
     }
 

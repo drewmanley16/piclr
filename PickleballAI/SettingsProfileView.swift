@@ -5,10 +5,18 @@ import UIKit
 // MARK: - Settings: Profile
 
 struct SettingsProfileView: View {
+    private enum NameField: Hashable {
+        case firstName
+        case lastName
+    }
+
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: AppStore
     var onSaved: () -> Void = {}
-    @State private var displayName = ""
+    @State private var firstName = ""
+    @State private var lastName = ""
+    @State private var touchedNameFields: Set<NameField> = []
+    @FocusState private var focusedNameField: NameField?
     @State private var homeCourt = ""
     @State private var rating = ""
     @State private var preferredSide = "Left"
@@ -46,6 +54,7 @@ struct SettingsProfileView: View {
             }
             .padding(16)
         }
+        .scrollDismissesKeyboard(.interactively)
         .background(Theme.background.ignoresSafeArea())
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
@@ -53,6 +62,16 @@ struct SettingsProfileView: View {
         .onChange(of: selectedPhoto) { _, item in
             Task {
                 selectedPhotoData = try? await item?.loadTransferable(type: Data.self)
+            }
+        }
+        .onChange(of: focusedNameField) { oldField, _ in
+            guard let oldField else { return }
+            touchedNameFields.insert(oldField)
+            switch oldField {
+            case .firstName:
+                firstName = ProfileIdentityValidator.normalizedName(firstName)
+            case .lastName:
+                lastName = ProfileIdentityValidator.normalizedName(lastName)
             }
         }
     }
@@ -83,20 +102,49 @@ struct SettingsProfileView: View {
     }
 
     private var accountCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            fieldRow(label: "NAME") {
-                TextField("Display name", text: $displayName)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Theme.textPrimary)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                IdentityInputField(
+                    title: "First name",
+                    placeholder: "",
+                    text: $firstName,
+                    focusedField: $focusedNameField,
+                    field: .firstName,
+                    textContentType: .givenName,
+                    feedback: settingsNameFeedback(
+                        validation: ProfileIdentityValidator.firstName(firstName),
+                        field: .firstName
+                    ),
+                    onSubmit: { focusedNameField = .lastName }
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                IdentityInputField(
+                    title: "Last name",
+                    placeholder: "",
+                    text: $lastName,
+                    focusedField: $focusedNameField,
+                    field: .lastName,
+                    textContentType: .familyName,
+                    submitLabel: .done,
+                    feedback: settingsNameFeedback(
+                        validation: settingsLastNameValidation,
+                        field: .lastName
+                    ),
+                    onSubmit: { focusedNameField = nil }
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            Divider().overlay(Theme.hairline)
-            fieldRow(label: "HOME COURT") {
-                TextField("Add your home court", text: $homeCourt)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Theme.textPrimary)
+
+            VStack(alignment: .leading, spacing: 4) {
+                fieldRow(label: "HOME COURT") {
+                    TextField("Add your home court", text: $homeCourt)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                }
             }
+            .cardStyle()
         }
-        .cardStyle()
     }
 
     private var playerDetailsSection: some View {
@@ -145,8 +193,8 @@ struct SettingsProfileView: View {
                 .frame(maxWidth: .infinity, minHeight: 50)
         }
         .background(Theme.accent, in: Capsule())
-        .disabled(displayName.isEmpty || store.isBusy)
-        .opacity(displayName.isEmpty || store.isBusy ? 0.5 : 1)
+        .disabled(!nameIsValid || store.isBusy)
+        .opacity(!nameIsValid || store.isBusy ? 0.5 : 1)
     }
 
     @ViewBuilder
@@ -177,7 +225,15 @@ struct SettingsProfileView: View {
     private func loadProfile() {
         store.errorMessage = nil
         guard let profile = store.currentProfile else { return }
-        displayName = profile.displayName
+        if let storedFirstName = profile.firstName, !storedFirstName.isEmpty,
+           let storedLastName = profile.lastName, !storedLastName.isEmpty {
+            firstName = storedFirstName
+            lastName = storedLastName
+        } else {
+            let nameParts = Self.splitName(profile.displayName)
+            firstName = nameParts.first
+            lastName = nameParts.last
+        }
         homeCourt = profile.homeCourt ?? ""
         rating = profile.rating.map { String(format: "%.2f", $0) } ?? ""
         preferredSide = profile.preferredSide ?? "Left"
@@ -190,11 +246,14 @@ struct SettingsProfileView: View {
     }
 
     private func saveProfile() async {
+        firstName = ProfileIdentityValidator.normalizedName(firstName)
+        lastName = ProfileIdentityValidator.normalizedName(lastName)
         let photoData = selectedPhotoData
         // The two writes touch different columns, so run them concurrently to
         // overlap their network round trips.
         async let profileSaved = store.updateProfile(
-            displayName: displayName,
+            firstName: firstName,
+            lastName: lastName,
             homeCourt: homeCourt,
             rating: Double(rating),
             preferredSide: preferredSide,
@@ -210,5 +269,32 @@ struct SettingsProfileView: View {
         selectedPhoto = nil
         onSaved()
         dismiss()
+    }
+
+    private var nameIsValid: Bool {
+        ProfileIdentityValidator.firstName(firstName).isValid
+            && settingsLastNameValidation.isValid
+    }
+
+    private var settingsLastNameValidation: IdentityValidationResult {
+        let lastNameResult = ProfileIdentityValidator.lastName(lastName)
+        guard lastNameResult.isValid else { return lastNameResult }
+        return ProfileIdentityValidator.combinedName(firstName: firstName, lastName: lastName)
+    }
+
+    private func settingsNameFeedback(
+        validation: IdentityValidationResult,
+        field: NameField
+    ) -> IdentityFieldFeedback {
+        if touchedNameFields.contains(field), let error = validation.errorMessage {
+            return .invalid(error)
+        }
+        return .none
+    }
+
+    private static func splitName(_ displayName: String) -> (first: String, last: String) {
+        let parts = displayName.split(whereSeparator: \.isWhitespace)
+        guard let first = parts.first else { return ("", "") }
+        return (String(first), parts.dropFirst().joined(separator: " "))
     }
 }

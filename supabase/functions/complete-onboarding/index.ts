@@ -6,6 +6,11 @@ const corsHeaders = {
 };
 
 const validSkillLevels = new Set(["beginner", "intermediate", "advanced", "dupr"]);
+const firstNameMaxLength = 30;
+const lastNameMaxLength = 40;
+const combinedNameMaxLength = 60;
+const usernameMinLength = 3;
+const usernameMaxLength = 24;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -36,20 +41,50 @@ Deno.serve(async (req) => {
   }
 
   const body = await req.json().catch(() => null);
-  const displayName = cleanText(body?.display_name, 60);
-  const username = cleanUsername(body?.username);
-  const avatarInitials = cleanText(body?.avatar_initials, 4) || initialsFrom(displayName);
+  const username = normalizeUsername(body?.username);
+  const usernameError = validateUsername(username);
+
+  if (body?.check_username_only === true) {
+    if (usernameError) {
+      return json({ error: usernameError }, 400);
+    }
+    const { data: conflicts, error: conflictError } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("username", username)
+      .neq("id", userData.user.id)
+      .limit(1);
+
+    if (conflictError) {
+      return json({ error: conflictError.message }, 400);
+    }
+    return json({ available: !conflicts || conflicts.length === 0 });
+  }
+
+  const firstName = cleanText(body?.first_name);
+  const lastName = cleanText(body?.last_name);
+  const legacyDisplayName = cleanText(body?.display_name);
+  const hasStructuredName = typeof body?.first_name === "string" || typeof body?.last_name === "string";
+  const displayName = hasStructuredName ? `${firstName} ${lastName}`.trim() : legacyDisplayName;
+  const legacyName = splitName(legacyDisplayName);
+  const storedFirstName = hasStructuredName ? firstName : legacyName.firstName;
+  const storedLastName = hasStructuredName ? lastName : legacyName.lastName;
+  const avatarInitials = cleanText(body?.avatar_initials).slice(0, 4) || initialsFrom(displayName);
   const skillLevel = String(body?.skill_level ?? "");
   const duprRating = body?.dupr_rating == null ? null : Number(body.dupr_rating);
 
-  if (!displayName || displayName.length < 2) {
-    return json({ error: "Display name is required" }, 400);
+  if (hasStructuredName) {
+    const firstNameError = validateName(firstName, "First name", firstNameMaxLength);
+    if (firstNameError) return json({ error: firstNameError }, 400);
+
+    const lastNameError = validateName(lastName, "Last name", lastNameMaxLength);
+    if (lastNameError) return json({ error: lastNameError }, 400);
   }
-  if (!username || username.length < 3 || username.length > 24) {
-    return json({ error: "Username must be 3-24 characters" }, 400);
+  if (!displayName || characterCount(displayName) < 2 || characterCount(displayName) > combinedNameMaxLength) {
+    return json({ error: `Name must be 2-${combinedNameMaxLength} characters` }, 400);
   }
-  if (!/^[a-z0-9_.]+$/.test(username)) {
-    return json({ error: "Username can use letters, numbers, underscores, and periods" }, 400);
+  if (usernameError) {
+    return json({ error: usernameError }, 400);
   }
   if (!validSkillLevels.has(skillLevel)) {
     return json({ error: "Skill level is required" }, 400);
@@ -66,7 +101,7 @@ Deno.serve(async (req) => {
   const { data: conflicts, error: conflictError } = await admin
     .from("profiles")
     .select("id")
-    .ilike("username", username)
+    .eq("username", username)
     .neq("id", user.id)
     .limit(1);
 
@@ -84,6 +119,8 @@ Deno.serve(async (req) => {
       {
         id: user.id,
         username,
+        first_name: storedFirstName || null,
+        last_name: storedLastName || null,
         display_name: displayName,
         avatar_initials: avatarInitials.toUpperCase(),
         skill_level: skillLevel,
@@ -95,6 +132,9 @@ Deno.serve(async (req) => {
     .select()
     .single();
 
+  if (profileError?.code === "23505") {
+    return json({ error: "That username is taken" }, 409);
+  }
   if (profileError) {
     return json({ error: profileError.message }, 400);
   }
@@ -106,24 +146,54 @@ Deno.serve(async (req) => {
   }
 });
 
-function cleanText(value: unknown, maxLength: number) {
+function cleanText(value: unknown) {
   if (typeof value !== "string") return "";
-  return value.trim().replace(/\s+/g, " ").slice(0, maxLength);
+  return value.normalize("NFC").trim().replace(/\s+/g, " ");
 }
 
-function cleanUsername(value: unknown) {
+function normalizeUsername(value: unknown) {
   if (typeof value !== "string") return "";
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "_")
-    .replace(/[^a-z0-9_.]/g, "");
+  return value.trim().toLowerCase();
+}
+
+function validateName(name: string, label: string, maximumLength: number) {
+  if (!name) return `${label} is required`;
+  if (characterCount(name) > maximumLength) {
+    return `${label} can use up to ${maximumLength} characters`;
+  }
+  if (!/\p{L}/u.test(name)) return `${label} must include a letter`;
+  if (!/^[\p{L}\p{M} .’'\-]+$/u.test(name)) {
+    return "Names can use letters, spaces, apostrophes, hyphens, or periods";
+  }
+  return null;
+}
+
+function validateUsername(username: string) {
+  if (characterCount(username) < usernameMinLength || characterCount(username) > usernameMaxLength) {
+    return `Username must be ${usernameMinLength}-${usernameMaxLength} characters`;
+  }
+  if (!/^[a-z0-9_.]+$/.test(username)) {
+    return "Username can use lowercase letters, numbers, underscores, and periods";
+  }
+  return null;
+}
+
+function characterCount(value: string) {
+  return Array.from(value).length;
 }
 
 function initialsFrom(name: string) {
   const parts = name.split(" ").filter(Boolean).slice(0, 2);
   const letters = parts.map((part) => part[0]).join("");
   return (letters || "PB").toUpperCase();
+}
+
+function splitName(name: string) {
+  const parts = name.split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts.shift() ?? "",
+    lastName: parts.join(" "),
+  };
 }
 
 function json(payload: unknown, status = 200) {
