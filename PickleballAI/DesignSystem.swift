@@ -119,6 +119,58 @@ struct StatPill: View {
     }
 }
 
+struct SocialAction: View {
+    var icon: String
+    var count: Int?
+
+    var body: some View {
+        Button {
+        } label: {
+            SocialLabel(icon: icon, count: count)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct SocialLabel: View {
+    var icon: String
+    var count: Int?
+    var isHighlighted = false
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.body.weight(.semibold))
+                // Spring "pop" when the icon becomes highlighted (a like landing).
+                .scaleEffect(isHighlighted ? 1.18 : 1)
+                .animation(.spring(response: 0.28, dampingFraction: 0.45), value: isHighlighted)
+            if let count, count > 0 {
+                Text("\(count)")
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+                    .contentTransition(.numericText(value: Double(count)))
+                    .animation(.snappy, value: count)
+            }
+        }
+        .foregroundStyle(isHighlighted ? Theme.accent : Theme.textSecondary)
+        .frame(minHeight: 44)
+        .animation(.easeInOut(duration: 0.16), value: isHighlighted)
+    }
+}
+
+struct FocusChip: View {
+    var title: String
+
+    var body: some View {
+        Text(title)
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 12)
+            .frame(minHeight: 32)
+            .background(Theme.accentSoft, in: Capsule())
+            .foregroundStyle(Theme.accent)
+    }
+}
+
 /// Loads a remote image with retries so a slow/blipped first load doesn't get
 /// stuck on the placeholder forever (AsyncImage never retries a failed load).
 struct RemoteImage: View {
