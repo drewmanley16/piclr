@@ -51,7 +51,7 @@ struct HomeView: View {
         }
         .safeAreaInset(edge: .top) {
             VStack(spacing: 12) {
-            AppHeader(title: "pickleball.ai") {
+            AppHeader(title: "Feed") {
                 HeaderPill {
                     HeaderIconButton(systemImage: "trophy", accessibilityTitle: "Leaderboard") {
                         showLeaderboard = true

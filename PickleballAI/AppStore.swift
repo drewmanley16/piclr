@@ -128,7 +128,7 @@ final class AppStore: ObservableObject {
             try await supabase.auth.signInWithOTP(phone: phone)
             return true
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return false
         }
     }
@@ -143,7 +143,7 @@ final class AppStore: ObservableObject {
             await handleSignedIn(userId: session.user.id)
             return true
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return false
         }
     }
@@ -166,7 +166,7 @@ final class AppStore: ObservableObject {
             clearSignedInState()
             return true
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return false
         }
     }
@@ -205,7 +205,7 @@ final class AppStore: ObservableObject {
                 await signOut()
                 errorMessage = "Your session expired. Please sign in again."
             } else {
-                errorMessage = friendly(error)
+                reportError(error)
             }
             return false
         }
@@ -669,7 +669,7 @@ final class AppStore: ObservableObject {
             currentProfile = await hydrateProfile(profile)
             return .loaded
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return .failed
         }
     }
@@ -744,7 +744,7 @@ final class AppStore: ObservableObject {
         } catch {
             isInitialFeedLoading = false
             initialFeedLoadStartedAt = nil
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -784,7 +784,7 @@ final class AppStore: ObservableObject {
                 likedSessionIds.formUnion(likedPage)
             }
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -806,7 +806,7 @@ final class AppStore: ObservableObject {
                 .value
             mySessions = await hydrateSessions(sessions)
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -824,7 +824,7 @@ final class AppStore: ObservableObject {
             if let uid = currentProfile?.id { await refreshLikedState(for: hydrated, uid: uid) }
             return hydrated.first
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return nil
         }
     }
@@ -839,7 +839,7 @@ final class AppStore: ObservableObject {
                 .execute()
                 .value
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -889,7 +889,7 @@ final class AppStore: ObservableObject {
                 )
             }
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -929,7 +929,7 @@ final class AppStore: ObservableObject {
                 FollowListEntry(userId: id, profile: byId[id], isFollowedByMe: true)
             }
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -956,7 +956,7 @@ final class AppStore: ObservableObject {
                 FollowListEntry(userId: id, profile: byId[id], isFollowedByMe: myFollowing.contains(id))
             }
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return []
         }
     }
@@ -1006,7 +1006,7 @@ final class AppStore: ObservableObject {
             }
             contactMatches = hydrated
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -1039,7 +1039,7 @@ final class AppStore: ObservableObject {
             }
             searchResults = hydrated
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -1065,7 +1065,7 @@ final class AppStore: ObservableObject {
             requestedFollowIds.insert(profile.id)
             await loadFollowState(userId: uid)
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -1093,7 +1093,7 @@ final class AppStore: ObservableObject {
             await loadFollowLists(userId: uid)
             await loadFeed()
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -1114,7 +1114,7 @@ final class AppStore: ObservableObject {
             await loadFollowLists(userId: uid)
             await loadFeed()
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -1137,7 +1137,7 @@ final class AppStore: ObservableObject {
             await loadFollowState(userId: uid)
             await loadFollowLists(userId: uid)
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -1157,7 +1157,7 @@ final class AppStore: ObservableObject {
                 .execute()
                 .value
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -1192,7 +1192,7 @@ final class AppStore: ObservableObject {
             await loadNotifications(userId: uid)
             return true
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return false
         }
     }
@@ -1210,7 +1210,7 @@ final class AppStore: ObservableObject {
                 .execute()
             await loadBlockedAccounts()
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -1232,7 +1232,7 @@ final class AppStore: ObservableObject {
                 .execute()
             return true
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return false
         }
     }
@@ -1310,7 +1310,7 @@ final class AppStore: ObservableObject {
                 sessions: sessions
             )
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return nil
         }
     }
@@ -1342,7 +1342,7 @@ final class AppStore: ObservableObject {
             await loadMySessions(userId: uid)
             await loadFeed()
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -1447,7 +1447,7 @@ final class AppStore: ObservableObject {
             await loadFeed()
             return true
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return false
         }
     }
@@ -1523,7 +1523,7 @@ final class AppStore: ObservableObject {
             await loadFeed()
             return true
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return false
         }
     }
@@ -1545,7 +1545,7 @@ final class AppStore: ObservableObject {
             await loadFeed()
             return true
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return false
         }
     }
@@ -1565,7 +1565,7 @@ final class AppStore: ObservableObject {
             await loadNotifications(userId: uid)
             return true
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return false
         }
     }
@@ -1601,7 +1601,7 @@ final class AppStore: ObservableObject {
             }
             notifications = hydrated
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -1619,7 +1619,7 @@ final class AppStore: ObservableObject {
                 return $0.matches > $1.matches
             }
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -1633,7 +1633,7 @@ final class AppStore: ObservableObject {
                 .execute()
             await loadNotifications(userId: uid)
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -1654,7 +1654,7 @@ final class AppStore: ObservableObject {
             }
             return hydrated
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return []
         }
     }
@@ -1671,7 +1671,7 @@ final class AppStore: ObservableObject {
             await loadFeed()
             return true
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return false
         }
     }
@@ -1686,7 +1686,7 @@ final class AppStore: ObservableObject {
             await loadFeed()
             return true
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return false
         }
     }
@@ -1703,7 +1703,7 @@ final class AppStore: ObservableObject {
                 .execute()
             requestedRepostSessionIds.insert(session.id)
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -1735,7 +1735,7 @@ final class AppStore: ObservableObject {
                 .value
             requestedRepostSessionIds = Set(mine.map(\.sessionId))
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -1746,7 +1746,7 @@ final class AppStore: ObservableObject {
             await loadRepostRequests(userId: uid)
             await loadFeed()
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -1759,7 +1759,7 @@ final class AppStore: ObservableObject {
                 .execute()
             await loadRepostRequests(userId: uid)
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -1785,7 +1785,7 @@ final class AppStore: ObservableObject {
             currentProfile?.preferredSide = preferredSide.isEmpty ? nil : preferredSide
             return true
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return false
         }
     }
@@ -1805,7 +1805,7 @@ final class AppStore: ObservableObject {
             await loadProfile(userId: uid)
             return errorMessage == nil
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return false
         }
     }
@@ -1853,7 +1853,7 @@ final class AppStore: ObservableObject {
             }
             return errorMessage == nil
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return false
         }
     }
@@ -1874,7 +1874,7 @@ final class AppStore: ObservableObject {
             await loadGear(userId: uid)
             return errorMessage == nil
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return false
         }
     }
@@ -1889,7 +1889,7 @@ final class AppStore: ObservableObject {
                 .execute()
             await loadGear(userId: uid)
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -1924,7 +1924,7 @@ final class AppStore: ObservableObject {
                 likedSessionIds.remove(session.id)
             }
             optimisticLikeCounts[session.id] = nil
-            errorMessage = friendly(error)
+            reportError(error)
             return
         }
         await loadFeed()
@@ -1965,7 +1965,7 @@ final class AppStore: ObservableObject {
             }
             activeInvites = hydrated
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -1984,7 +1984,7 @@ final class AppStore: ObservableObject {
             if let host = invite.host { invite.host = await hydrateParticipantProfile(host) }
             return invite
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return nil
         }
     }
@@ -2019,7 +2019,7 @@ final class AppStore: ObservableObject {
                 .value
             return created.first
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return nil
         }
     }
@@ -2047,7 +2047,7 @@ final class AppStore: ObservableObject {
             await loadActiveInvites(userId: uid)
             return true
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return false
         }
     }
@@ -2063,7 +2063,7 @@ final class AppStore: ObservableObject {
                 .execute()
             await loadActiveInvites(userId: uid)
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
         }
     }
 
@@ -2086,7 +2086,7 @@ final class AppStore: ObservableObject {
             activeInvites.removeAll { $0.id == invite.id }
             return true
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return false
         }
     }
@@ -2316,7 +2316,7 @@ final class AppStore: ObservableObject {
             )
             return path
         } catch {
-            errorMessage = friendly(error)
+            reportError(error)
             return nil
         }
     }
@@ -2336,6 +2336,17 @@ final class AppStore: ObservableObject {
             image.draw(in: CGRect(origin: .zero, size: size))
         }
         return resized.jpegData(compressionQuality: quality)
+    }
+
+    /// Surface an error to the user — unless it's a cancellation. A cancelled
+    /// request (a superseded feed refresh, a task torn down on dismiss) is not a
+    /// failure and must never pop an alert. Because `errorMessage` is shared
+    /// app-wide, a cancelled background reload used to hijack whatever modal was
+    /// on screen (e.g. "Couldn't post session" after a post that actually saved).
+    private func reportError(_ error: Error) {
+        if error is CancellationError { return }
+        if let urlError = error as? URLError, urlError.code == .cancelled { return }
+        errorMessage = friendly(error)
     }
 
     private func friendly(_ error: Error) -> String {

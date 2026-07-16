@@ -361,14 +361,11 @@ struct ProfileView: View {
     // MARK: Dashboard
 
     private var dashboard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Dashboard").font(.headline).foregroundStyle(Theme.textPrimary)
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
-                DashboardTile(icon: "chart.line.uptrend.xyaxis", label: "Statistics") { activeSheet = .stats }
-                DashboardTile(icon: "trophy.fill", label: "Leaderboard") { activeSheet = .leaderboard }
-                DashboardTile(icon: "bag.fill", label: "Gear") { activeSheet = .gear }
-                DashboardTile(icon: "figure.stand", label: "Measures") { activeSheet = .measures }
-            }
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
+            DashboardTile(icon: "chart.line.uptrend.xyaxis", label: "Statistics") { activeSheet = .stats }
+            DashboardTile(icon: "trophy.fill", label: "Leaderboard") { activeSheet = .leaderboard }
+            DashboardTile(icon: "bag.fill", label: "Gear") { activeSheet = .gear }
+            DashboardTile(icon: "figure.stand", label: "Measures") { activeSheet = .measures }
         }
     }
 
