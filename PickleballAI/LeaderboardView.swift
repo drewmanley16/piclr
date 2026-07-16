@@ -18,10 +18,7 @@ struct LeaderboardSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if !loaded && store.leaderboard.isEmpty {
-                        ProgressView()
-                            .tint(Theme.accent)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 80)
+                        SkeletonList(rows: 6)
                     } else if ranked.isEmpty && unranked.isEmpty {
                         emptyState
                     } else {

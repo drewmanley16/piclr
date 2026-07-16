@@ -70,9 +70,10 @@ struct OtherProfileView: View {
                         privateCard
                     }
                 } else if isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 48)
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Sessions").font(.headline).foregroundStyle(Theme.textPrimary)
+                        SkeletonList(rows: 3)
+                    }
                 }
             }
             .padding(.horizontal, 16)

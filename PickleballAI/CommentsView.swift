@@ -71,8 +71,8 @@ struct CommentsView: View {
                 .lineLimit(1...4)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
 
             Button {
                 Task { await send() }
@@ -98,6 +98,7 @@ struct CommentsView: View {
         let body = draft
         draft = ""
         if await store.addComment(sessionId: session.id, body: body) {
+            Haptics.success()
             await load()
         } else {
             draft = body // restore on failure

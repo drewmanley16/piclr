@@ -196,9 +196,9 @@ struct WorkoutView: View {
             }
             .padding(20)
             .frame(maxWidth: .infinity)
-            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous)
                     .strokeBorder(Theme.accent.opacity(0.35), lineWidth: 1)
             )
         }
@@ -305,7 +305,7 @@ struct SessionSummaryRow: View {
                 .font(.headline)
                 .foregroundStyle(Theme.accent)
                 .frame(width: 46, height: 46)
-                .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(session.displayTitle)
@@ -587,7 +587,7 @@ struct ActiveSessionView: View {
                 Image(uiImage: image)
                     .resizable().scaledToFill()
                     .frame(width: 52, height: 52)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
                 Text("Photo added").font(.subheadline).foregroundStyle(Theme.textPrimary)
                 Spacer()
                 Button { draft.photoData = nil; selectedPhoto = nil } label: {

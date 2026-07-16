@@ -527,7 +527,12 @@ struct ProfileStat: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label).font(.caption).foregroundStyle(Theme.textSecondary)
-            Text(value).font(.title3.weight(.bold)).foregroundStyle(Theme.textPrimary)
+            Text(value)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(Theme.textPrimary)
+                .monospacedDigit()
+                .contentTransition(.numericText())
+                .animation(.snappy, value: value)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -657,6 +662,7 @@ struct FollowRequestRow: View {
             Spacer()
 
             Button {
+                Haptics.tap()
                 Task { await store.respondToFollowRequest(request, accept: false) }
             } label: {
                 Image(systemName: "xmark")
@@ -668,6 +674,7 @@ struct FollowRequestRow: View {
             .buttonStyle(.plain)
 
             Button {
+                Haptics.success()
                 Task { await store.respondToFollowRequest(request, accept: true) }
             } label: {
                 Image(systemName: "checkmark")
@@ -707,6 +714,7 @@ struct RepostRequestRow: View {
             Spacer()
 
             Button {
+                Haptics.tap()
                 Task { await store.declineRepost(request) }
             } label: {
                 Image(systemName: "xmark")
@@ -718,6 +726,7 @@ struct RepostRequestRow: View {
             .buttonStyle(.plain)
 
             Button {
+                Haptics.success()
                 Task { await store.approveRepost(request) }
             } label: {
                 Image(systemName: "checkmark")
