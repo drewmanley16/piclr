@@ -14,6 +14,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+  try {
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
   }
@@ -97,6 +98,10 @@ Deno.serve(async (req) => {
     .filter(Boolean);
 
   return json({ matches });
+  } catch (err) {
+    console.error("match-contacts unhandled error:", err);
+    return json({ error: "internal error" }, 500);
+  }
 });
 
 function normalizePhone(value: unknown) {

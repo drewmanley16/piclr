@@ -12,6 +12,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+  try {
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
   }
@@ -53,6 +54,10 @@ Deno.serve(async (req) => {
   }
 
   return json({ deleted: true });
+  } catch (err) {
+    console.error("delete-account unhandled error:", err);
+    return json({ error: "internal error" }, 500);
+  }
 });
 
 async function emptyUserFolder(

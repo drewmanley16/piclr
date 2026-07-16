@@ -11,6 +11,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+  try {
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
   }
@@ -99,6 +100,10 @@ Deno.serve(async (req) => {
   }
 
   return json({ profile });
+  } catch (err) {
+    console.error("complete-onboarding unhandled error:", err);
+    return json({ error: "internal error" }, 500);
+  }
 });
 
 function cleanText(value: unknown, maxLength: number) {

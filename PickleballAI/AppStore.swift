@@ -1,4 +1,5 @@
 import Foundation
+import os
 import Supabase
 import UIKit
 
@@ -53,8 +54,13 @@ final class AppStore: ObservableObject {
     /// Set when the user taps a push notification; RootView presents the target.
     @Published var pendingDeepLink: DeepLink?
 
-    private let selectWithCounts = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path)))"
-    private let selectFeedPreview = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), preview_comments:comments(*, author:profiles!comments_user_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path)), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path)))"
+    /// The subset of profile columns embedded wherever a lightweight identity
+    /// (avatar + name) is all a view needs. Hand-typed in several PostgREST
+    /// select strings; kept as one constant so they can't drift apart.
+    private static let selectProfileLite = "id,username,display_name,avatar_initials,avatar_url,avatar_path"
+
+    private let selectWithCounts = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(\(AppStore.selectProfileLite))))"
+    private let selectFeedPreview = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), preview_comments:comments(*, author:profiles!comments_user_id_fkey(\(AppStore.selectProfileLite))), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(\(AppStore.selectProfileLite))))"
 
     private var realtimeChannel: RealtimeChannelV2?
     private var realtimeTask: Task<Void, Never>?
@@ -71,6 +77,8 @@ final class AppStore: ObservableObject {
     private var signedInBackgroundTask: Task<Void, Never>?
     private var isFeedRequestInFlight = false
     private var pendingFeedRefresh = false
+    private var isDiscoverRequestInFlight = false
+    private var pendingDiscoverRefresh = false
     private var initialFeedLoadStartedAt: Date?
     private var acceptedFollowingUserIDs: Set<UUID> = []
     private var sessionRefreshDebounceTask: Task<Void, Never>?
@@ -103,6 +111,9 @@ final class AppStore: ObservableObject {
         f.formatOptions = [.withInternetDateTime]
         return f
     }()
+
+    private static let pushLogger = Logger(subsystem: "com.pickleball.ai", category: "Push")
+    private static let feedLogger = Logger(subsystem: "com.pickleball.ai", category: "FeedPerf")
 
     // MARK: - Lifecycle
 
@@ -262,6 +273,7 @@ final class AppStore: ObservableObject {
         likedSessionIds = []
         notifications = []
         blockedAccounts = []
+        deletePersistedDraft() // the live draft belongs to the signed-in user
         authState = .signedOut
     }
 
@@ -296,6 +308,10 @@ final class AppStore: ObservableObject {
     }
 
     private func loadSignedInData(userId: UUID) async {
+        // A signed-in session is now confirmed for the local user; resurrect any
+        // live draft persisted before a kill (the sign-out path deletes the file,
+        // so a leftover file always belongs to this user).
+        restorePersistedDraft()
         let startupBeganAt = Date()
         initialFeedLoadStartedAt = startupBeganAt
         isInitialFeedLoading = feed.isEmpty
@@ -374,7 +390,7 @@ final class AppStore: ObservableObject {
                 .execute()
         } catch {
             // Non-fatal: worst case the device just won't get pushes this run.
-            print("[Push] token upload failed: \(error.localizedDescription)")
+            Self.pushLogger.error("token upload failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -752,6 +768,20 @@ final class AppStore: ObservableObject {
     func loadDiscover(reset: Bool = true) async {
         guard let uid = currentProfile?.id else { return }
         if reset { discoverReachedEnd = false } else if discoverReachedEnd { return }
+        if isDiscoverRequestInFlight {
+            if reset { pendingDiscoverRefresh = true }
+            return
+        }
+
+        isDiscoverRequestInFlight = true
+        defer {
+            isDiscoverRequestInFlight = false
+            if pendingDiscoverRefresh {
+                pendingDiscoverRefresh = false
+                Task { [weak self] in await self?.loadDiscover() }
+            }
+        }
+
         do {
             let from = reset ? 0 : discoverFeed.count
             let page: [FeedSession] = try await supabase
@@ -829,15 +859,28 @@ final class AppStore: ObservableObject {
         }
     }
 
+    /// Refetch one session and swap the fresh copy into every feed array that
+    /// holds it. Used after a comment add/delete so the count stays in sync
+    /// across Home, Discover, and the profile grid without a full feed reload
+    /// (which would collapse pagination back to the first page).
+    private func refreshSessionAcrossFeeds(id: UUID) async {
+        guard let updated = await loadSession(id: id) else { return }
+        feed = feed.map { $0.id == id ? updated : $0 }
+        discoverFeed = discoverFeed.map { $0.id == id ? updated : $0 }
+        mySessions = mySessions.map { $0.id == id ? updated : $0 }
+    }
+
     func loadGear(userId: UUID) async {
         do {
-            gear = try await supabase
+            let items: [GearItem] = try await supabase
                 .from("gear")
                 .select()
                 .eq("user_id", value: userId.uuidString)
                 .order("created_at", ascending: false)
                 .execute()
                 .value
+            guard currentProfile?.id == userId, !Task.isCancelled else { return }
+            gear = items
         } catch {
             reportError(error)
         }
@@ -847,14 +890,14 @@ final class AppStore: ObservableObject {
     /// this user has already requested/follows (for discovery button state).
     func loadFollowState(userId: UUID) async {
         do {
-            followerCount = try await supabase
+            let followerTotal = try await supabase
                 .from("follows")
                 .select("*", head: true, count: .exact)
                 .eq("followee_id", value: userId.uuidString)
                 .eq("status", value: "accepted")
                 .execute()
                 .count ?? 0
-            followingCount = try await supabase
+            let followingTotal = try await supabase
                 .from("follows")
                 .select("*", head: true, count: .exact)
                 .eq("follower_id", value: userId.uuidString)
@@ -869,7 +912,6 @@ final class AppStore: ObservableObject {
                 .eq("follower_id", value: userId.uuidString)
                 .execute()
                 .value
-            requestedFollowIds = Set(outgoing.map(\.followeeId))
 
             // Incoming pending requests → resolve requester profiles.
             let incoming: [FollowRow] = try await supabase
@@ -880,12 +922,16 @@ final class AppStore: ObservableObject {
                 .order("created_at", ascending: false)
                 .execute()
                 .value
-            let followers = try await profilesByID(for: incoming.map(\.followerId))
+            let requesters = try await profilesByID(for: incoming.map(\.followerId))
+            guard currentProfile?.id == userId, !Task.isCancelled else { return }
+            followerCount = followerTotal
+            followingCount = followingTotal
+            requestedFollowIds = Set(outgoing.map(\.followeeId))
             incomingFollowRequests = incoming.map { row in
                 FollowRequest(
                     followerId: row.followerId,
                     followeeId: row.followeeId,
-                    follower: followers[row.followerId]
+                    follower: requesters[row.followerId]
                 )
             }
         } catch {
@@ -1149,13 +1195,15 @@ final class AppStore: ObservableObject {
             return
         }
         do {
-            blockedAccounts = try await supabase
+            let blocks: [BlockedAccount] = try await supabase
                 .from("blocks")
                 .select("blocked_id,blocked_username,blocked_display_name,blocked_avatar_path,created_at")
                 .eq("blocker_id", value: uid.uuidString)
                 .order("created_at", ascending: false)
                 .execute()
                 .value
+            guard currentProfile?.id == uid, !Task.isCancelled else { return }
+            blockedAccounts = blocks
         } catch {
             reportError(error)
         }
@@ -1317,42 +1365,67 @@ final class AppStore: ObservableObject {
 
     // MARK: - Writes
 
-    func logSession(
-        title: String,
-        location: String,
-        durationMinutes: Int,
-        focus: String,
-        takeaway: String,
-        postToFeed: Bool
-    ) async {
-        guard let uid = currentProfile?.id else { return }
-        busyCount += 1
-        defer { busyCount -= 1 }
-        do {
-            let new = NewSession(
-                userId: uid,
-                title: title.isEmpty ? nil : title,
-                location: location.isEmpty ? nil : location,
-                durationMinutes: durationMinutes,
-                focus: focus,
-                takeaway: takeaway.isEmpty ? nil : takeaway,
-                posted: postToFeed
-            )
-            try await supabase.from("sessions").insert(new).execute()
-            await loadMySessions(userId: uid)
-            await loadFeed()
-        } catch {
-            reportError(error)
-        }
-    }
-
     /// Write a full multi-activity session built on-device. Inserts the session
     /// unposted, writes activities + tagged participants, then flips `posted`
     /// last so realtime subscribers only see the completed post.
     /// An in-progress ("live") session that survives leaving the Workout tab.
     /// nil means no session is currently open. Mutations drive the Live Activity.
     @Published var activeDraft: SessionDraft? {
-        didSet { LiveActivityManager.shared.sync(draft: activeDraft) }
+        didSet {
+            LiveActivityManager.shared.sync(draft: activeDraft)
+            persistActiveDraft()
+        }
+    }
+
+    // MARK: - Live draft persistence
+    // A live session already survives leaving the Workout tab in memory;
+    // mirroring it to disk lets it also survive a force-quit / crash /
+    // low-memory kill so logged activities aren't lost. All I/O is best-effort:
+    // it must never throw or block the UI. The JSON (incl. base64 photoData)
+    // is small enough to encode on the main actor.
+    private static let draftMaxAge: TimeInterval = 60 * 60 * 24 // 24h
+
+    private var draftFileURL: URL? {
+        guard let dir = try? FileManager.default.url(
+            for: .applicationSupportDirectory, in: .userDomainMask,
+            appropriateFor: nil, create: true
+        ) else { return nil }
+        return dir.appendingPathComponent("LiveSessionDraft.json")
+    }
+
+    /// Called from `activeDraft.didSet`: write the current draft, or delete the
+    /// file when the session is posted/discarded (`activeDraft == nil`).
+    private func persistActiveDraft() {
+        guard let url = draftFileURL else { return }
+        guard let draft = activeDraft else {
+            try? FileManager.default.removeItem(at: url)
+            return
+        }
+        if let data = try? JSONEncoder().encode(draft) {
+            try? data.write(to: url, options: .atomic)
+        }
+    }
+
+    private func deletePersistedDraft() {
+        guard let url = draftFileURL else { return }
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    /// Restore a live session persisted before a kill. Assigning normally lets
+    /// `didSet` re-sync the Live Activity (which adopts any orphaned one). Drops
+    /// drafts older than `draftMaxAge` — a days-old resurrected session is worse
+    /// than a lost one. Only restores when nothing is already in progress.
+    private func restorePersistedDraft() {
+        guard activeDraft == nil,
+              let url = draftFileURL,
+              let data = try? Data(contentsOf: url),
+              let draft = try? JSONDecoder().decode(SessionDraft.self, from: data)
+        else { return }
+        guard Date().timeIntervalSince(draft.startedAt) < Self.draftMaxAge else {
+            deletePersistedDraft()
+            return
+        }
+        activeDraft = draft
     }
 
     func startLiveSession() {
@@ -1586,7 +1659,7 @@ final class AppStore: ObservableObject {
         do {
             let rows: [AppNotification] = try await supabase
                 .from("notifications")
-                .select("id,type,read,created_at,detail, actor:profiles!notifications_actor_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path), session:sessions!notifications_session_id_fkey(id,title), comment:comments!notifications_comment_id_fkey(id,body), invite:session_invites!notifications_invite_id_fkey(id, court:courts(name))")
+                .select("id,type,read,created_at,detail, actor:profiles!notifications_actor_id_fkey(\(Self.selectProfileLite)), session:sessions!notifications_session_id_fkey(id,title), comment:comments!notifications_comment_id_fkey(id,body), invite:session_invites!notifications_invite_id_fkey(id, court:courts(name))")
                 .eq("user_id", value: userId.uuidString)
                 .order("created_at", ascending: false)
                 .limit(50)
@@ -1599,6 +1672,7 @@ final class AppStore: ObservableObject {
                 }
                 hydrated.append(notification)
             }
+            guard currentProfile?.id == userId, !Task.isCancelled else { return }
             notifications = hydrated
         } catch {
             reportError(error)
@@ -1643,7 +1717,7 @@ final class AppStore: ObservableObject {
         do {
             let rows: [Comment] = try await supabase
                 .from("comments")
-                .select("*, author:profiles!comments_user_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path)")
+                .select("*, author:profiles!comments_user_id_fkey(\(Self.selectProfileLite))")
                 .eq("session_id", value: sessionId.uuidString)
                 .order("created_at", ascending: true)
                 .execute()
@@ -1668,7 +1742,7 @@ final class AppStore: ObservableObject {
             try await supabase.from("comments")
                 .insert(NewComment(sessionId: sessionId, userId: uid, body: trimmed))
                 .execute()
-            await loadFeed()
+            await refreshSessionAcrossFeeds(id: sessionId)
             return true
         } catch {
             reportError(error)
@@ -1683,7 +1757,7 @@ final class AppStore: ObservableObject {
                 .delete()
                 .eq("id", value: comment.id.uuidString)
                 .execute()
-            await loadFeed()
+            await refreshSessionAcrossFeeds(id: comment.sessionId)
             return true
         } catch {
             reportError(error)
@@ -1712,7 +1786,7 @@ final class AppStore: ObservableObject {
         do {
             let rows: [RepostRequest] = try await supabase
                 .from("repost_requests")
-                .select("*, requester:profiles!requester_id(id,username,display_name,avatar_initials,avatar_url,avatar_path), session:sessions!session_id(id,user_id,title)")
+                .select("*, requester:profiles!requester_id(\(Self.selectProfileLite)), session:sessions!session_id(id,user_id,title)")
                 .eq("status", value: "pending")
                 .execute()
                 .value
@@ -1927,8 +2001,10 @@ final class AppStore: ObservableObject {
             reportError(error)
             return
         }
-        await loadFeed()
-        optimisticLikeCounts[session.id] = nil
+        // Keep the optimistic count as the source of truth rather than reloading
+        // only `feed`: `likeCount(for:)` reads this overlay for every array, so
+        // copies of the session in `discoverFeed`/`mySessions` stay in sync too
+        // (clearing it here would revert those to their stale decoded counts).
     }
 
     func likeCount(for session: FeedSession) -> Int {
@@ -1937,7 +2013,7 @@ final class AppStore: ObservableObject {
 
     // MARK: - Session invites (RSVP)
 
-    private let selectInvite = "*, host:profiles!session_invites_host_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path), court:courts(*), recipients:invite_recipients(*, user:profiles!invite_recipients_user_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path))"
+    private let selectInvite = "*, host:profiles!session_invites_host_id_fkey(\(AppStore.selectProfileLite)), court:courts(*), recipients:invite_recipients(*, user:profiles!invite_recipients_user_id_fkey(\(AppStore.selectProfileLite)))"
 
     /// Mutual followers only — the pool of people you're allowed to tag on an
     /// invite (matches the `is_mutual_follow` RLS check on `invite_recipients`).
@@ -2283,9 +2359,7 @@ final class AppStore: ObservableObject {
             }
             debugFeedMetric("signed \(missing.count) \(bucket) URLs in one request", since: signingBeganAt)
         } catch {
-            #if DEBUG
-            print("[FeedPerformance] \(bucket) batch signing failed: \(error.localizedDescription)")
-            #endif
+            Self.feedLogger.error("\(bucket, privacy: .public) batch signing failed: \(error.localizedDescription, privacy: .public)")
         }
         return resolved
     }
@@ -2293,7 +2367,7 @@ final class AppStore: ObservableObject {
     private func debugFeedMetric(_ label: String, since start: Date) {
         #if DEBUG
         let milliseconds = Int(Date().timeIntervalSince(start) * 1_000)
-        print("[FeedPerformance] \(label): \(milliseconds) ms")
+        Self.feedLogger.debug("\(label, privacy: .public): \(milliseconds) ms")
         #endif
     }
 

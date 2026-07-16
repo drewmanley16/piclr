@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Read models
 
-struct Profile: Identifiable, Decodable, Hashable {
+struct Profile: Identifiable, Codable, Hashable {
     let id: UUID
     var username: String
     var displayName: String
@@ -334,9 +334,11 @@ struct NewActivityParticipant: Encodable {
 
 // MARK: - On-device session draft (built live, written on Finish & Post)
 
-enum ActivityKind: String, Hashable { case practice, match }
+enum ActivityKind: String, Codable, Hashable { case practice, match }
 
-struct DraftPlayer: Identifiable, Hashable {
+// Draft types are Codable so a live session can be persisted to disk and
+// restored after a force-quit/crash (see AppStore live-draft persistence).
+struct DraftPlayer: Identifiable, Codable, Hashable {
     var id = UUID()
     var profile: Profile?
     var guestName: String?
@@ -371,7 +373,7 @@ struct DraftPlayer: Identifiable, Hashable {
     }
 }
 
-struct DraftActivity: Identifiable, Hashable {
+struct DraftActivity: Identifiable, Codable, Hashable {
     var id = UUID()
     var kind: ActivityKind
     // practice
@@ -416,7 +418,7 @@ struct DraftActivity: Identifiable, Hashable {
     }
 }
 
-struct SessionDraft: Equatable {
+struct SessionDraft: Codable, Equatable {
     var title: String = ""
     var location: String = ""
     var takeaway: String = ""
