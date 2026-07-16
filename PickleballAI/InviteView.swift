@@ -181,6 +181,10 @@ private extension Date {
 struct InviteCard: View {
     @EnvironmentObject private var store: AppStore
     let invite: SessionInvite
+    var showsInlineCancel = true
+
+    @State private var showCancelConfirmation = false
+    @State private var isCancelling = false
 
     private var myId: UUID? { store.currentProfile?.id }
     private var isHost: Bool { invite.hostId == myId }
@@ -197,7 +201,7 @@ struct InviteCard: View {
                         Text(invite.court?.name ?? "Court")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Theme.textPrimary)
-                        Text("\(isHost ? "You" : invite.host?.displayName ?? "Someone") · \(invite.scheduledAtDate.relativeLabel)")
+                        Text("\(isHost ? "You" : invite.host?.displayName ?? "Someone") · \(invite.scheduledAtDate.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute()))")
                             .font(.caption)
                             .foregroundStyle(Theme.textSecondary)
                     }
@@ -211,13 +215,34 @@ struct InviteCard: View {
                 }
 
                 HStack {
-                    if invite.yesCount > 0 {
+                    if invite.isCancelled {
+                        Label("Canceled", systemImage: "xmark.circle.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.loss)
+                    } else if invite.isPast {
+                        Label("Ended", systemImage: "clock.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.textTertiary)
+                    } else if invite.yesCount > 0 {
                         Text("\(invite.yesCount) in")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(Theme.accent)
                     }
                     Spacer()
-                    if !isHost {
+                    if isHost && showsInlineCancel && !invite.isCancelled && !invite.isPast {
+                        Button {
+                            showCancelConfirmation = true
+                        } label: {
+                            if isCancelling {
+                                ProgressView().controlSize(.small).tint(Theme.loss)
+                            } else {
+                                Label("Cancel", systemImage: "xmark.circle")
+                            }
+                        }
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.loss)
+                        .disabled(isCancelling)
+                    } else if !isHost && !invite.isCancelled && !invite.isPast {
                         RSVPButtons(invite: invite, current: myResponse)
                     }
                 }
@@ -225,6 +250,18 @@ struct InviteCard: View {
             .cardStyle()
         }
         .buttonStyle(.plain)
+        .confirmationDialog("Cancel this invite?", isPresented: $showCancelConfirmation, titleVisibility: .visible) {
+            Button("Cancel Invite", role: .destructive) {
+                Task {
+                    isCancelling = true
+                    _ = await store.cancelInvite(invite)
+                    isCancelling = false
+                }
+            }
+            Button("Keep Invite", role: .cancel) {}
+        } message: {
+            Text("Everyone invited will be notified that it was canceled.")
+        }
     }
 }
 
@@ -257,15 +294,38 @@ struct InviteDetailView: View {
     let inviteId: UUID
     var preloaded: SessionInvite?
 
+    @State private var fetchedInvite: SessionInvite?
+    @State private var isLoading = true
+    @State private var showCancelConfirmation = false
+    @State private var isCancelling = false
+
     private var invite: SessionInvite? {
-        store.activeInvites.first { $0.id == inviteId } ?? preloaded
+        fetchedInvite ?? store.activeInvites.first { $0.id == inviteId } ?? preloaded
     }
+
+    private var isHost: Bool { invite?.hostId == store.currentProfile?.id }
 
     var body: some View {
         ScrollView {
             if let invite {
                 VStack(alignment: .leading, spacing: 16) {
-                    InviteCard(invite: invite)
+                    InviteCard(invite: invite, showsInlineCancel: false)
+
+                    if invite.isCancelled {
+                        statusBanner(
+                            title: "Invite canceled",
+                            message: "The invited players were notified.",
+                            systemImage: "xmark.circle.fill",
+                            color: Theme.loss
+                        )
+                    } else if invite.isPast {
+                        statusBanner(
+                            title: "Session time passed",
+                            message: "This invite is no longer shown in Upcoming.",
+                            systemImage: "clock.fill",
+                            color: Theme.textSecondary
+                        )
+                    }
 
                     if let recipients = invite.recipients, !recipients.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
@@ -284,8 +344,32 @@ struct InviteDetailView: View {
                             }
                         }
                     }
+
+                    if isHost && !invite.isCancelled && !invite.isPast {
+                        Button(role: .destructive) {
+                            showCancelConfirmation = true
+                        } label: {
+                            HStack {
+                                Spacer()
+                                if isCancelling {
+                                    ProgressView().tint(Theme.loss)
+                                } else {
+                                    Label("Cancel Invite", systemImage: "xmark.circle")
+                                }
+                                Spacer()
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(Theme.loss)
+                        .disabled(isCancelling)
+                    }
                 }
                 .padding(16)
+            } else if isLoading {
+                ProgressView()
+                    .tint(Theme.accent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 100)
             } else {
                 VStack(spacing: 10) {
                     Image(systemName: "figure.pickleball")
@@ -302,5 +386,50 @@ struct InviteDetailView: View {
         .background(Theme.background.ignoresSafeArea())
         .navigationTitle("Invite")
         .navigationBarTitleDisplayMode(.inline)
+        .task(id: inviteId) {
+            if store.activeInvites.first(where: { $0.id == inviteId }) == nil,
+               preloaded == nil {
+                fetchedInvite = await store.loadInvite(inviteId: inviteId)
+            }
+            isLoading = false
+        }
+        .onChange(of: store.activeInvites) { _, invites in
+            guard !invites.contains(where: { $0.id == inviteId }),
+                  fetchedInvite?.isCancelled != true else { return }
+            Task { fetchedInvite = await store.loadInvite(inviteId: inviteId) }
+        }
+        .confirmationDialog("Cancel this invite?", isPresented: $showCancelConfirmation, titleVisibility: .visible) {
+            Button("Cancel Invite", role: .destructive) {
+                guard let invite else { return }
+                Task {
+                    isCancelling = true
+                    if await store.cancelInvite(invite) {
+                        fetchedInvite = await store.loadInvite(inviteId: inviteId)
+                    }
+                    isCancelling = false
+                }
+            }
+            Button("Keep Invite", role: .cancel) {}
+        } message: {
+            Text("Everyone invited will be notified that it was canceled.")
+        }
+    }
+
+    private func statusBanner(title: String, message: String, systemImage: String, color: Color) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.title3)
+                .foregroundStyle(color)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.textPrimary)
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            Spacer()
+        }
+        .cardStyle(padding: 14, fill: Theme.surfaceElevated)
     }
 }

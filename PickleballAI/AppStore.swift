@@ -359,7 +359,7 @@ final class AppStore: ObservableObject {
             if let actorId { pendingDeepLink = .profile(actorId) }
         case "comment":
             if let sessionId { pendingDeepLink = .comments(sessionId) }
-        case "invite_received", "invite_response":
+        case "invite_received", "invite_response", "invite_cancelled":
             if let inviteId { pendingDeepLink = .invite(inviteId) }
         default:
             if let sessionId { pendingDeepLink = .session(sessionId) }
@@ -1945,13 +1945,15 @@ final class AppStore: ObservableObject {
         followers.filter { $0.isFollowedByMe }
     }
 
-    /// Invites visible to the signed-in user (hosted by them or tagged in),
-    /// newest first. RLS already scopes rows to what's visible.
+    /// Upcoming, non-cancelled invites visible to the signed-in user (hosted by
+    /// them or tagged in). RLS already scopes rows to what's visible.
     func loadActiveInvites(userId: UUID) async {
         do {
             let rows: [SessionInvite] = try await supabase
                 .from("session_invites")
                 .select(selectInvite)
+                .is("cancelled_at", value: nil)
+                .gte("scheduled_at", value: Self.iso.string(from: Date()))
                 .order("scheduled_at", ascending: true)
                 .execute()
                 .value
@@ -1964,6 +1966,26 @@ final class AppStore: ObservableObject {
             activeInvites = hydrated
         } catch {
             errorMessage = friendly(error)
+        }
+    }
+
+    /// Loads one invite for notification/deep-link detail, including cancelled
+    /// or elapsed invites that no longer belong in the Upcoming list.
+    func loadInvite(inviteId: UUID) async -> SessionInvite? {
+        do {
+            let rows: [SessionInvite] = try await supabase
+                .from("session_invites")
+                .select(selectInvite)
+                .eq("id", value: inviteId.uuidString)
+                .limit(1)
+                .execute()
+                .value
+            guard var invite = rows.first else { return nil }
+            if let host = invite.host { invite.host = await hydrateParticipantProfile(host) }
+            return invite
+        } catch {
+            errorMessage = friendly(error)
+            return nil
         }
     }
 
@@ -2042,6 +2064,30 @@ final class AppStore: ObservableObject {
             await loadActiveInvites(userId: uid)
         } catch {
             errorMessage = friendly(error)
+        }
+    }
+
+    /// Soft-cancels an invite. The database enforces host ownership and emits
+    /// one cancellation notification for every invited recipient.
+    @discardableResult
+    func cancelInvite(_ invite: SessionInvite) async -> Bool {
+        guard let uid = currentProfile?.id,
+              invite.hostId == uid,
+              !invite.isCancelled,
+              !invite.isPast else { return false }
+        do {
+            try await supabase
+                .from("session_invites")
+                .update(InviteCancellationUpdate(cancelledAt: Date()))
+                .eq("id", value: invite.id.uuidString)
+                .eq("host_id", value: uid.uuidString)
+                .is("cancelled_at", value: nil)
+                .execute()
+            activeInvites.removeAll { $0.id == invite.id }
+            return true
+        } catch {
+            errorMessage = friendly(error)
+            return false
         }
     }
 

@@ -74,7 +74,7 @@ struct NotificationsView: View {
         switch n.type {
         case "follow":  return n.actor.map { .profile($0.id) }
         case "comment": return n.session.map { .comments($0.id) }
-        case "invite_received", "invite_response": return n.invite.map { .invite($0.id) }
+        case "invite_received", "invite_response", "invite_cancelled": return n.invite.map { .invite($0.id) }
         default:        return n.session.map { .session($0.id) }
         }
     }
