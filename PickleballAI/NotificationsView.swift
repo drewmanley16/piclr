@@ -4,6 +4,8 @@ struct NotificationsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: AppStore
 
+    @State private var loaded = false
+
     private var isEmpty: Bool {
         store.incomingFollowRequests.isEmpty
             && store.incomingRepostRequests.isEmpty
@@ -14,7 +16,9 @@ struct NotificationsView: View {
         ProfileNavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    if isEmpty {
+                    if !loaded && isEmpty {
+                        SkeletonList(rows: 6)
+                    } else if isEmpty {
                         emptyState
                     } else {
                         if !store.incomingFollowRequests.isEmpty {
@@ -64,7 +68,7 @@ struct NotificationsView: View {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }
             .refreshable { await reload() }
-            .task { await store.markNotificationsRead() }
+            .task { await store.markNotificationsRead(); loaded = true }
         }
     }
 
@@ -192,7 +196,7 @@ struct NotificationRow: View {
     var body: some View {
         HStack(spacing: 12) {
             ZStack(alignment: .bottomTrailing) {
-                ProfileAvatar(participant: notification.actor, size: 40)
+                ProfileAvatar(participant: notification.actor, size: 40, unlinked: true)
                 Image(systemName: notification.icon)
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(Theme.background)

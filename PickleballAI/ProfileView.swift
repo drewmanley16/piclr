@@ -76,7 +76,7 @@ struct ProfileView: View {
 
     private var profileRow: some View {
         HStack(spacing: 20) {
-            ProfileAvatar(profile: profile, size: 76)
+            ProfileAvatar(profile: profile, size: 76, unlinked: true)
 
             ProfileStat(label: "Sessions", value: "\(store.mySessions.count)")
 
@@ -223,8 +223,10 @@ struct ProfileView: View {
                                 .foregroundStyle(Theme.textSecondary)
                             ForEach(s.partners.prefix(3)) { partner in
                                 HStack(spacing: 10) {
-                                    ProfileAvatar(url: nil, initials: partner.avatarInitials, size: 32)
-                                    Text(partner.name)
+                                    // Inside the tappable Record card, so opt out
+                                    // of avatar navigation to avoid a nested tap.
+                                    ProfileAvatar(person: partner.person, size: 32, unlinked: true)
+                                    Text(partner.person.displayName)
                                         .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(Theme.textPrimary)
                                         .lineLimit(1)
@@ -269,7 +271,7 @@ struct ProfileView: View {
                             .font(.caption.weight(.bold))
                             .foregroundStyle(Theme.accent)
                     }
-                    RivalRow(rivalry: top, emphasized: true)
+                    RivalRow(rivalry: top, emphasized: true, unlinked: true)
                 }
                 .cardStyle()
             }

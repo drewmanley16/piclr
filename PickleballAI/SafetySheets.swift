@@ -72,7 +72,14 @@ struct BlockedAccountsView: View {
                 } else {
                     ForEach(store.blockedAccounts) { account in
                         HStack(spacing: 12) {
-                            ProfileAvatar(url: nil, initials: account.initials)
+                            // Deliberately non-navigable: you blocked them, so show
+                            // the real avatar but don't route to their profile.
+                            ProfileAvatar(
+                                url: account.avatarURL,
+                                initials: account.initials,
+                                userId: account.blockedId,
+                                unlinked: true
+                            )
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(account.blockedDisplayName)
                                     .font(.body.weight(.semibold))

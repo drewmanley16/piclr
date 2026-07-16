@@ -18,7 +18,15 @@ extension AppStore {
                 .execute()
                 .value
             guard currentProfile?.id == uid, !Task.isCancelled else { return }
-            blockedAccounts = blocks
+            // Sign the private avatar paths so blocked rows show real faces.
+            let paths = Set(blocks.compactMap(\.blockedAvatarPath))
+            let urls = await media.signedAvatarURLs(forPaths: paths)
+            guard currentProfile?.id == uid, !Task.isCancelled else { return }
+            blockedAccounts = blocks.map { block in
+                var hydrated = block
+                if let path = block.blockedAvatarPath { hydrated.avatarURL = urls[path] }
+                return hydrated
+            }
         } catch {
             reportError(error)
         }

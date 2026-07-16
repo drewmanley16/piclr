@@ -96,7 +96,7 @@ struct LeaderboardRow: View {
 
             ProfileLink(userId: isYou ? nil : entry.userId) {
                 HStack(spacing: 12) {
-                    ProfileAvatar(url: entry.avatarURL, initials: entry.initials, size: 40, userId: entry.userId)
+                    ProfileAvatar(url: entry.avatarURL, initials: entry.initials, size: 40, userId: entry.userId, unlinked: true)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(isYou ? "You" : entry.displayName)
                             .font(.subheadline.weight(.semibold))

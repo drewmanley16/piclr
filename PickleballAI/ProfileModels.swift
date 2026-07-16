@@ -108,6 +108,48 @@ struct ParticipantProfile: Decodable, Hashable {
     }
 }
 
+/// The minimum identity needed to render a person anywhere in the UI.
+/// Models that represent people embed this so views can always show the real
+/// avatar and navigate; a nil `profileId` means a guest — non-navigable by
+/// construction.
+struct PersonRef: Identifiable, Hashable, Codable {
+    /// The account behind this person, or nil for a guest player with no profile.
+    let profileId: UUID?
+    let displayName: String
+    let handle: String?
+    let avatarURL: String?
+    let initials: String
+
+    /// Stable `Identifiable` key: the profile id when present, else the guest's
+    /// name (guests have no account to key on).
+    var id: String { profileId?.uuidString ?? "guest:\(displayName)" }
+
+    init(profile: Profile) {
+        profileId = profile.id
+        displayName = profile.displayName
+        handle = "@\(profile.username)"
+        avatarURL = profile.avatarURL
+        initials = profile.initials
+    }
+
+    init(participant: ParticipantProfile) {
+        profileId = participant.id
+        displayName = participant.displayName
+        handle = "@\(participant.username)"
+        avatarURL = participant.avatarURL
+        initials = participant.initials
+    }
+
+    init(guestName: String) {
+        profileId = nil
+        displayName = guestName
+        handle = nil
+        avatarURL = nil
+        let letters = guestName.split(separator: " ").prefix(2).compactMap { $0.first }
+        initials = letters.isEmpty ? "?" : String(letters).uppercased()
+    }
+}
+
 /// A snapshot of another user's profile as seen by the signed-in user.
 /// `sessions` is only populated when `relationship.canViewContent` is true;
 /// otherwise it's empty and the UI shows a "This profile is private" state.

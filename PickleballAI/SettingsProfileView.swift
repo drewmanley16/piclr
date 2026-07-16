@@ -218,7 +218,7 @@ struct SettingsProfileView: View {
                 .clipShape(Circle())
                 .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
         } else {
-            ProfileAvatar(profile: store.currentProfile, size: 96)
+            ProfileAvatar(profile: store.currentProfile, size: 96, unlinked: true)
         }
     }
 

@@ -128,19 +128,9 @@ private struct PlayerRecordRow: View {
     let record: PlayerRecord
 
     var body: some View {
-        HStack(spacing: 12) {
-            ProfileAvatar(url: nil, initials: record.avatarInitials)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(record.name)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.textPrimary)
-                if let handle = record.handle {
-                    Text(handle)
-                        .font(.caption)
-                        .foregroundStyle(Theme.textSecondary)
-                }
-            }
-            Spacer()
+        // Plain list row with no enclosing link, so default navigation is
+        // correct: members tap through to their profile, guests stay inert.
+        IdentityRow(person: record.person, avatarSize: 44) {
             VStack(alignment: .trailing, spacing: 2) {
                 Text(record.recordLine)
                     .font(.subheadline.weight(.bold))

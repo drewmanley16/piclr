@@ -8,6 +8,8 @@ struct BlockedAccount: Identifiable, Decodable, Hashable {
     let blockedDisplayName: String
     let blockedAvatarPath: String?
     let createdAt: String
+    /// Signed URL for `blockedAvatarPath`, populated post-fetch (not decoded).
+    var avatarURL: String? = nil
 
     var id: UUID { blockedId }
     var initials: String {

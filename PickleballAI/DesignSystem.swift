@@ -237,32 +237,51 @@ struct ProfileAvatar: View {
     var url: String?
     var initials: String
     var size: CGFloat
-    /// The user this avatar represents, when known. Enables `linked`.
+    /// The user this avatar represents. A non-nil id makes the avatar navigate to
+    /// that profile unless `unlinked` opts out.
     var userId: UUID?
-    /// When true (and `userId` is known), tapping the avatar pushes that user's
-    /// profile — routed through `ProfileLink` so navigation stays defined in one
-    /// place. Off by default so avatars in pickers, editors, or rows that are
-    /// already navigation links don't double-navigate.
-    var linked: Bool = false
+    /// Opt out of navigation for an avatar inside an already-tappable container
+    /// (an enclosing `ProfileLink`, card, button, or picker row) where a second
+    /// tap target would double-navigate or fight the parent gesture. Own-profile
+    /// headers use it too — navigating to yourself from yourself is noise.
+    var unlinked: Bool = false
 
-    init(url: String?, initials: String, size: CGFloat = 44, userId: UUID? = nil, linked: Bool = false) {
+    /// A real user's avatar. `userId` is required so a person's avatar can't
+    /// silently become inert — use `init(guest:)`/`init(preview:)` for the
+    /// genuinely profile-less cases instead.
+    init(url: String?, initials: String, size: CGFloat = 44, userId: UUID?, unlinked: Bool = false) {
         self.url = url
         self.initials = initials.isEmpty ? "PB" : initials
         self.size = size
         self.userId = userId
-        self.linked = linked
+        self.unlinked = unlinked
     }
 
-    init(profile: Profile?, size: CGFloat = 44, linked: Bool = false) {
-        self.init(url: profile?.avatarURL, initials: profile?.initials ?? "PB", size: size, userId: profile?.id, linked: linked)
+    init(profile: Profile?, size: CGFloat = 44, unlinked: Bool = false) {
+        self.init(url: profile?.avatarURL, initials: profile?.initials ?? "PB", size: size, userId: profile?.id, unlinked: unlinked)
     }
 
-    init(participant: ParticipantProfile?, size: CGFloat = 44, linked: Bool = false) {
-        self.init(url: participant?.avatarURL, initials: participant?.initials ?? "?", size: size, userId: participant?.id, linked: linked)
+    init(participant: ParticipantProfile?, size: CGFloat = 44, unlinked: Bool = false) {
+        self.init(url: participant?.avatarURL, initials: participant?.initials ?? "?", size: size, userId: participant?.id, unlinked: unlinked)
+    }
+
+    init(person: PersonRef, size: CGFloat = 44, unlinked: Bool = false) {
+        self.init(url: person.avatarURL, initials: person.initials, size: size, userId: person.profileId, unlinked: unlinked)
+    }
+
+    /// A guest player with no account: initials only, never navigable.
+    init(guest initials: String, size: CGFloat = 44) {
+        self.init(url: nil, initials: initials, size: size, userId: nil)
+    }
+
+    /// Fake/marketing avatar for previews and onboarding: initials only, never
+    /// navigable. Renders identically to `guest`; the name states intent.
+    init(preview initials: String, size: CGFloat = 44) {
+        self.init(url: nil, initials: initials, size: size, userId: nil)
     }
 
     var body: some View {
-        if linked, let userId {
+        if !unlinked, let userId {
             ProfileLink(userId: userId) { circle }
         } else {
             circle
@@ -434,7 +453,7 @@ struct IdentityRow<Trailing: View>: View {
         HStack(spacing: 12) {
             ProfileLink(userId: userId, placeholder: placeholder) {
                 HStack(spacing: 12) {
-                    ProfileAvatar(url: avatarURL, initials: initials, size: avatarSize)
+                    ProfileAvatar(url: avatarURL, initials: initials, size: avatarSize, userId: userId, unlinked: true)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(name)
                             .font(.headline)
@@ -454,6 +473,30 @@ struct IdentityRow<Trailing: View>: View {
 
             trailing
         }
+    }
+}
+
+extension IdentityRow {
+    /// Build a person row straight from a `PersonRef`. A guest ref (nil profile
+    /// id) renders non-navigable by construction; pass `unlinked: true` to
+    /// suppress navigation even for a real account.
+    init(
+        person: PersonRef,
+        avatarSize: CGFloat = 40,
+        detail: String? = nil,
+        unlinked: Bool = false,
+        @ViewBuilder trailing: () -> Trailing
+    ) {
+        self.init(
+            avatarURL: person.avatarURL,
+            initials: person.initials,
+            avatarSize: avatarSize,
+            name: person.displayName,
+            detail: detail ?? person.handle,
+            userId: unlinked ? nil : person.profileId,
+            placeholder: nil,
+            trailing: trailing
+        )
     }
 }
 

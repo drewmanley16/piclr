@@ -7,12 +7,15 @@ import SwiftUI
 struct RivalRow: View {
     let rivalry: Rivalry
     var emphasized: Bool = false
+    /// Opt out of avatar navigation when the row sits inside an already-tappable
+    /// container (the profile Rivals card is a button into the Rivals sheet).
+    var unlinked: Bool = false
 
     var body: some View {
         HStack(spacing: 12) {
-            ProfileAvatar(url: nil, initials: rivalry.avatarInitials, size: emphasized ? 44 : 40)
+            ProfileAvatar(person: rivalry.person, size: emphasized ? 44 : 40, unlinked: unlinked)
             VStack(alignment: .leading, spacing: 2) {
-                Text(rivalry.name)
+                Text(rivalry.person.displayName)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)

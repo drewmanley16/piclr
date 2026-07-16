@@ -107,6 +107,7 @@ struct InviteComposerSheet: View {
                     } else {
                         ForEach(store.mutualFriends) { friend in
                             Button {
+                                Haptics.tap()
                                 if selectedFriendIds.contains(friend.userId) {
                                     selectedFriendIds.remove(friend.userId)
                                 } else {
@@ -167,7 +168,10 @@ struct InviteComposerSheet: View {
             note: note,
             recipientIds: Array(selectedFriendIds)
         )
-        if ok { dismiss() }
+        if ok {
+            Haptics.success()
+            dismiss()
+        }
     }
 }
 
@@ -253,6 +257,7 @@ struct InviteCard: View {
         .buttonStyle(.plain)
         .confirmationDialog("Cancel this invite?", isPresented: $showCancelConfirmation, titleVisibility: .visible) {
             Button("Cancel Invite", role: .destructive) {
+                Haptics.tap()
                 Task {
                     isCancelling = true
                     _ = await store.cancelInvite(invite)
@@ -281,7 +286,7 @@ private struct RSVPButtons: View {
 
     private func rsvpButton(_ status: RSVPStatus, label: String) -> some View {
         let isSelected = current == status
-        return Button(label) { Task { await store.respondToInvite(invite, status: status) } }
+        return Button(label) { Haptics.tap(); Task { await store.respondToInvite(invite, status: status) } }
             .font(.caption.weight(.semibold))
             .foregroundStyle(isSelected ? Theme.background : Theme.textSecondary)
             .padding(.horizontal, 10)
@@ -333,7 +338,7 @@ struct InviteDetailView: View {
                             Text("Invited").font(.headline).foregroundStyle(Theme.textPrimary)
                             ForEach(recipients) { recipient in
                                 HStack(spacing: 10) {
-                                    ProfileAvatar(participant: recipient.user, size: 32, linked: true)
+                                    ProfileAvatar(participant: recipient.user, size: 32)
                                     Text(recipient.user?.displayName ?? "Player")
                                         .font(.subheadline)
                                         .foregroundStyle(Theme.textPrimary)
@@ -402,6 +407,7 @@ struct InviteDetailView: View {
         .confirmationDialog("Cancel this invite?", isPresented: $showCancelConfirmation, titleVisibility: .visible) {
             Button("Cancel Invite", role: .destructive) {
                 guard let invite else { return }
+                Haptics.tap()
                 Task {
                     isCancelling = true
                     if await store.cancelInvite(invite) {

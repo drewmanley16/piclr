@@ -26,6 +26,8 @@ struct FollowListView: View {
     @EnvironmentObject private var store: AppStore
     let kind: FollowListKind
 
+    @State private var loaded = false
+
     private var entries: [FollowListEntry] {
         kind == .followers ? store.followers : store.following
     }
@@ -33,7 +35,9 @@ struct FollowListView: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 10) {
-                if entries.isEmpty {
+                if !loaded && entries.isEmpty {
+                    SkeletonList(rows: 6)
+                } else if entries.isEmpty {
                     Text(kind.emptyMessage)
                         .font(.subheadline)
                         .foregroundStyle(Theme.textSecondary)
@@ -54,7 +58,7 @@ struct FollowListView: View {
         .background(Theme.background.ignoresSafeArea())
         .navigationTitle(kind.title)
         .navigationBarTitleDisplayMode(.inline)
-        .task { await store.loadFollowLists() }
+        .task { await store.loadFollowLists(); loaded = true }
         .refreshable { await store.loadFollowLists() }
     }
 }
@@ -100,12 +104,14 @@ struct FollowEntryRow: View {
         .cardStyle()
         .confirmationDialog("Remove this follower?", isPresented: $confirmRemove, titleVisibility: .visible) {
             Button("Remove Follower", role: .destructive) {
+                Haptics.tap()
                 Task { await store.removeFollower(userId: entry.userId) }
             }
             Button("Cancel", role: .cancel) {}
         }
         .confirmationDialog("Block this player?", isPresented: $confirmBlock, titleVisibility: .visible) {
             Button("Block", role: .destructive) {
+                Haptics.tap()
                 Task { _ = await store.blockUser(userId: entry.userId) }
             }
             Button("Cancel", role: .cancel) {}
@@ -142,6 +148,7 @@ struct FollowActionButton: View {
                 titleVisibility: .visible
             ) {
                 Button("Unfollow", role: .destructive) {
+                    Haptics.tap()
                     Task { await store.unfollow(userId: entry.userId) }
                 }
                 Button("Cancel", role: .cancel) {}
@@ -160,12 +167,14 @@ struct FollowActionButton: View {
                     titleVisibility: .visible
                 ) {
                     Button("Cancel Request", role: .destructive) {
+                        Haptics.tap()
                         Task { await store.cancelFollowRequest(userId: entry.userId) }
                     }
                     Button("Keep Request", role: .cancel) {}
                 }
             } else {
                 Button {
+                    Haptics.impact()
                     Task { await store.sendFollowRequest(to: profile) }
                 } label: {
                     capsule("Follow", filled: true, muted: false)
@@ -202,9 +211,7 @@ struct UserFollowListView: View {
         ScrollView {
             LazyVStack(spacing: 10) {
                 if isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 48)
+                    SkeletonList(rows: 6)
                 } else if entries.isEmpty {
                     Text(kind.emptyMessage)
                         .font(.subheadline)

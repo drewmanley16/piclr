@@ -89,7 +89,7 @@ struct FeedCard: View {
         HStack(spacing: 12) {
             ProfileLink(userId: session.author.id, placeholder: session.author) {
                 HStack(spacing: 12) {
-                    ProfileAvatar(profile: session.author, size: 44)
+                    ProfileAvatar(profile: session.author, size: 44, unlinked: true)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(session.author.displayName)
                             .font(.subheadline.weight(.semibold))

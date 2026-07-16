@@ -4,7 +4,7 @@ struct OnboardingPreviewCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 12) {
-                ProfileAvatar(url: nil, initials: "DM", size: 40)
+                ProfileAvatar(preview: "DM", size: 40)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Drew & Maya won")
                         .font(.headline)

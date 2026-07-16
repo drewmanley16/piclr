@@ -52,6 +52,13 @@ final class MediaHydrator {
         return hydrated
     }
 
+    /// Sign a batch of bare avatar Storage paths into short-lived URLs (path →
+    /// URL), reusing the shared signed-URL cache and one signing request. Used by
+    /// models that carry only a path (e.g. blocked accounts).
+    func signedAvatarURLs(forPaths paths: Set<String>) async -> [String: String] {
+        await signedMediaURLs(bucket: "avatars", paths: paths)
+    }
+
     func hydrateComment(_ comment: Comment) async -> Comment {
         var hydrated = comment
         if let author = comment.author {
