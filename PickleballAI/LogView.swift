@@ -44,7 +44,7 @@ struct WorkoutView: View {
             if let uid = store.currentProfile?.id { await store.loadMySessions(userId: uid) }
         }
         .safeAreaInset(edge: .top) {
-            AppHeader(title: "Workout") {
+            AppHeader(title: "Play") {
                 HeaderCircleButton(systemImage: "plus", accessibilityTitle: "Start session") {
                     startLive()
                 }
@@ -370,8 +370,12 @@ struct SessionSummaryRow: View {
 
     private var matchResults: (wins: Int, losses: Int) {
         var wins = 0, losses = 0
-        for activity in session.sortedActivities where activity.isMatch {
-            if let won = activity.won { won ? (wins += 1) : (losses += 1) }
+        for activity in session.sortedActivities {
+            switch activity.matchResult {
+            case .win:  wins += 1
+            case .loss: losses += 1
+            default:    break   // tie / not a match
+            }
         }
         return (wins, losses)
     }
@@ -403,6 +407,7 @@ struct ActiveSessionView: View {
     @State private var showDiscardConfirm = false
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var showLocationPicker = false
+    @State private var showCelebration = false
 
     init(existingSession: FeedSession? = nil, isLive: Bool = false) {
         self.existingSession = existingSession
@@ -466,6 +471,12 @@ struct ActiveSessionView: View {
                     dismiss()
                 }
                 Button("Keep Editing", role: .cancel) {}
+            }
+        }
+        .overlay {
+            if showCelebration {
+                CelebrationView(title: "Session posted")
+                    .transition(.opacity)
             }
         }
         .interactiveDismissDisabled(!isLive && (isEditing || !draft.activities.isEmpty))
@@ -661,9 +672,15 @@ struct ActiveSessionView: View {
 
     private func save() async {
         if let existingSession {
-            if await store.updateSession(existingSession, draft: draft) { dismiss() }
+            if await store.updateSession(existingSession, draft: draft) {
+                Haptics.success()
+                dismiss()
+            }
         } else if await store.postSession(draft) {
+            Haptics.success()
             if isLive { store.discardLiveSession() }
+            withAnimation { showCelebration = true }
+            try? await Task.sleep(nanoseconds: 1_050_000_000)
             dismiss()
         }
     }
@@ -729,7 +746,8 @@ struct DraftActivityRow: View {
             return activity.reps.isEmpty ? (activity.notes.isEmpty ? nil : activity.notes) : activity.reps
         case .match:
             let names = (activity.partners + activity.opponents).map(\.displayName)
-            return names.isEmpty ? (activity.won ? "Won" : "Lost") : names.joined(separator: ", ")
+            let outcome = activity.isTie ? "Tied" : (activity.won ? "Won" : "Lost")
+            return names.isEmpty ? outcome : names.joined(separator: ", ")
         }
     }
 }

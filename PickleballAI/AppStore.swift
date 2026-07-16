@@ -41,6 +41,8 @@ final class AppStore: ObservableObject {
     @Published var blockedAccounts: [BlockedAccount] = []
     /// Upcoming invites you're hosting or were tagged in, newest first.
     @Published var activeInvites: [SessionInvite] = []
+    /// Crew leaderboard (you + everyone you follow), ranked. Loaded on demand.
+    @Published var leaderboard: [LeaderboardEntry] = []
     /// Count of in-flight user-initiated operations. `isBusy` is *derived* from
     /// this so concurrent operations (e.g. saving profile fields and a photo at
     /// once) don't clobber each other — the UI reads idle only once every one of
@@ -1410,7 +1412,7 @@ final class AppStore: ObservableObject {
                     notes: activity.notes.isEmpty ? nil : activity.notes,
                     teamScore: isMatch ? activity.teamScore : nil,
                     opponentScore: isMatch ? activity.opponentScore : nil,
-                    won: isMatch ? activity.won : nil
+                    won: activity.wonValue
                 )
                 try await supabase.from("session_activities").insert(newActivity).execute()
 
@@ -1494,7 +1496,7 @@ final class AppStore: ObservableObject {
                     notes: activity.notes.isEmpty ? nil : activity.notes,
                     teamScore: isMatch ? activity.teamScore : nil,
                     opponentScore: isMatch ? activity.opponentScore : nil,
-                    won: isMatch ? activity.won : nil,
+                    won: activity.wonValue,
                     participants: participants
                 )
             }
@@ -1584,7 +1586,7 @@ final class AppStore: ObservableObject {
         do {
             let rows: [AppNotification] = try await supabase
                 .from("notifications")
-                .select("id,type,read,created_at, actor:profiles!notifications_actor_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path), session:sessions!notifications_session_id_fkey(id,title), comment:comments!notifications_comment_id_fkey(id,body), invite:session_invites!notifications_invite_id_fkey(id, court:courts(name))")
+                .select("id,type,read,created_at,detail, actor:profiles!notifications_actor_id_fkey(id,username,display_name,avatar_initials,avatar_url,avatar_path), session:sessions!notifications_session_id_fkey(id,title), comment:comments!notifications_comment_id_fkey(id,body), invite:session_invites!notifications_invite_id_fkey(id, court:courts(name))")
                 .eq("user_id", value: userId.uuidString)
                 .order("created_at", ascending: false)
                 .limit(50)
@@ -1598,6 +1600,24 @@ final class AppStore: ObservableObject {
                 hydrated.append(notification)
             }
             notifications = hydrated
+        } catch {
+            errorMessage = friendly(error)
+        }
+    }
+
+    /// Loads and ranks the crew leaderboard: most wins first, then win rate,
+    /// then games played. Players with no matches sink to the bottom.
+    func loadLeaderboard() async {
+        do {
+            let rows: [LeaderboardEntry] = try await supabase
+                .rpc("crew_leaderboard")
+                .execute()
+                .value
+            leaderboard = rows.sorted {
+                if $0.wins != $1.wins { return $0.wins > $1.wins }
+                if $0.winRate != $1.winRate { return $0.winRate > $1.winRate }
+                return $0.matches > $1.matches
+            }
         } catch {
             errorMessage = friendly(error)
         }

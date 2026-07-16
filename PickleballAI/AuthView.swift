@@ -1,5 +1,22 @@
 import SwiftUI
 
+/// Central home for the hosted legal documents. These URLs MUST resolve to the
+/// live Terms of Use — which has to carry an explicit zero-tolerance clause for
+/// objectionable content and abusive users (App Store Review Guideline 1.2) —
+/// and the Privacy Policy before submitting to App Review.
+enum Legal {
+    static let termsURL = "https://pickleball-ai-web.vercel.app/terms"
+    static let privacyURL = "https://pickleball-ai-web.vercel.app/privacy"
+}
+
+/// Shared app links used in more than one screen.
+enum AppLinks {
+    /// Destination of "Share invite link". Pre-launch this is the marketing site
+    /// (waitlist + "coming soon"), so shared invites always land somewhere real.
+    // TODO: swap to App Store URL at launch
+    static let invite = "https://pickleball-ai-web.vercel.app"
+}
+
 struct AuthView: View {
     @EnvironmentObject private var store: AppStore
     @AppStorage("hasSeenOnboardingSplash") private var hasSeenOnboardingSplash = false
@@ -27,6 +44,7 @@ struct AuthView: View {
     @State private var duprRating = ""
     @State private var searchQuery = ""
     @State private var contactStatus: String?
+    @State private var agreedToTerms = false
 
     init(startsAtProfile: Bool = false) {
         self.startsAtProfile = startsAtProfile
@@ -131,7 +149,9 @@ struct AuthView: View {
 
             errorText
 
-            primaryButton("Send Code", systemImage: "message.fill", disabled: normalizedPhone == nil) {
+            termsGate
+
+            primaryButton("Send Code", systemImage: "message.fill", disabled: normalizedPhone == nil || !agreedToTerms) {
                 guard let normalizedPhone else { return }
                 Task {
                     if await store.sendPhoneOTP(phone: normalizedPhone) {
@@ -344,9 +364,9 @@ struct AuthView: View {
             }
 
             ShareLink(
-                item: URL(string: "https://pickleball.ai/invite")!,
-                subject: Text("Join my pickleball crew"),
-                message: Text("Add me on pickleball.ai and log matches with the crew.")
+                item: URL(string: AppLinks.invite)!,
+                subject: Text("Get early access to pickleball.ai"),
+                message: Text("Get early access to pickleball.ai — log every match with your crew.")
             ) {
                 Label("Share invite link", systemImage: "square.and.arrow.up")
                     .font(.headline)
@@ -372,6 +392,41 @@ struct AuthView: View {
             }
             .buttonStyle(.plain)
         }
+    }
+
+    /// App Store Review Guideline 1.2: users must affirmatively agree to the
+    /// Terms of Use (which carry a zero-tolerance policy for objectionable
+    /// content and abusive users) and the Privacy Policy before an account is
+    /// created. This gate keeps "Send Code" disabled until the box is checked.
+    /// The checkbox and the in-sentence links are separate tap targets so
+    /// opening a document doesn't also toggle consent.
+    private var termsGate: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Button {
+                agreedToTerms.toggle()
+            } label: {
+                Image(systemName: agreedToTerms ? "checkmark.square.fill" : "square")
+                    .font(.title3)
+                    .foregroundStyle(agreedToTerms ? Theme.accent : Theme.textSecondary)
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Agree to the Terms of Use and Privacy Policy")
+            .accessibilityValue(agreedToTerms ? "Checked" : "Not checked")
+
+            Text(consentText)
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
+                .tint(Theme.accent)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var consentText: AttributedString {
+        let markdown = "I agree to the [Terms of Use](\(Legal.termsURL)) and [Privacy Policy](\(Legal.privacyURL)), and understand that pickleball.ai has **zero tolerance** for objectionable content or abusive behavior."
+        return (try? AttributedString(markdown: markdown)) ?? AttributedString(markdown)
     }
 
     @ViewBuilder
@@ -448,6 +503,7 @@ struct AuthView: View {
             duprRating: parsedDUPR
         )
         if didComplete {
+            Haptics.success()
             contactStatus = nil
         }
     }
@@ -655,6 +711,7 @@ struct FriendCandidateRow: View {
 
     private var followButton: some View {
         Button {
+            Haptics.impact()
             Task { await store.sendFollowRequest(to: profile) }
         } label: {
             Image(systemName: store.requestedFollowIds.contains(profile.id) ? "checkmark" : "plus")

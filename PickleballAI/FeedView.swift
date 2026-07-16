@@ -9,8 +9,8 @@ struct HomeView: View {
     @EnvironmentObject private var store: AppStore
     @State private var showFindFriends = false
     @State private var showNotifications = false
+    @State private var showLeaderboard = false
     @State private var feedMode: FeedMode = .following
-    @State private var showFeedMenu = false
 
     private var currentFeed: [FeedSession] {
         feedMode == .following ? store.feed : store.discoverFeed
@@ -25,11 +25,7 @@ struct HomeView: View {
             LazyVStack(spacing: 12) {
                 if currentFeed.isEmpty {
                     if feedMode == .following && store.isInitialFeedLoading {
-                        ProgressView("Loading feed…")
-                            .tint(Theme.accent)
-                            .foregroundStyle(Theme.textSecondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 80)
+                        ForEach(0..<3, id: \.self) { _ in FeedCardSkeleton() }
                     } else {
                         emptyState
                     }
@@ -50,16 +46,16 @@ struct HomeView: View {
         }
         .background(Theme.background.ignoresSafeArea())
         .refreshable { await refresh() }
-        .confirmationDialog("Feed", isPresented: $showFeedMenu, titleVisibility: .visible) {
-            Button("Following") { feedMode = .following }
-            Button("Discover") { feedMode = .discover }
-        }
         .task(id: feedMode) {
             if feedMode == .discover && store.discoverFeed.isEmpty { await store.loadDiscover() }
         }
         .safeAreaInset(edge: .top) {
-            AppHeader(title: feedMode.title, showsChevron: true, onTitleTap: { showFeedMenu = true }) {
+            VStack(spacing: 12) {
+            AppHeader(title: "pickleball.ai") {
                 HeaderPill {
+                    HeaderIconButton(systemImage: "trophy", accessibilityTitle: "Leaderboard") {
+                        showLeaderboard = true
+                    }
                     HeaderIconButton(systemImage: "magnifyingglass", accessibilityTitle: "Find friends") {
                         showFindFriends = true
                     }
@@ -82,6 +78,14 @@ struct HomeView: View {
                     .accessibilityLabel("Notifications")
                 }
             }
+
+            SegmentedControl(
+                options: [(.following, "Following"), (.discover, "Discover")],
+                selection: $feedMode
+            )
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
+            }
             .background(Theme.background)
         }
         .sheet(isPresented: $showFindFriends) {
@@ -90,6 +94,9 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showNotifications) {
             NotificationsView()
+        }
+        .sheet(isPresented: $showLeaderboard) {
+            LeaderboardSheet()
         }
         .toolbar(.hidden, for: .navigationBar)
         }
@@ -198,9 +205,9 @@ struct FindFriendsSheet: View {
                     contactsSection
 
                     ShareLink(
-                        item: URL(string: "https://pickleball.ai/invite")!,
-                        subject: Text("Join my pickleball crew"),
-                        message: Text("Add me on pickleball.ai and log matches with the crew.")
+                        item: URL(string: AppLinks.invite)!,
+                        subject: Text("Get early access to pickleball.ai"),
+                        message: Text("Get early access to pickleball.ai — log every match with your crew.")
                     ) {
                         Label("Share invite link", systemImage: "square.and.arrow.up")
                             .font(.headline)
@@ -305,6 +312,7 @@ struct FeedCard: View {
     @State private var confirmBlock = false
     @State private var confirmRemoveTag = false
     @State private var reportTarget: ReportTarget?
+    @State private var shareItem: ShareImage?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -425,6 +433,7 @@ struct FeedCard: View {
             HStack(spacing: 20) {
                 let liked = store.likedSessionIds.contains(session.id)
                 Button {
+                    Haptics.impact()
                     Task { await store.toggleLike(session) }
                 } label: {
                     SocialLabel(
@@ -441,12 +450,19 @@ struct FeedCard: View {
                 }
                 .buttonStyle(.plain)
 
-                ShareLink(item: session.shareSummary) {
+                Button {
+                    if let image = renderShareImage(for: session) {
+                        Haptics.tap()
+                        shareItem = ShareImage(image: image, caption: session.shareSummary)
+                    }
+                } label: {
                     Image(systemName: "square.and.arrow.up")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Theme.textSecondary)
                         .frame(minHeight: 44)
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Share session")
 
                 Spacer()
 
@@ -496,6 +512,9 @@ struct FeedCard: View {
         }
         .sheet(item: $reportTarget) { target in
             ReportSheet(target: target)
+        }
+        .sheet(item: $shareItem) { item in
+            ActivityShareSheet(payload: item)
         }
         .fullScreenCover(isPresented: $showEditor) {
             ActiveSessionView(existingSession: session)
@@ -605,7 +624,8 @@ struct SessionSummaryStrip: View {
         let matches = session.matchCount
         if matches > 0 {
             result.append(Stat(value: "\(matches)", label: matches == 1 ? "Match" : "Matches"))
-            result.append(Stat(value: "\(wins)–\(losses)", label: "Record", emphasized: wins > 0 && losses == 0))
+            let record = ties > 0 ? "\(wins)–\(losses)–\(ties)" : "\(wins)–\(losses)"
+            result.append(Stat(value: record, label: ties > 0 ? "W–L–T" : "Record", emphasized: wins > 0 && losses == 0 && ties == 0))
         } else if session.practiceCount > 0 {
             let drills = session.practiceCount
             result.append(Stat(value: "\(drills)", label: drills == 1 ? "Drill" : "Drills"))
@@ -613,8 +633,9 @@ struct SessionSummaryStrip: View {
         return result
     }
 
-    private var wins: Int { session.sortedActivities.filter { $0.isMatch && $0.won == true }.count }
-    private var losses: Int { session.sortedActivities.filter { $0.isMatch && $0.won == false }.count }
+    private var wins: Int { session.sortedActivities.filter { $0.matchResult == .win }.count }
+    private var losses: Int { session.sortedActivities.filter { $0.matchResult == .loss }.count }
+    private var ties: Int { session.sortedActivities.filter { $0.matchResult == .tie }.count }
 
     private var durationText: String {
         let m = session.durationMinutes
@@ -654,13 +675,13 @@ struct ActivityRow: View {
                     Text(score)
                         .font(.callout.weight(.bold))
                         .monospacedDigit()
-                        .foregroundStyle(Theme.textPrimary)
-                    if let won = activity.won {
-                        Text(won ? "W" : "L")
+                        .foregroundStyle(activity.matchResult?.color ?? Theme.textPrimary)
+                    if let result = activity.matchResult {
+                        Text(result.badge)
                             .font(.caption.weight(.heavy))
-                            .foregroundStyle(Theme.background)
+                            .foregroundStyle(result == .tie ? Theme.textPrimary : Theme.background)
                             .frame(width: 22, height: 22)
-                            .background(won ? Theme.win : Theme.loss, in: Circle())
+                            .background(result.color, in: Circle())
                     }
                 }
             }

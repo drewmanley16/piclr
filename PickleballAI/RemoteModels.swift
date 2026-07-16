@@ -194,6 +194,21 @@ struct FeedSession: Identifiable, Decodable, Hashable {
 
 // MARK: - Session activities (read models)
 
+/// The outcome of a match, from the logging user's perspective.
+enum MatchResult {
+    case win, loss, tie
+
+    /// Single-letter badge (W / L / T).
+    var badge: String {
+        switch self {
+        case .win:  return "W"
+        case .loss: return "L"
+        case .tie:  return "T"
+        }
+    }
+}
+
+
 struct SessionActivity: Identifiable, Decodable, Hashable {
     let id: UUID
     let kind: String
@@ -219,6 +234,14 @@ struct SessionActivity: Identifiable, Decodable, Hashable {
     var scoreLine: String? {
         guard let t = teamScore, let o = opponentScore else { return nil }
         return "\(t)–\(o)"
+    }
+    /// Win/loss/tie derived from the scores, so a tie (equal scores) is never
+    /// mistaken for a loss — the stored `won` flag can't represent a draw.
+    var matchResult: MatchResult? {
+        guard isMatch, let t = teamScore, let o = opponentScore else { return nil }
+        if t > o { return .win }
+        if t < o { return .loss }
+        return .tie
     }
     var title: String {
         if isMatch { return scoreLine.map { "Match \($0)" } ?? "Match" }
@@ -362,6 +385,13 @@ struct DraftActivity: Identifiable, Hashable {
     var opponentScore: Int = 9
 
     var won: Bool { teamScore > opponentScore }
+    var isTie: Bool { kind == .match && teamScore == opponentScore }
+    /// What to persist in `won`: nil for a tie (neither win nor loss), so ties
+    /// never count against a record on the server (leaderboard, rivalries).
+    var wonValue: Bool? {
+        guard kind == .match else { return nil }
+        return teamScore == opponentScore ? nil : teamScore > opponentScore
+    }
     var summary: String {
         switch kind {
         case .practice: return focus.isEmpty ? "Practice" : "\(focus) practice"
@@ -515,6 +545,40 @@ struct NewRepostRequest: Encodable {
     }
 }
 
+// MARK: - Crew leaderboard
+
+/// One row of the crew leaderboard (you + everyone you follow), from
+/// `crew_leaderboard()`. Ranking is decided client-side so the same rows can be
+/// re-sorted without another round trip.
+struct LeaderboardEntry: Identifiable, Decodable, Hashable {
+    let userId: UUID
+    let username: String
+    let displayName: String
+    let avatarURL: String?
+    let avatarInitials: String?
+    let wins: Int
+    let losses: Int
+    let matches: Int
+
+    var id: UUID { userId }
+    var winRate: Int { matches == 0 ? 0 : Int((Double(wins) / Double(matches) * 100).rounded()) }
+    var recordLine: String { "\(wins)–\(losses)" }
+    var initials: String {
+        if let a = avatarInitials, !a.isEmpty { return a }
+        let letters = displayName.split(separator: " ").prefix(2).compactMap { $0.first }
+        return letters.isEmpty ? "?" : String(letters).uppercased()
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case username
+        case displayName = "display_name"
+        case avatarURL = "avatar_url"
+        case avatarInitials = "avatar_initials"
+        case wins, losses, matches
+    }
+}
+
 // MARK: - Activity notifications
 
 struct AppNotification: Identifiable, Decodable, Hashable {
@@ -522,13 +586,16 @@ struct AppNotification: Identifiable, Decodable, Hashable {
     let type: String
     let read: Bool
     let createdAt: String
+    /// Pre-rendered phrase for notifications the generic actor/type message can't
+    /// express (e.g. a rivalry's exact record). When present it wins.
+    let detail: String?
     var actor: ParticipantProfile?
     let session: NotifSessionRef?
     let comment: NotifCommentRef?
     let invite: NotifInviteRef?
 
     enum CodingKeys: String, CodingKey {
-        case id, type, read
+        case id, type, read, detail
         case createdAt = "created_at"
         case actor, session, comment, invite
     }
@@ -544,6 +611,7 @@ struct AppNotification: Identifiable, Decodable, Hashable {
     private var handle: String { actor.map { "@\($0.username)" } ?? "Someone" }
 
     var message: String {
+        if let detail, !detail.isEmpty { return detail }
         switch type {
         case "like":            return "\(handle) liked your session"
         case "comment":         return "\(handle) commented: \(comment?.body ?? "")"
@@ -552,6 +620,7 @@ struct AppNotification: Identifiable, Decodable, Hashable {
         case "repost_approved": return "\(handle) approved your repost"
         case "invite_received": return "\(handle) invited you to play at \(invite?.courtName ?? "a court")"
         case "invite_response":  return "\(handle) responded to your invite"
+        case "rivalry":         return "\(handle) played you"
         default:                return "\(handle) interacted with your post"
         }
     }
@@ -563,6 +632,7 @@ struct AppNotification: Identifiable, Decodable, Hashable {
         case "follow":  return "person.fill.badge.plus"
         case "tag":     return "flag.checkered"
         case "invite_received", "invite_response": return "figure.pickleball"
+        case "rivalry": return "flame.fill"
         default:        return "bell.fill"
         }
     }

@@ -17,9 +17,10 @@ enum Theme {
     static let accent = Color(hex: 0xC5FF3D)
     static var accentSoft: Color { accent.opacity(0.14) }
 
-    // Semantic result colors (a match is won or lost — both must read at a glance).
+    // Semantic result colors (a match is won, lost, or tied — all must read at a glance).
     static let win = Color(hex: 0xC5FF3D)              // optic green
     static let loss = Color(hex: 0xF0785A)             // court clay
+    static let tie = Color.white.opacity(0.55)         // neutral — no winner
 
     // Text
     static let textPrimary = Color.white
@@ -37,6 +38,17 @@ enum Theme {
     /// Courtside scoreboard numerals: heavy, rounded, tabular so scores line up.
     static func scoreboard(_ size: CGFloat) -> Font {
         .system(size: size, weight: .heavy, design: .rounded).monospacedDigit()
+    }
+}
+
+extension MatchResult {
+    /// Green win / red loss / neutral tie — the app's at-a-glance result colors.
+    var color: Color {
+        switch self {
+        case .win:  return Theme.win
+        case .loss: return Theme.loss
+        case .tie:  return Theme.tie
+        }
     }
 }
 
@@ -344,6 +356,106 @@ struct ProfileLink<Content: View>: View {
         } else {
             content
         }
+    }
+}
+
+/// Two-or-more-way capsule segmented control — the discoverable replacement for
+/// hiding a mode switch behind a menu. Selection is a plain equatable value so
+/// callers bind their own enum. Fires a light haptic on change.
+struct SegmentedControl<Value: Hashable>: View {
+    var options: [(value: Value, title: String)]
+    @Binding var selection: Value
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(options, id: \.value) { option in
+                let isSelected = selection == option.value
+                Button {
+                    guard !isSelected else { return }
+                    Haptics.tap()
+                    withAnimation(.snappy(duration: 0.22)) { selection = option.value }
+                } label: {
+                    Text(option.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(isSelected ? Theme.background : Theme.textSecondary)
+                        .frame(maxWidth: .infinity, minHeight: 34)
+                        .background(
+                            isSelected ? Theme.accent : Color.clear,
+                            in: Capsule()
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(Theme.surface, in: Capsule())
+        .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: 1))
+    }
+}
+
+/// A single sweeping highlight used by skeleton placeholders so loading states
+/// read as "content is coming" rather than a dead spinner.
+struct Shimmer: ViewModifier {
+    @State private var phase: CGFloat = -1
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                GeometryReader { geo in
+                    LinearGradient(
+                        colors: [.clear, Color.white.opacity(0.06), .clear],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(width: geo.size.width * 1.5)
+                    .offset(x: phase * geo.size.width * 1.5)
+                }
+                .allowsHitTesting(false)
+            )
+            .onAppear {
+                withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) {
+                    phase = 1
+                }
+            }
+    }
+}
+
+extension View {
+    func shimmer() -> some View { modifier(Shimmer()) }
+}
+
+/// Ghost of a `FeedCard` shown while the first page of the feed loads, so the
+/// feed feels populated instantly instead of blank-then-spinner.
+struct FeedCardSkeleton: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 12) {
+                Circle().fill(Theme.surfaceElevated).frame(width: 44, height: 44)
+                VStack(alignment: .leading, spacing: 6) {
+                    bar(width: 120, height: 12)
+                    bar(width: 80, height: 10)
+                }
+                Spacer()
+            }
+            bar(width: 180, height: 14)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Theme.surfaceElevated)
+                .frame(height: 54)
+            HStack(spacing: 20) {
+                bar(width: 40, height: 12)
+                bar(width: 40, height: 12)
+                Spacer()
+            }
+        }
+        .cardStyle(bordered: false)
+        .shimmer()
+        .redacted(reason: .placeholder)
+    }
+
+    private func bar(width: CGFloat, height: CGFloat) -> some View {
+        RoundedRectangle(cornerRadius: height / 2, style: .continuous)
+            .fill(Theme.surfaceElevated)
+            .frame(width: width, height: height)
     }
 }
 
