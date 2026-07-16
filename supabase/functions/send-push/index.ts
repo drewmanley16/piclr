@@ -140,6 +140,7 @@ function buildMessage(
     case "tag":             return { title: "You were tagged", message: `${handle} tagged you in a session` };
     case "repost_approved": return { title: "Repost approved", message: `${handle} approved your repost` };
     case "invite_received": return { title: "You're invited", message: `${handle} invited you to play` };
+    case "invite_cancelled": return { title: "Invite canceled", message: detail ?? `${handle} canceled the invite` };
     case "invite_response": {
       const verb = rsvpStatus === "yes" ? "is in" : rsvpStatus === "no" ? "can't make it" : rsvpStatus === "maybe" ? "might join" : "responded";
       return { title: "RSVP update", message: `${handle} ${verb} for your invite` };

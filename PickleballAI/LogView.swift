@@ -31,8 +31,13 @@ struct WorkoutView: View {
                     quickLog
                     inviteButton
                 }
-                if !store.activeInvites.isEmpty {
-                    activeInvitesSection
+                TimelineView(.periodic(from: .now, by: 60)) { context in
+                    let upcoming = store.activeInvites.filter {
+                        !$0.isCancelled && $0.scheduledAtDate > context.date
+                    }
+                    if !upcoming.isEmpty {
+                        activeInvitesSection(upcoming)
+                    }
                 }
                 recentSection
             }
@@ -41,7 +46,10 @@ struct WorkoutView: View {
         }
         .background(Theme.background.ignoresSafeArea())
         .refreshable {
-            if let uid = store.currentProfile?.id { await store.loadMySessions(userId: uid) }
+            if let uid = store.currentProfile?.id {
+                await store.loadMySessions(userId: uid)
+                await store.loadActiveInvites(userId: uid)
+            }
         }
         .safeAreaInset(edge: .top) {
             AppHeader(title: "Play") {
@@ -228,12 +236,12 @@ struct WorkoutView: View {
 
     // MARK: Active invites
 
-    private var activeInvitesSection: some View {
+    private func activeInvitesSection(_ invites: [SessionInvite]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Upcoming invites")
                 .font(.headline)
                 .foregroundStyle(Theme.textPrimary)
-            ForEach(store.activeInvites) { invite in
+            ForEach(invites) { invite in
                 InviteCard(invite: invite)
             }
         }

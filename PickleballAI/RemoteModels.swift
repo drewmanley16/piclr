@@ -620,6 +620,7 @@ struct AppNotification: Identifiable, Decodable, Hashable {
         case "repost_approved": return "\(handle) approved your repost"
         case "invite_received": return "\(handle) invited you to play at \(invite?.courtName ?? "a court")"
         case "invite_response":  return "\(handle) responded to your invite"
+        case "invite_cancelled": return "\(handle) canceled the invite"
         case "rivalry":         return "\(handle) played you"
         default:                return "\(handle) interacted with your post"
         }
@@ -632,6 +633,7 @@ struct AppNotification: Identifiable, Decodable, Hashable {
         case "follow":  return "person.fill.badge.plus"
         case "tag":     return "flag.checkered"
         case "invite_received", "invite_response": return "figure.pickleball"
+        case "invite_cancelled": return "xmark.circle.fill"
         case "rivalry": return "flame.fill"
         default:        return "bell.fill"
         }
@@ -1079,6 +1081,7 @@ struct SessionInvite: Identifiable, Decodable, Hashable {
     let scheduledAt: String
     let note: String?
     let createdAt: String
+    let cancelledAt: String?
     var host: ParticipantProfile?
     var court: Court?
     var recipients: [InviteRecipient]?
@@ -1090,12 +1093,14 @@ struct SessionInvite: Identifiable, Decodable, Hashable {
         case scheduledAt = "scheduled_at"
         case note
         case createdAt = "created_at"
+        case cancelledAt = "cancelled_at"
         case host, court, recipients
     }
 
     var scheduledAtDate: Date { FeedSession.parse(scheduledAt) }
     var createdAtDate: Date { FeedSession.parse(createdAt) }
     var isPast: Bool { scheduledAtDate < Date() }
+    var isCancelled: Bool { cancelledAt != nil }
 
     func myResponse(userId: UUID) -> RSVPStatus? {
         recipients?.first { $0.userId == userId }.flatMap { RSVPStatus(rawValue: $0.status) }
@@ -1150,5 +1155,17 @@ struct InviteRecipientUpdate: Encodable {
     enum CodingKeys: String, CodingKey {
         case status
         case respondedAt = "responded_at"
+    }
+}
+
+struct InviteCancellationUpdate: Encodable {
+    let cancelledAt: String
+
+    init(cancelledAt: Date) {
+        self.cancelledAt = ISO8601DateFormatter().string(from: cancelledAt)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case cancelledAt = "cancelled_at"
     }
 }
