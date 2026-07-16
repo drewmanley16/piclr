@@ -115,12 +115,13 @@ struct PaywallView: View {
         sub.plans.first { $0.id == sub.selectedPlanID } ?? SubscriptionStore.annual
     }
     private var ctaTitle: String {
-        selectedPlan.id == SubscriptionStore.annual.id ? "Start free trial" : "Continue"
+        selectedPlan.trialDays != nil ? "Start free trial" : "Continue"
     }
     private var ctaSubtitle: String {
-        selectedPlan.id == SubscriptionStore.annual.id
-            ? "7 days free, then \(selectedPlan.priceText)/yr. Cancel anytime."
-            : "\(selectedPlan.priceText)/mo. Cancel anytime."
+        if let days = selectedPlan.trialDays {
+            return "\(days) days free, then \(selectedPlan.renewalText). Cancel anytime."
+        }
+        return "\(selectedPlan.renewalText). Cancel anytime."
     }
 
     private var footer: some View {

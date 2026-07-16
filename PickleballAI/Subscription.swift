@@ -13,6 +13,12 @@ struct PlanOption: Identifiable, Hashable {
     let footnote: String
     /// Optional accent badge (e.g. "SAVE 50%").
     let badge: String?
+    /// Free-trial length in days, nil if the plan has no trial.
+    let trialDays: Int?
+    /// What the plan renews to after any trial, for the CTA subtitle
+    /// (e.g. "$29.99/yr"). Kept separate from the display price so the
+    /// billing sentence reads naturally.
+    let renewalText: String
 }
 
 /// App-wide subscription state and the paywall's brain. Today it's a stub:
@@ -37,15 +43,19 @@ final class SubscriptionStore: ObservableObject {
         priceText: "$29.99",
         periodText: "per year",
         footnote: "7-day free trial, then $29.99/yr · $2.50/mo",
-        badge: "SAVE 50%"
+        badge: "SAVE 50%",
+        trialDays: 7,
+        renewalText: "$29.99/yr"
     )
     static let monthly = PlanOption(
         id: "com.pickleball.ai.pro.monthly",
         title: "Monthly",
         priceText: "$4.99",
         periodText: "per month",
-        footnote: "Billed monthly · cancel anytime",
-        badge: nil
+        footnote: "7-day free trial, then $4.99/mo",
+        badge: nil,
+        trialDays: 7,
+        renewalText: "$4.99/mo"
     )
     var plans: [PlanOption] { [Self.annual, Self.monthly] }
 
