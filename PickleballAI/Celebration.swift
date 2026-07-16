@@ -9,6 +9,7 @@ struct CelebrationView: View {
 
     var body: some View {
         ZStack {
+            // swiftlint:disable:next hardcoded_color — deliberate dimming scrim, not a themed surface
             Color.black.opacity(0.35).ignoresSafeArea()
 
             ConfettiBurst()

@@ -68,3 +68,12 @@ A session in progress is `store.activeDraft: SessionDraft?`. It persists at the 
 - **Storage paths must lowercase the UID**: Swift's `UUID.uuidString` is uppercase but storage RLS checks `auth.uid()::text` (lowercase). Use `uid.uuidString.lowercased()` for any Storage object path.
 - **New feature = new branch off `main`, one PR.** Verify with a simulator screenshot when there's UI. Match the surrounding SwiftUI style (small computed subviews, `Theme` tokens, `cardStyle()`).
 - When screenshot-verifying a specific screen you can't tap to, a common pattern is a temporary `TabView(selection: .constant(<tab>))` + `.tag()` hooks or an `.onAppear` seed — **always revert these temp hooks before committing.**
+
+## UI consistency contract
+
+- **Person rows use `IdentityRow`** (or `ProfileAvatar` directly when the row shape genuinely diverges — leaderboard ranks, comment replies). Models representing people carry `PersonRef`.
+- **Avatars always navigate when a profile exists.** `ProfileAvatar` links by default; `unlinked: true` is the documented opt-out and needs a reason (inside an enclosing link/tappable card, own-profile, pickers). Use `guest:`/`preview:` for profile-less avatars.
+- **Every list screen ships skeleton loading (`SkeletonList`) + an empty state + `.refreshable`.**
+- **User-initiated state changes fire `Haptics`** (impact / tap / success per `Haptics.swift`'s doc).
+- **Colors, spacing, and fonts come from `Theme`** — no hardcoded values.
+- `scripts/lint.sh` (SwiftLint custom rules in `.swiftlint.yml`) enforces the mechanical subset of the above in CI.
