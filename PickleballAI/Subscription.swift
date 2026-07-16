@@ -30,6 +30,15 @@ struct PlanOption: Identifiable, Hashable {
 final class SubscriptionStore: ObservableObject {
     /// The single switch every premium gate reads.
     @Published var isPro = false
+
+    /// Whether the app should surface any paywall / Pro UI. Off in the App Store
+    /// build (see `FeatureFlags`), so Pro entry points hide entirely there.
+    var monetizationEnabled: Bool { FeatureFlags.monetizationEnabled }
+
+    /// True when a feature should be shown but locked behind the paywall:
+    /// monetization is live and the user isn't Pro yet. When monetization is off,
+    /// this is false everywhere so gated features simply don't appear.
+    var showsLockedFeatures: Bool { monetizationEnabled && !isPro }
     /// Drives the global paywall sheet. Set via `presentPaywall(_:)`.
     @Published var paywallContext: PaywallContext?
     /// In-flight purchase/restore, for button spinners.
@@ -62,6 +71,7 @@ final class SubscriptionStore: ObservableObject {
     /// Present the paywall for a given trigger. Calling this from a locked
     /// feature is the whole "tap premium → see plans" flow.
     func presentPaywall(_ context: PaywallContext = .general) {
+        guard monetizationEnabled else { return }
         Haptics.tap()
         paywallContext = context
     }

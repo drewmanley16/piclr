@@ -9,6 +9,10 @@ struct ProfileView: View {
     @State private var showNotifications = false
     @State private var activeSheet: ProfileSheet?
     @State private var metric: ActivityMetric = .duration
+    @State private var range: HistoryRange = .week
+    @State private var showCustomRange = false
+    @State private var customStart = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+    @State private var customEnd = Date()
     @AppStorage("dismissedProfileCompletion") private var dismissedCompletion = false
 
     private var profile: Profile? { store.currentProfile }
@@ -24,7 +28,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     profileRow
                     if !store.incomingFollowRequests.isEmpty { followRequestsBanner }
-                    if !subscriptions.isPro { proBanner }
+                    if subscriptions.showsLockedFeatures { proBanner }
                     if completion < 1 && !dismissedCompletion { completionBanner }
                     recordCard
                     rivalsCard
@@ -356,36 +360,39 @@ struct ProfileView: View {
     // MARK: Activity chart
 
     private var buckets: [ActivityBucket] {
-        ActivityBucket.lastWeekDaily(sessions: store.mySessions)
+        ActivityBucket.series(for: range, sessions: store.mySessions)
     }
 
-    private var thisWeekValue: (String, String) {
-        let cal = Calendar.current
-        let weekStart = cal.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
-        let mine = store.mySessions.filter { $0.date >= weekStart }
+    /// Headline total for the selected range: hours or sessions across its span.
+    private var rangeValue: (String, String) {
+        let (start, end) = range.interval
+        let endExclusive = Calendar.current.date(byAdding: .day, value: 1, to: end) ?? end
+        let mine = store.mySessions.filter { $0.date >= start && $0.date < endExclusive }
         switch metric {
         case .duration:
             let hrs = Double(mine.reduce(0) { $0 + $1.durationMinutes }) / 60
-            return (String(format: "%.1f", hrs), "hours this week")
+            return (String(format: "%.1f", hrs), "hours")
         case .sessions:
-            return ("\(mine.count)", "sessions this week")
+            return ("\(mine.count)", mine.count == 1 ? "session" : "sessions")
         }
     }
 
     private var activityCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .firstTextBaseline) {
-                Text(thisWeekValue.0).font(.title2.weight(.bold)).foregroundStyle(Theme.textPrimary)
-                + Text("  \(thisWeekValue.1)").font(.subheadline).foregroundStyle(Theme.textSecondary)
+                Text(rangeValue.0).font(.title2.weight(.bold)).foregroundStyle(Theme.textPrimary)
+                + Text("  \(rangeValue.1)").font(.subheadline).foregroundStyle(Theme.textSecondary)
                 Spacer()
-                Text("Last 7 days")
+                Text(range.caption)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Theme.textSecondary)
             }
 
+            rangeSelector
+
             Chart(buckets) { b in
                 BarMark(
-                    x: .value("Day", b.day, unit: .day),
+                    x: .value("Period", b.day, unit: chartUnit),
                     y: .value(metric.rawValue, metric == .duration ? b.hours : Double(b.sessions))
                 )
                 .foregroundStyle(Theme.accent)
@@ -399,8 +406,8 @@ struct ProfileView: View {
                 }
             }
             .chartXAxis {
-                AxisMarks(values: .stride(by: .day)) { _ in
-                    AxisValueLabel(format: .dateTime.weekday(.narrow)).foregroundStyle(Theme.textTertiary)
+                AxisMarks { _ in
+                    AxisValueLabel(format: xAxisFormat).foregroundStyle(Theme.textTertiary)
                 }
             }
 
@@ -420,6 +427,79 @@ struct ProfileView: View {
             }
         }
         .cardStyle()
+        .sheet(isPresented: $showCustomRange) {
+            CustomRangeSheet(start: $customStart, end: $customEnd) {
+                range = .custom(start: customStart, end: customEnd)
+            }
+        }
+    }
+
+    private var chartUnit: Calendar.Component {
+        switch range.granularity {
+        case .month: return .month
+        case .weekOfYear: return .weekOfYear
+        default: return .day
+        }
+    }
+
+    private var xAxisFormat: Date.FormatStyle {
+        switch range.granularity {
+        case .month:      return .dateTime.month(.narrow)
+        case .weekOfYear: return .dateTime.month(.abbreviated).day()
+        default:          return .dateTime.weekday(.narrow)
+        }
+    }
+
+    /// Range chips. Hidden entirely when monetization is off (App Store build),
+    /// so the chart quietly stays on the free week view there. When on, Pro ranges
+    /// show a lock for non-Pro users and open the paywall on tap.
+    @ViewBuilder
+    private var rangeSelector: some View {
+        if subscriptions.monetizationEnabled {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(HistoryRange.presets) { preset in
+                        rangeChip(label: preset.shortLabel, locked: preset.isPro && !subscriptions.isPro,
+                                  selected: range == preset) {
+                            if preset.isPro && !subscriptions.isPro {
+                                subscriptions.presentPaywall(.unlimitedHistory)
+                            } else {
+                                withAnimation(.snappy(duration: 0.2)) { range = preset }
+                            }
+                        }
+                    }
+                    rangeChip(label: "Custom", locked: !subscriptions.isPro, selected: isCustom) {
+                        if !subscriptions.isPro {
+                            subscriptions.presentPaywall(.unlimitedHistory)
+                        } else {
+                            showCustomRange = true
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var isCustom: Bool {
+        if case .custom = range { return true }
+        return false
+    }
+
+    private func rangeChip(label: String, locked: Bool, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Text(label)
+                if locked {
+                    Image(systemName: "lock.fill").font(.system(size: 9, weight: .bold))
+                }
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(selected ? Theme.background : (locked ? Theme.textTertiary : Theme.textSecondary))
+            .padding(.horizontal, 14)
+            .frame(height: 32)
+            .background(selected ? Theme.accent : Theme.surfaceElevated, in: Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: Dashboard
@@ -441,30 +521,130 @@ enum ActivityMetric: String, CaseIterable, Hashable {
     case sessions = "Sessions"
 }
 
+/// A selectable window for the activity chart. Only `.week` is free; everything
+/// longer (and the custom range) is a Pro feature.
+enum HistoryRange: Hashable, Identifiable {
+    case week, twoWeeks, month, threeMonths, year
+    case custom(start: Date, end: Date)
+
+    var id: String { shortLabel }
+
+    /// The fixed presets shown as chips (custom is added via its own control).
+    static let presets: [HistoryRange] = [.week, .twoWeeks, .month, .threeMonths, .year]
+
+    var shortLabel: String {
+        switch self {
+        case .week:        return "1W"
+        case .twoWeeks:    return "2W"
+        case .month:       return "1M"
+        case .threeMonths: return "3M"
+        case .year:        return "1Y"
+        case .custom:      return "Custom"
+        }
+    }
+
+    /// Header caption for the chart ("Last 7 days", "Last 3 months", …).
+    var caption: String {
+        switch self {
+        case .week:        return "Last 7 days"
+        case .twoWeeks:    return "Last 2 weeks"
+        case .month:       return "Last 30 days"
+        case .threeMonths: return "Last 3 months"
+        case .year:        return "Last 12 months"
+        case .custom:      return "Custom range"
+        }
+    }
+
+    /// Only the week view is free; the rest require Pro.
+    var isPro: Bool {
+        if case .week = self { return false }
+        return true
+    }
+
+    /// Inclusive [start, end] the window covers, ending today (or the custom end).
+    var interval: (start: Date, end: Date) {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        func daysBack(_ n: Int) -> Date { cal.date(byAdding: .day, value: -n, to: today) ?? today }
+        switch self {
+        case .week:        return (daysBack(6), today)
+        case .twoWeeks:    return (daysBack(13), today)
+        case .month:       return (daysBack(29), today)
+        case .threeMonths: return (cal.date(byAdding: .month, value: -3, to: today) ?? today, today)
+        case .year:        return (cal.date(byAdding: .year, value: -1, to: today) ?? today, today)
+        case .custom(let s, let e):
+            return (cal.startOfDay(for: min(s, e)), cal.startOfDay(for: max(s, e)))
+        }
+    }
+
+    /// Bucket granularity that keeps the bar count readable for the span.
+    var granularity: Calendar.Component {
+        switch self {
+        case .week, .twoWeeks, .month: return .day
+        case .threeMonths:             return .weekOfYear
+        case .year:                    return .month
+        case .custom(let s, let e):
+            let days = Calendar.current.dateComponents([.day], from: min(s, e), to: max(s, e)).day ?? 0
+            if days <= 31 { return .day }
+            if days <= 120 { return .weekOfYear }
+            return .month
+        }
+    }
+}
+
 struct ActivityBucket: Identifiable {
     let id = UUID()
     let day: Date
     var hours: Double
     var sessions: Int
 
-    /// One bucket per day for the last 7 days (oldest → today).
-    static func lastWeekDaily(sessions: [FeedSession]) -> [ActivityBucket] {
+    /// Buckets for an arbitrary range, one per unit of the range's granularity
+    /// (day / week / month), oldest → newest, with empty buckets filled in so the
+    /// chart baseline stays continuous.
+    static func series(for range: HistoryRange, sessions: [FeedSession]) -> [ActivityBucket] {
         let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
+        let unit = range.granularity
+        let (start, end) = range.interval
+        let startBucket = bucketStart(start, unit: unit, cal: cal)
+
+        // Seed every empty bucket across the span.
         var map: [Date: ActivityBucket] = [:]
-        for offset in 0..<7 {
-            if let day = cal.date(byAdding: .day, value: -offset, to: today) {
-                map[day] = ActivityBucket(day: day, hours: 0, sessions: 0)
-            }
+        var order: [Date] = []
+        var cursor = startBucket
+        while cursor <= end {
+            if map[cursor] == nil { map[cursor] = ActivityBucket(day: cursor, hours: 0, sessions: 0); order.append(cursor) }
+            guard let next = cal.date(byAdding: unit, value: 1, to: cursor) else { break }
+            cursor = next
         }
-        let weekAgo = cal.date(byAdding: .day, value: -6, to: today) ?? today
-        for s in sessions where s.date >= weekAgo {
-            let day = cal.startOfDay(for: s.date)
-            guard map[day] != nil else { continue }
-            map[day]!.hours += Double(s.durationMinutes) / 60
-            map[day]!.sessions += 1
+
+        for s in sessions {
+            let d = s.date
+            guard d >= startBucket, d <= cal.date(byAdding: .day, value: 1, to: end) ?? end else { continue }
+            let key = bucketStart(d, unit: unit, cal: cal)
+            guard map[key] != nil else { continue }
+            map[key]!.hours += Double(s.durationMinutes) / 60
+            map[key]!.sessions += 1
         }
-        return map.values.sorted { $0.day < $1.day }
+        return order.compactMap { map[$0] }
+    }
+
+    /// One bucket per day for the last 7 days — kept for callers that want the
+    /// free default without constructing a range.
+    static func lastWeekDaily(sessions: [FeedSession]) -> [ActivityBucket] {
+        series(for: .week, sessions: sessions)
+    }
+
+    private static func bucketStart(_ date: Date, unit: Calendar.Component, cal: Calendar) -> Date {
+        switch unit {
+        case .day:
+            return cal.startOfDay(for: date)
+        case .weekOfYear:
+            return cal.dateInterval(of: .weekOfYear, for: date)?.start ?? cal.startOfDay(for: date)
+        case .month:
+            return cal.dateInterval(of: .month, for: date)?.start ?? cal.startOfDay(for: date)
+        default:
+            return cal.startOfDay(for: date)
+        }
     }
 }
 
@@ -513,6 +693,45 @@ struct DashboardTile: View {
             .overlay(RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// Pro custom date-range picker for the activity chart.
+struct CustomRangeSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var start: Date
+    @Binding var end: Date
+    var onApply: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Range") {
+                    DatePicker("Start", selection: $start, in: ...end, displayedComponents: .date)
+                    DatePicker("End", selection: $end, in: start...Date(), displayedComponents: .date)
+                }
+                Section {
+                    Button {
+                        onApply()
+                        dismiss()
+                    } label: {
+                        Text("Apply")
+                            .font(.headline)
+                            .foregroundStyle(Theme.background)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .listRowBackground(Theme.accent)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Theme.background)
+            .tint(Theme.accent)
+            .navigationTitle("Custom range")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            }
+        }
     }
 }
 

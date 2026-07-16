@@ -81,6 +81,7 @@
 		E610A0298FD18084A62FDD82 /* EdgeFunctionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 594C30F607DCAA2E5D2E6245 /* EdgeFunctionModels.swift */; };
 		E95EB337AB3BC80E320E2F32 /* AppStore+Invites.swift in Sources */ = {isa = PBXBuildFile; fileRef = 501DC922351647C18A6F314D /* AppStore+Invites.swift */; };
 		F2618610586DB9C3345C94C8 /* Celebration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30A6ECDA3C89862D17F1C81 /* Celebration.swift */; };
+		F84C0C2709EA5C0BCBB1DBBA /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CA98BE610EB60AB332917D5 /* FeatureFlags.swift */; };
 		F9D4FE283820E25A05692966 /* Supabase.plist in Resources */ = {isa = PBXBuildFile; fileRef = 110EB1A0604D9D68DD50D886 /* Supabase.plist */; };
 		FAAE8C4DF4AA21A371F4F0DF /* AppStore+Feed.swift in Sources */ = {isa = PBXBuildFile; fileRef = E027CA4D49372EC880E7A7BA /* AppStore+Feed.swift */; };
 		FBC5CA0F99C49D8AC902D659 /* ProfileIdentityValidation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C1946954DF585AB3AA78971 /* ProfileIdentityValidation.swift */; };
@@ -139,6 +140,7 @@
 		43B84DB1AF26B28199D3B9F9 /* ShareCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCard.swift; sourceTree = "<group>"; };
 		44D81CAB89B41706FD9E8701 /* FeedCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedCard.swift; sourceTree = "<group>"; };
 		475451E24481504893FFE7ED /* ProfileModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileModels.swift; sourceTree = "<group>"; };
+		4CA98BE610EB60AB332917D5 /* FeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureFlags.swift; sourceTree = "<group>"; };
 		4D28EC049E2380767AA0A2B6 /* OnboardingPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPreview.swift; sourceTree = "<group>"; };
 		4F6C03EC3ED4D2A8C098B84F /* CommentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentsView.swift; sourceTree = "<group>"; };
 		501DC922351647C18A6F314D /* AppStore+Invites.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Invites.swift"; sourceTree = "<group>"; };
@@ -256,6 +258,7 @@
 				2C2F55C19C493784AFEFC588 /* DesignSystem.swift */,
 				2C792A7AC8B56AE02E63F640 /* DraftModels.swift */,
 				594C30F607DCAA2E5D2E6245 /* EdgeFunctionModels.swift */,
+				4CA98BE610EB60AB332917D5 /* FeatureFlags.swift */,
 				44D81CAB89B41706FD9E8701 /* FeedCard.swift */,
 				92AD1866882A183DAB69974D /* FeedView.swift */,
 				7854EB879EEA122DFA7E5FE1 /* FollowListView.swift */,
@@ -459,6 +462,7 @@
 				664317151FD26AFB65FCFB64 /* DesignSystem.swift in Sources */,
 				713CDC37F05C373C2A4C9DFB /* DraftModels.swift in Sources */,
 				E610A0298FD18084A62FDD82 /* EdgeFunctionModels.swift in Sources */,
+				F84C0C2709EA5C0BCBB1DBBA /* FeatureFlags.swift in Sources */,
 				864554706E770DC971174E0E /* FeedCard.swift in Sources */,
 				987C065BEC871C430815F0D5 /* FeedView.swift in Sources */,
 				BACB683507C15BE288E50D3C /* FollowListView.swift in Sources */,
