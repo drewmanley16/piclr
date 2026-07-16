@@ -56,6 +56,8 @@ struct NotificationsView: View {
                     SessionDetailView(sessionId: sessionId)
                 case .comments(let sessionId):
                     SessionDetailView(sessionId: sessionId, openComments: true)
+                case .invite(let inviteId):
+                    InviteDetailView(inviteId: inviteId)
                 }
             }
             .toolbar {
@@ -72,6 +74,7 @@ struct NotificationsView: View {
         switch n.type {
         case "follow":  return n.actor.map { .profile($0.id) }
         case "comment": return n.session.map { .comments($0.id) }
+        case "invite_received", "invite_response": return n.invite.map { .invite($0.id) }
         default:        return n.session.map { .session($0.id) }
         }
     }
@@ -112,6 +115,7 @@ enum NotifDestination: Hashable {
     case profile(UUID)
     case session(UUID)
     case comments(UUID)
+    case invite(UUID)
 }
 
 /// A target the app navigates to when the user taps a push notification.
@@ -119,12 +123,14 @@ enum DeepLink: Identifiable, Hashable {
     case session(UUID)
     case comments(UUID)
     case profile(UUID)
+    case invite(UUID)
 
     var id: String {
         switch self {
         case .session(let id):  return "session-\(id)"
         case .comments(let id): return "comments-\(id)"
         case .profile(let id):  return "profile-\(id)"
+        case .invite(let id):   return "invite-\(id)"
         }
     }
 }

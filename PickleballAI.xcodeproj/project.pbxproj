@@ -37,6 +37,7 @@
 		C4D639B6FB92C30CB2822077 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D656AFC1851F5D01BC4BB70 /* AppStore.swift */; };
 		C5338F649A3DC6D11AE71F0B /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528729889F780FEF8B81D160 /* ProfileView.swift */; };
 		D60B10153096A64D929AE1AC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */; };
+		D7F2EE361D4137FD7E546EB4 /* InviteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9848E60F27125A620DA0B90 /* InviteView.swift */; };
 		DE6F84AD2314939D4E8C317C /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65F9240942A799CF19EF40AC /* Haptics.swift */; };
 		F2618610586DB9C3345C94C8 /* Celebration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30A6ECDA3C89862D17F1C81 /* Celebration.swift */; };
 		F9D4FE283820E25A05692966 /* Supabase.plist in Resources */ = {isa = PBXBuildFile; fileRef = 110EB1A0604D9D68DD50D886 /* Supabase.plist */; };
@@ -100,6 +101,7 @@
 		DC1B8FB7392D5C5FC8C4D640 /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
 		DD24443783672F30DD360A7A /* Supabase.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Supabase.example.plist; sourceTree = "<group>"; };
 		E57559D0A66C08920B1C67A3 /* ProfileSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSheets.swift; sourceTree = "<group>"; };
+		E9848E60F27125A620DA0B90 /* InviteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteView.swift; sourceTree = "<group>"; };
 		EAB915786701A168499210BF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F30A6ECDA3C89862D17F1C81 /* Celebration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Celebration.swift; sourceTree = "<group>"; };
 		F8FD3C96B80BD2A5C26D975D /* RemoteModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteModels.swift; sourceTree = "<group>"; };
@@ -150,6 +152,7 @@
 				7854EB879EEA122DFA7E5FE1 /* FollowListView.swift */,
 				65F9240942A799CF19EF40AC /* Haptics.swift */,
 				6BF6725B8FBFB5A75FCF41BB /* Info.plist */,
+				E9848E60F27125A620DA0B90 /* InviteView.swift */,
 				2BCD8F33D0E442DCBB8E637F /* LeaderboardView.swift */,
 				1DF3D5A5AC51AF989571223E /* LiveActivityAttributes.swift */,
 				DC1B8FB7392D5C5FC8C4D640 /* LiveActivityManager.swift */,
@@ -304,6 +307,7 @@
 				987C065BEC871C430815F0D5 /* FeedView.swift in Sources */,
 				BACB683507C15BE288E50D3C /* FollowListView.swift in Sources */,
 				DE6F84AD2314939D4E8C317C /* Haptics.swift in Sources */,
+				D7F2EE361D4137FD7E546EB4 /* InviteView.swift in Sources */,
 				3D6C3B86141C26738F80B2A1 /* LeaderboardView.swift in Sources */,
 				FD52FEB282F1D784FD37A351 /* LiveActivityAttributes.swift in Sources */,
 				5E9F8ED09A2B926B38FFE0C8 /* LiveActivityManager.swift in Sources */,

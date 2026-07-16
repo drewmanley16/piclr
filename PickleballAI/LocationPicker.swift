@@ -11,6 +11,7 @@ final class LocationSearchModel: NSObject, ObservableObject, CLLocationManagerDe
         let name: String
         let subtitle: String
         let distanceLabel: String?
+        let coordinate: CLLocationCoordinate2D?
     }
 
     @Published var results: [Place] = []
@@ -112,7 +113,8 @@ final class LocationSearchModel: NSObject, ObservableObject, CLLocationManagerDe
                         name: item.name ?? "Court",
                         subtitle: [item.placemark.locality, item.placemark.administrativeArea]
                             .compactMap { $0 }.joined(separator: ", "),
-                        distanceLabel: distance.map { String(format: "%.1f mi", $0) }
+                        distanceLabel: distance.map { String(format: "%.1f mi", $0) },
+                        coordinate: item.placemark.location?.coordinate
                     )
                 }
             }
