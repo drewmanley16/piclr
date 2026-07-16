@@ -172,7 +172,8 @@ final class AppStore: ObservableObject {
     }
 
     func completeOnboarding(
-        displayName: String,
+        firstName: String,
+        lastName: String,
         username: String,
         skillLevel: SkillLevel,
         duprRating: Double?
@@ -182,9 +183,11 @@ final class AppStore: ObservableObject {
         defer { busyCount -= 1 }
         do {
             let request = CompleteOnboardingRequest(
-                displayName: displayName.trimmed,
+                firstName: firstName.trimmed,
+                lastName: lastName.trimmed,
+                displayName: [firstName.trimmed, lastName.trimmed].joined(separator: " "),
                 username: username.normalizedUsername,
-                avatarInitials: initials(from: displayName),
+                avatarInitials: initials(from: [firstName.trimmed, lastName.trimmed].joined(separator: " ")),
                 skillLevel: skillLevel.rawValue,
                 duprRating: skillLevel == .dupr ? duprRating : nil
             )
@@ -208,6 +211,27 @@ final class AppStore: ObservableObject {
                 reportError(error)
             }
             return false
+        }
+    }
+
+    /// A lightweight, debounced hint for the onboarding form. The unique
+    /// database index remains authoritative when onboarding is completed.
+    func checkUsernameAvailability(username: String) async -> Bool? {
+        guard ProfileIdentityValidator.username(username).isValid else { return nil }
+        do {
+            let response: UsernameAvailabilityResponse = try await supabase.functions
+                .invoke(
+                    "complete-onboarding",
+                    options: FunctionInvokeOptions(
+                        body: UsernameAvailabilityRequest(
+                            username: username,
+                            checkUsernameOnly: true
+                        )
+                    )
+                )
+            return response.available
+        } catch {
+            return nil
         }
     }
 
@@ -1763,13 +1787,27 @@ final class AppStore: ObservableObject {
         }
     }
 
-    func updateProfile(displayName: String, homeCourt: String, rating: Double?, preferredSide: String, birthday: String?) async -> Bool {
+    func updateProfile(firstName: String, lastName: String, homeCourt: String, rating: Double?, preferredSide: String, birthday: String?) async -> Bool {
         guard let uid = currentProfile?.id else { return false }
+        let cleanFirstName = ProfileIdentityValidator.normalizedName(firstName)
+        let cleanLastName = ProfileIdentityValidator.normalizedName(lastName)
+        let validations = [
+            ProfileIdentityValidator.firstName(cleanFirstName),
+            ProfileIdentityValidator.lastName(cleanLastName),
+            ProfileIdentityValidator.combinedName(firstName: cleanFirstName, lastName: cleanLastName),
+        ]
+        if let message = validations.compactMap(\.errorMessage).first {
+            errorMessage = message
+            return false
+        }
         busyCount += 1
         errorMessage = nil
         defer { busyCount -= 1 }
         do {
+            let displayName = [cleanFirstName, cleanLastName].joined(separator: " ")
             let update = ProfileUpdate(
+                firstName: cleanFirstName,
+                lastName: cleanLastName,
                 displayName: displayName,
                 homeCourt: homeCourt.isEmpty ? nil : homeCourt,
                 rating: rating,
@@ -1779,6 +1817,8 @@ final class AppStore: ObservableObject {
             try await supabase.from("profiles").update(update).eq("id", value: uid.uuidString).execute()
             // Apply locally instead of re-fetching — saves a round trip and
             // avoids clobbering a concurrent avatar update to the same row.
+            currentProfile?.firstName = cleanFirstName
+            currentProfile?.lastName = cleanLastName
             currentProfile?.displayName = displayName
             currentProfile?.homeCourt = homeCourt.isEmpty ? nil : homeCourt
             currentProfile?.rating = rating

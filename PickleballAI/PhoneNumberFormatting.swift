@@ -1,0 +1,43 @@
+import Foundation
+import PhoneNumberKit
+
+/// Country-aware display formatting and E.164 normalization for phone auth and
+/// contact matching. Local input uses the device region; a leading `+` always
+/// selects an explicit international calling code.
+enum PhoneNumberFormatting {
+    private static let utility = PhoneNumberUtility()
+    private static let defaultRegion = PhoneNumberUtility.defaultRegionCode()
+    private static let partialFormatter = PartialFormatter(
+        utility: utility,
+        defaultRegion: defaultRegion,
+        withPrefix: true,
+        maxDigits: 15
+    )
+
+    static let examplePlaceholder: String = {
+        guard let example = utility.getExampleNumber(forCountry: defaultRegion) else {
+            return "Phone number"
+        }
+        return utility.format(example, toType: .national)
+    }()
+
+    static func formatPartial(_ rawValue: String) -> String {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasInternationalPrefix = trimmed.hasPrefix("+") || trimmed.hasPrefix("＋")
+        let digits = trimmed.filter(\.isNumber).prefix(15)
+
+        guard !digits.isEmpty else {
+            return hasInternationalPrefix ? "+" : ""
+        }
+
+        let sanitized = (hasInternationalPrefix ? "+" : "") + digits
+        return partialFormatter.formatPartial(sanitized)
+    }
+
+    static func e164(_ rawValue: String) -> String? {
+        guard let number = try? utility.parse(rawValue, withRegion: defaultRegion) else {
+            return nil
+        }
+        return utility.format(number, toType: .e164)
+    }
+}

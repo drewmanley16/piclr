@@ -30,6 +30,12 @@ struct AuthView: View {
         case friends
     }
 
+    private enum ProfileField: Hashable {
+        case firstName
+        case lastName
+        case username
+    }
+
     let startsAtProfile: Bool
 
     @State private var step: Step
@@ -37,9 +43,13 @@ struct AuthView: View {
     @State private var phone = ""
     @State private var verifiedPhone = ""
     @State private var code = ""
-    @State private var displayName = ""
+    @State private var firstName = ""
+    @State private var lastName = ""
     @State private var username = ""
     @State private var didEditUsername = false
+    @State private var touchedProfileFields: Set<ProfileField> = []
+    @State private var usernameAvailability = UsernameAvailability.idle
+    @FocusState private var focusedProfileField: ProfileField?
     @State private var selectedSkill = SkillLevel.intermediate
     @State private var duprRating = ""
     @State private var searchQuery = ""
@@ -60,6 +70,7 @@ struct AuthView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 32)
         }
+        .scrollDismissesKeyboard(.interactively)
         .background(Theme.background.ignoresSafeArea())
         .onAppear(perform: initialize)
     }
@@ -101,10 +112,12 @@ struct AuthView: View {
                 .foregroundStyle(Theme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text(subtitle)
-                .font(.subheadline)
-                .foregroundStyle(Theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            if !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(.top, 44)
     }
@@ -134,7 +147,7 @@ struct AuthView: View {
     private var phoneStep: some View {
         VStack(alignment: .leading, spacing: 16) {
             AuthField(
-                placeholder: "+1 123 456 6789",
+                placeholder: PhoneNumberFormatting.examplePlaceholder,
                 text: $phone,
                 keyboard: .phonePad,
                 autocapitalize: false,
@@ -164,38 +177,15 @@ struct AuthView: View {
     }
 
     private static func formattedPhoneInput(_ raw: String) -> String {
-        if raw.contains("+") {
-            let digits = raw.filter(\.isNumber)
-            guard !digits.isEmpty else { return "+" }
-            return "+\(digits)"
-        }
-
-        var digits = raw.filter(\.isNumber)
-        if digits.hasPrefix("1"), digits.count > 10 {
-            digits.removeFirst()
-        }
-        digits = String(digits.prefix(10))
-        guard !digits.isEmpty else { return "" }
-        var result = "+1 "
-        for (i, d) in digits.enumerated() {
-            if i == 3 || i == 6 { result += " " }
-            result.append(d)
-        }
-        return result
+        PhoneNumberFormatting.formatPartial(raw)
     }
 
     private var codeStep: some View {
         VStack(alignment: .leading, spacing: 16) {
-            AuthField(
-                placeholder: "6-digit code",
-                text: $code,
-                keyboard: .numberPad,
-                autocapitalize: false,
-                textContentType: .oneTimeCode
-            )
+            OTPCodeField(code: $code)
 
             HStack {
-                Text(verifiedPhone)
+                Text(PhoneNumberFormatting.formatPartial(verifiedPhone))
                     .font(.caption)
                     .foregroundStyle(Theme.textTertiary)
                 Spacer()
@@ -248,29 +238,88 @@ struct AuthView: View {
                 }
             }
 
-            AuthField(
-                placeholder: "Display name",
-                text: $displayName,
-                textContentType: .name
-            )
-            .onChange(of: displayName) { _, newValue in
-                guard !didEditUsername else { return }
-                username = Self.suggestUsername(from: newValue)
+            HStack(alignment: .top, spacing: 12) {
+                IdentityInputField(
+                    title: "First name",
+                    placeholder: "",
+                    text: $firstName,
+                    focusedField: $focusedProfileField,
+                    field: .firstName,
+                    textContentType: .givenName,
+                    feedback: firstNameFeedback,
+                    onSubmit: { focusedProfileField = .lastName }
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .onChange(of: firstName) { _, _ in
+                    guard !didEditUsername else { return }
+                    username = ProfileIdentityValidator.suggestedUsername(firstName: firstName, lastName: lastName)
+                }
+
+                IdentityInputField(
+                    title: "Last name",
+                    placeholder: "",
+                    text: $lastName,
+                    focusedField: $focusedProfileField,
+                    field: .lastName,
+                    textContentType: .familyName,
+                    feedback: lastNameFeedback,
+                    onSubmit: { focusedProfileField = .username }
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .onChange(of: lastName) { _, _ in
+                    guard !didEditUsername else { return }
+                    username = ProfileIdentityValidator.suggestedUsername(firstName: firstName, lastName: lastName)
+                }
             }
 
-            AuthField(
-                placeholder: "Username",
+            IdentityInputField(
+                title: "Username",
+                placeholder: "",
                 text: $username,
-                autocapitalize: false,
-                textContentType: .username
+                focusedField: $focusedProfileField,
+                field: .username,
+                prefix: "@",
+                textContentType: .username,
+                keyboard: .asciiCapable,
+                autocapitalization: .never,
+                autocorrectionDisabled: true,
+                submitLabel: .done,
+                feedback: usernameFeedback,
+                onSubmit: { focusedProfileField = nil }
             )
-            .onChange(of: username) { _, _ in
-                didEditUsername = true
+            .onChange(of: username) { _, newValue in
+                let normalized = ProfileIdentityValidator.normalizedUsernameInput(newValue)
+                if normalized != newValue {
+                    username = normalized
+                    return
+                }
+                usernameAvailability = .idle
+                if newValue != ProfileIdentityValidator.suggestedUsername(firstName: firstName, lastName: lastName) {
+                    didEditUsername = true
+                }
+            }
+            .task(id: username) {
+                await checkUsernameAvailability()
             }
 
             primaryButton("Continue", systemImage: "arrow.right", disabled: !profileIsValid) {
-                username = username.normalizedUsername
+                firstName = ProfileIdentityValidator.normalizedName(firstName)
+                lastName = ProfileIdentityValidator.normalizedName(lastName)
+                username = username.trimmingCharacters(in: .whitespacesAndNewlines)
+                focusedProfileField = nil
                 step = .skill
+            }
+        }
+        .onChange(of: focusedProfileField) { oldField, _ in
+            guard let oldField else { return }
+            touchedProfileFields.insert(oldField)
+            switch oldField {
+            case .firstName:
+                firstName = ProfileIdentityValidator.normalizedName(firstName)
+            case .lastName:
+                lastName = ProfileIdentityValidator.normalizedName(lastName)
+            case .username:
+                username = username.trimmingCharacters(in: .whitespacesAndNewlines)
             }
         }
     }
@@ -479,13 +528,21 @@ struct AuthView: View {
     private func prefillProfile() {
         guard let profile = store.currentProfile else { return }
         if profile.displayName != "Pickleball Player" {
-            displayName = profile.displayName
+            if let storedFirstName = profile.firstName, !storedFirstName.isEmpty,
+               let storedLastName = profile.lastName, !storedLastName.isEmpty {
+                firstName = storedFirstName
+                lastName = storedLastName
+            } else {
+                let nameParts = Self.splitName(profile.displayName)
+                firstName = nameParts.first
+                lastName = nameParts.last
+            }
         }
         if !profile.username.hasPrefix("player_") {
             username = profile.username
             didEditUsername = true
-        } else if !displayName.isEmpty {
-            username = Self.suggestUsername(from: displayName)
+        } else if !fullName.isEmpty {
+            username = ProfileIdentityValidator.suggestedUsername(firstName: firstName, lastName: lastName)
         }
         if let skill = profile.skillLevel, let level = SkillLevel(rawValue: skill) {
             selectedSkill = level
@@ -497,7 +554,8 @@ struct AuthView: View {
 
     private func finishOnboarding() async {
         let didComplete = await store.completeOnboarding(
-            displayName: displayName,
+            firstName: firstName,
+            lastName: lastName,
             username: username,
             skillLevel: selectedSkill,
             duprRating: parsedDUPR
@@ -536,7 +594,7 @@ struct AuthView: View {
     private var title: String {
         switch step {
         case .splash: return "Track every pickleball match with your crew."
-        case .phone: return "Start with your phone"
+        case .phone: return "Continue with your phone"
         case .code: return "Enter the code"
         case .profile: return "Claim your court name"
         case .skill: return "What is your level?"
@@ -547,9 +605,9 @@ struct AuthView: View {
     private var subtitle: String {
         switch step {
         case .splash: return "Log sessions, compare streaks, and keep the group feed moving after every game."
-        case .phone: return "No passwords. We will text you a one-time code."
-        case .code: return "Your phone can suggest the SMS code automatically."
-        case .profile: return "A display name and username are enough to get rolling."
+        case .phone: return "We’ll sign you in or create your account."
+        case .code: return ""
+        case .profile: return ""
         case .skill: return "One tap gives the app a useful rating seed."
         case .friends: return "Sync contacts, search a username, or invite the crew yourself."
         }
@@ -564,12 +622,15 @@ struct AuthView: View {
     }
 
     private var profileInitials: String {
-        let letters = displayName.split(separator: " ").prefix(2).compactMap { $0.first }
+        let letters = [firstName.trimmed.first, lastName.trimmed.first].compactMap { $0 }
         return letters.isEmpty ? "PB" : String(letters).uppercased()
     }
 
     private var profileIsValid: Bool {
-        displayName.trimmed.count >= 2 && username.normalizedUsername.count >= 3
+        firstNameValidation.isValid
+            && lastNameValidation.isValid
+            && usernameValidation.isValid
+            && (usernameAvailability == .available || usernameAvailability == .unavailable)
     }
 
     private var skillIsValid: Bool {
@@ -582,9 +643,93 @@ struct AuthView: View {
         return value
     }
 
-    private static func suggestUsername(from name: String) -> String {
-        let suggestion = name.normalizedUsername
-        return suggestion.isEmpty ? "" : suggestion
+    private var fullName: String {
+        [ProfileIdentityValidator.normalizedName(firstName), ProfileIdentityValidator.normalizedName(lastName)]
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+
+    private var firstNameValidation: IdentityValidationResult {
+        ProfileIdentityValidator.firstName(firstName)
+    }
+
+    private var lastNameValidation: IdentityValidationResult {
+        let lastNameResult = ProfileIdentityValidator.lastName(lastName)
+        guard lastNameResult.isValid else { return lastNameResult }
+        return ProfileIdentityValidator.combinedName(firstName: firstName, lastName: lastName)
+    }
+
+    private var usernameValidation: IdentityValidationResult {
+        ProfileIdentityValidator.username(username)
+    }
+
+    private var firstNameFeedback: IdentityFieldFeedback {
+        nameFeedback(
+            validation: firstNameValidation,
+            field: .firstName
+        )
+    }
+
+    private var lastNameFeedback: IdentityFieldFeedback {
+        nameFeedback(
+            validation: lastNameValidation,
+            field: .lastName
+        )
+    }
+
+    private var usernameFeedback: IdentityFieldFeedback {
+        if touchedProfileFields.contains(.username), let error = usernameValidation.errorMessage {
+            return .invalid(error)
+        }
+        guard usernameValidation.isValid else {
+            return .none
+        }
+        switch usernameAvailability {
+        case .idle, .available, .unavailable:
+            return .none
+        case .checking:
+            return .checking
+        case .taken:
+            return .invalid("That username is already taken")
+        }
+    }
+
+    private func nameFeedback(
+        validation: IdentityValidationResult,
+        field: ProfileField
+    ) -> IdentityFieldFeedback {
+        if touchedProfileFields.contains(field), let error = validation.errorMessage {
+            return .invalid(error)
+        }
+        return .none
+    }
+
+    private func checkUsernameAvailability() async {
+        usernameAvailability = .idle
+        guard usernameValidation.isValid else { return }
+
+        do {
+            try await Task.sleep(for: .milliseconds(400))
+        } catch {
+            return
+        }
+        guard !Task.isCancelled else { return }
+
+        usernameAvailability = .checking
+        let isAvailable = await store.checkUsernameAvailability(username: username)
+        guard !Task.isCancelled else { return }
+
+        if let isAvailable {
+            usernameAvailability = isAvailable ? .available : .taken
+        } else {
+            usernameAvailability = .unavailable
+        }
+    }
+
+    private static func splitName(_ displayName: String) -> (first: String, last: String) {
+        let parts = displayName.split(whereSeparator: \.isWhitespace)
+        guard let first = parts.first else { return ("", "") }
+        return (String(first), parts.dropFirst().joined(separator: " "))
     }
 }
 
@@ -754,6 +899,70 @@ struct AuthField: View {
 
     private var prompt: Text {
         Text(placeholder).foregroundColor(Theme.textTertiary)
+    }
+}
+
+struct OTPCodeField: View {
+    @Binding var code: String
+    @FocusState private var isFocused: Bool
+
+    private let digitCount = 6
+
+    var body: some View {
+        ZStack {
+            HStack(spacing: 8) {
+                ForEach(0..<digitCount, id: \.self) { index in
+                    Text(digit(at: index))
+                        .font(.title2.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .background(
+                            Theme.surface,
+                            in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous)
+                        )
+                        .overlay {
+                            RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous)
+                                .strokeBorder(borderColor(at: index), lineWidth: isActive(index) ? 1.5 : 1)
+                        }
+                }
+            }
+            .accessibilityHidden(true)
+
+            TextField("", text: sanitizedCode)
+                .keyboardType(.numberPad)
+                .textContentType(.oneTimeCode)
+                .focused($isFocused)
+                .foregroundStyle(Color.clear)
+                .tint(Color.clear)
+                .accessibilityLabel("Six-digit verification code")
+                .accessibilityValue("\(code.count) of \(digitCount) digits entered")
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { isFocused = true }
+        .onAppear { isFocused = true }
+        .animation(.easeOut(duration: 0.15), value: code.count)
+    }
+
+    private var sanitizedCode: Binding<String> {
+        Binding(
+            get: { code },
+            set: { code = String($0.filter(\.isNumber).prefix(digitCount)) }
+        )
+    }
+
+    private func digit(at index: Int) -> String {
+        guard index < code.count else { return "" }
+        let codeIndex = code.index(code.startIndex, offsetBy: index)
+        return String(code[codeIndex])
+    }
+
+    private func isActive(_ index: Int) -> Bool {
+        guard isFocused else { return false }
+        return index == min(code.count, digitCount - 1)
+    }
+
+    private func borderColor(at index: Int) -> Color {
+        isActive(index) ? Theme.accent.opacity(0.85) : Theme.hairline
     }
 }
 

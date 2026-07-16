@@ -4,6 +4,9 @@ options:
   deploymentTarget:
     iOS: "17.0"
 packages:
+  PhoneNumberKit:
+    url: https://github.com/PhoneNumberKit/PhoneNumberKit
+    from: "5.0.4"
   Supabase:
     url: https://github.com/supabase/supabase-swift
     from: "2.0.0"
@@ -20,6 +23,8 @@ targets:
     sources:
       - PickleballAI
     dependencies:
+      - package: PhoneNumberKit
+        product: PhoneNumberKit
       - package: Supabase
         product: Supabase
       - target: PickleballAIWidget
