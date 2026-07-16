@@ -206,6 +206,20 @@ struct InviteCard: View {
                             .foregroundStyle(Theme.textSecondary)
                     }
                     Spacer()
+                    if isHost && showsInlineCancel && !invite.isCancelled && !invite.isPast {
+                        Button {
+                            showCancelConfirmation = true
+                        } label: {
+                            if isCancelling {
+                                ProgressView().controlSize(.small).tint(Theme.loss)
+                            } else {
+                                Image(systemName: "xmark.circle")
+                                    .font(.subheadline)
+                            }
+                        }
+                        .foregroundStyle(Theme.loss)
+                        .disabled(isCancelling)
+                    }
                 }
 
                 if let note = invite.note, !note.isEmpty {
@@ -229,20 +243,7 @@ struct InviteCard: View {
                             .foregroundStyle(Theme.accent)
                     }
                     Spacer()
-                    if isHost && showsInlineCancel && !invite.isCancelled && !invite.isPast {
-                        Button {
-                            showCancelConfirmation = true
-                        } label: {
-                            if isCancelling {
-                                ProgressView().controlSize(.small).tint(Theme.loss)
-                            } else {
-                                Label("Cancel", systemImage: "xmark.circle")
-                            }
-                        }
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Theme.loss)
-                        .disabled(isCancelling)
-                    } else if !isHost && !invite.isCancelled && !invite.isPast {
+                    if !isHost && !invite.isCancelled && !invite.isPast {
                         RSVPButtons(invite: invite, current: myResponse)
                     }
                 }
