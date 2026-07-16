@@ -12,9 +12,13 @@
 -- actor/type message can't express — store the phrase on the row.
 alter table public.notifications add column if not exists detail text;
 
+-- Keep every existing type (including session-invite types added in a sibling
+-- migration) and add 'rivalry'. Listing them all makes this safe regardless of
+-- which migration lands first.
 alter table public.notifications drop constraint if exists notifications_type_check;
 alter table public.notifications add constraint notifications_type_check
-  check (type in ('like', 'comment', 'follow', 'tag', 'repost_approved', 'rivalry'));
+  check (type in ('like', 'comment', 'follow', 'tag', 'repost_approved',
+                  'invite_received', 'invite_response', 'rivalry'));
 
 -- --- Rivalry trigger ---------------------------------------------------------
 
