@@ -459,6 +459,37 @@ struct FeedCardSkeleton: View {
     }
 }
 
+/// Ghost of an avatar + two-line row, for list loads (profiles, leaderboard,
+/// sessions) — the row equivalent of `FeedCardSkeleton`.
+struct SkeletonRow: View {
+    var body: some View {
+        HStack(spacing: 12) {
+            Circle().fill(Theme.surfaceElevated).frame(width: 40, height: 40)
+            VStack(alignment: .leading, spacing: 6) {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Theme.surfaceElevated).frame(width: 140, height: 12)
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(Theme.surfaceElevated).frame(width: 90, height: 10)
+            }
+            Spacer()
+        }
+        .padding(.vertical, 6)
+        .shimmer()
+        .redacted(reason: .placeholder)
+    }
+}
+
+/// A column of `SkeletonRow`s in a card, for whole-list loading states.
+struct SkeletonList: View {
+    var rows = 5
+    var body: some View {
+        VStack(spacing: 4) {
+            ForEach(0..<rows, id: \.self) { _ in SkeletonRow() }
+        }
+        .cardStyle()
+    }
+}
+
 struct SectionHeader: View {
     var title: String
     var actionTitle: String?

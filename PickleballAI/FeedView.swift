@@ -51,7 +51,7 @@ struct HomeView: View {
         }
         .safeAreaInset(edge: .top) {
             VStack(spacing: 12) {
-            AppHeader(title: "pickleball.ai") {
+            AppHeader(title: "Feed") {
                 HeaderPill {
                     HeaderIconButton(systemImage: "trophy", accessibilityTitle: "Leaderboard") {
                         showLeaderboard = true
@@ -143,6 +143,7 @@ struct HomeView: View {
         } else {
             await store.loadDiscover()
         }
+        Haptics.tap()
     }
 }
 
@@ -468,6 +469,7 @@ struct FeedCard: View {
 
                 if canRepost {
                     Button {
+                        Haptics.impact()
                         Task { await store.requestRepost(session) }
                     } label: {
                         HStack(spacing: 6) {
@@ -654,7 +656,7 @@ struct ActivityRow: View {
                 .font(.footnote.weight(.bold))
                 .foregroundStyle(Theme.textSecondary)
                 .frame(width: 36, height: 36)
-                .background(Theme.surfaceElevated, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(Theme.surfaceElevated, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(activity.isMatch ? "Match" : activity.title)
@@ -726,9 +728,15 @@ struct SocialLabel: View {
         HStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.body.weight(.semibold))
+                // Spring "pop" when the icon becomes highlighted (a like landing).
+                .scaleEffect(isHighlighted ? 1.18 : 1)
+                .animation(.spring(response: 0.28, dampingFraction: 0.45), value: isHighlighted)
             if let count, count > 0 {
                 Text("\(count)")
                     .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+                    .contentTransition(.numericText(value: Double(count)))
+                    .animation(.snappy, value: count)
             }
         }
         .foregroundStyle(isHighlighted ? Theme.accent : Theme.textSecondary)

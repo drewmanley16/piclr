@@ -24,6 +24,7 @@ struct RootView: View {
     }
 
     @EnvironmentObject private var store: AppStore
+    @State private var selectedTab = 0
 
     var body: some View {
         Group {
@@ -51,22 +52,26 @@ struct RootView: View {
     }
 
     private var mainTabs: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             HomeView()
                 .tabItem {
                     Label("Home", systemImage: "house.fill")
                 }
+                .tag(0)
 
             WorkoutView()
                 .tabItem {
                     Label("Play", systemImage: "figure.pickleball")
                 }
+                .tag(1)
 
             ProfileView()
                 .tabItem {
                     Label("Profile", systemImage: "person.fill")
                 }
+                .tag(2)
         }
+        .onChange(of: selectedTab) { _, _ in Haptics.tap() }
         .sheet(item: Binding(
             get: { store.pendingDeepLink },
             set: { store.pendingDeepLink = $0 }

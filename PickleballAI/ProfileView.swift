@@ -361,14 +361,10 @@ struct ProfileView: View {
     // MARK: Dashboard
 
     private var dashboard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Dashboard").font(.headline).foregroundStyle(Theme.textPrimary)
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
-                DashboardTile(icon: "chart.line.uptrend.xyaxis", label: "Statistics") { activeSheet = .stats }
-                DashboardTile(icon: "trophy.fill", label: "Leaderboard") { activeSheet = .leaderboard }
-                DashboardTile(icon: "bag.fill", label: "Gear") { activeSheet = .gear }
-                DashboardTile(icon: "figure.stand", label: "Measures") { activeSheet = .measures }
-            }
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
+            DashboardTile(icon: "trophy.fill", label: "Leaderboard") { activeSheet = .leaderboard }
+            DashboardTile(icon: "bag.fill", label: "Gear") { activeSheet = .gear }
+            DashboardTile(icon: "figure.stand", label: "Measures") { activeSheet = .measures }
         }
     }
 
@@ -527,7 +523,12 @@ struct ProfileStat: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label).font(.caption).foregroundStyle(Theme.textSecondary)
-            Text(value).font(.title3.weight(.bold)).foregroundStyle(Theme.textPrimary)
+            Text(value)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(Theme.textPrimary)
+                .monospacedDigit()
+                .contentTransition(.numericText())
+                .animation(.snappy, value: value)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -547,10 +548,13 @@ struct DashboardTile: View {
                 Text(label)
                     .font(.body.weight(.semibold))
                     .foregroundStyle(Theme.textPrimary)
-                Spacer()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
             }
-            .padding(16)
+            .padding(.horizontal, 16)
             .frame(maxWidth: .infinity)
+            .frame(height: 56)
             .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
         }
@@ -657,6 +661,7 @@ struct FollowRequestRow: View {
             Spacer()
 
             Button {
+                Haptics.tap()
                 Task { await store.respondToFollowRequest(request, accept: false) }
             } label: {
                 Image(systemName: "xmark")
@@ -668,6 +673,7 @@ struct FollowRequestRow: View {
             .buttonStyle(.plain)
 
             Button {
+                Haptics.success()
                 Task { await store.respondToFollowRequest(request, accept: true) }
             } label: {
                 Image(systemName: "checkmark")
@@ -707,6 +713,7 @@ struct RepostRequestRow: View {
             Spacer()
 
             Button {
+                Haptics.tap()
                 Task { await store.declineRepost(request) }
             } label: {
                 Image(systemName: "xmark")
@@ -718,6 +725,7 @@ struct RepostRequestRow: View {
             .buttonStyle(.plain)
 
             Button {
+                Haptics.success()
                 Task { await store.approveRepost(request) }
             } label: {
                 Image(systemName: "checkmark")
