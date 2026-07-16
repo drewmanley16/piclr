@@ -98,25 +98,6 @@ Deno.serve(async (req) => {
     return json({ error: profileError.message }, 400);
   }
 
-  const { error: phoneError } = await admin
-    .schema("private")
-    .from("phone_lookup")
-    .upsert(
-      {
-        profile_id: user.id,
-        phone_e164: user.phone,
-        updated_at: completedAt,
-      },
-      { onConflict: "profile_id" },
-    );
-
-  if (phoneError) {
-    // Non-fatal: phone_lookup only powers contact matching. The profile is
-    // already created and onboarding is complete, so don't block the user —
-    // log it and move on. Their number can be backfilled on a later match.
-    console.error("phone_lookup upsert failed (non-fatal):", phoneError.message);
-  }
-
   return json({ profile });
 });
 
