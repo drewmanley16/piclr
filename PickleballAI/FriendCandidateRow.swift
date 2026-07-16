@@ -8,29 +8,17 @@ struct FriendCandidateRow: View {
     var navigable: Bool = false
 
     var body: some View {
-        HStack(spacing: 12) {
-            ProfileLink(userId: navigable ? profile.id : nil, placeholder: profile) {
-                identity
-            }
+        IdentityRow(
+            avatarURL: profile.avatarURL,
+            initials: profile.initials,
+            name: profile.displayName,
+            detail: "@\(profile.username)",
+            userId: navigable ? profile.id : nil,
+            placeholder: profile
+        ) {
             followButton
         }
         .cardStyle()
-    }
-
-    private var identity: some View {
-        HStack(spacing: 12) {
-            ProfileAvatar(profile: profile, size: 40)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(profile.displayName)
-                    .font(.headline)
-                    .foregroundStyle(Theme.textPrimary)
-                Text("@\(profile.username)")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textSecondary)
-            }
-            Spacer()
-        }
-        .contentShape(Rectangle())
     }
 
     private var followButton: some View {

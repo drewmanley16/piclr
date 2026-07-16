@@ -1,5 +1,31 @@
 import Foundation
 
+// MARK: - Date formatting
+
+/// The app's shared ISO-8601 formatters — the single source of truth for both
+/// the wire format written to Postgres and parsing of PostgREST timestamps.
+/// `ISO8601DateFormatter` is thread-safe, so sharing statics is fine.
+enum DateFormatting {
+    /// Wire format sent to Postgres (`2026-07-16T12:34:56Z`, no fractional
+    /// seconds). Encoding must stay byte-identical to this.
+    static let iso: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+
+    static let isoFractional: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
+    /// Parses a PostgREST timestamp (tries fractional seconds, then plain).
+    static func parse(_ s: String) -> Date {
+        isoFractional.date(from: s) ?? iso.date(from: s) ?? Date()
+    }
+}
+
 // MARK: - Session read models
 
 /// Embedded `{ count: N }` rows returned by PostgREST aggregate selects.
@@ -104,20 +130,10 @@ struct FeedSession: Identifiable, Decodable, Hashable {
         case previewComments = "preview_comments"
     }
 
-    private static let isoFractional: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return f
-    }()
-    private static let iso: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime]
-        return f
-    }()
-    /// Shared ISO8601 parser (tries fractional seconds, then plain). Kept internal
-    /// so other read models (notifications, comments, invites) can reuse it.
+    /// Shared ISO8601 parser. Kept as a delegating alias so other read models
+    /// (notifications, comments, invites) keep their existing call sites.
     static func parse(_ s: String) -> Date {
-        isoFractional.date(from: s) ?? iso.date(from: s) ?? Date()
+        DateFormatting.parse(s)
     }
 }
 

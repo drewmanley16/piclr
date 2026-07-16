@@ -15,7 +15,7 @@ extension AppStore {
                 .value
             var hydrated: [Comment] = []
             for comment in rows {
-                hydrated.append(await hydrateComment(comment))
+                hydrated.append(await media.hydrateComment(comment))
             }
             return hydrated
         } catch {

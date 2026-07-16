@@ -8,14 +8,21 @@ struct WorkoutCalendarCard: View {
 
     private let cal = Calendar.current
 
+    // Locale/calendar-dependent formatters, cached so they aren't rebuilt on
+    // every body evaluation (DateFormatter construction is expensive).
+    private static let monthTitleFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "LLLL yyyy"
+        return f
+    }()
+    private static let weekdaySymbolsFormatter = DateFormatter()
+
     private var workoutDays: Set<Date> {
         Set(sessions.map { cal.startOfDay(for: $0.date) })
     }
 
     private var monthTitle: String {
-        let f = DateFormatter()
-        f.dateFormat = "LLLL yyyy"
-        return f.string(from: monthAnchor)
+        Self.monthTitleFormatter.string(from: monthAnchor)
     }
 
     /// Day cells for the anchored month, with leading nils to align weekdays.
@@ -32,7 +39,7 @@ struct WorkoutCalendarCard: View {
     }
 
     private var weekdaySymbols: [String] {
-        let symbols = DateFormatter().veryShortStandaloneWeekdaySymbols ?? ["S", "M", "T", "W", "T", "F", "S"]
+        let symbols = Self.weekdaySymbolsFormatter.veryShortStandaloneWeekdaySymbols ?? ["S", "M", "T", "W", "T", "F", "S"]
         let start = cal.firstWeekday - 1
         return Array(symbols[start...] + symbols[..<start])
     }

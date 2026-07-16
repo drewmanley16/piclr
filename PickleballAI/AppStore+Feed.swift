@@ -59,7 +59,7 @@ extension AppStore {
                 self.initialFeedLoadStartedAt = nil
             }
 
-            async let hydrated: [FeedSession] = hydrateSessions(page)
+            async let hydrated: [FeedSession] = media.hydrateSessions(page)
             async let liked: Set<UUID>? = try? likedSessionIds(for: uid, sessionIds: page.map(\.id))
             let (hydratedPage, likedPage) = await (hydrated, liked)
             guard currentProfile?.id == uid, !Task.isCancelled else { return }
@@ -117,7 +117,7 @@ extension AppStore {
                 discoverFeed.append(contentsOf: page.filter { !existingIDs.contains($0.id) })
             }
             discoverReachedEnd = page.count < feedPageSize
-            async let hydrated: [FeedSession] = hydrateSessions(page)
+            async let hydrated: [FeedSession] = media.hydrateSessions(page)
             async let liked: Set<UUID>? = try? likedSessionIds(for: uid, sessionIds: page.map(\.id))
             let (hydratedPage, likedPage) = await (hydrated, liked)
             guard currentProfile?.id == uid, !Task.isCancelled else { return }
@@ -148,7 +148,7 @@ extension AppStore {
                 .order("created_at", ascending: false)
                 .execute()
                 .value
-            mySessions = await hydrateSessions(sessions)
+            mySessions = await media.hydrateSessions(sessions)
         } catch {
             reportError(error)
         }
@@ -164,7 +164,7 @@ extension AppStore {
                 .limit(1)
                 .execute()
                 .value
-            let hydrated = await hydrateSessions(rows)
+            let hydrated = await media.hydrateSessions(rows)
             if let uid = currentProfile?.id { await refreshLikedState(for: hydrated, uid: uid) }
             return hydrated.first
         } catch {

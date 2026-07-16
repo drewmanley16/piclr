@@ -126,7 +126,7 @@ extension AppStore {
         realtimeNeedsMySessionsRefresh = false
         realtimeNeedsDiscoverRefresh = false
         isInitialFeedLoading = false
-        mediaURLCache.removeAll()
+        media.clearCache()
         currentProfile = nil
         feed = []
         discoverFeed = []

@@ -29,7 +29,7 @@ extension AppStore {
             guard let profile = rows.first else {
                 return .missing
             }
-            currentProfile = await hydrateProfile(profile)
+            currentProfile = await media.hydrateProfile(profile)
             return .loaded
         } catch {
             reportError(error)
@@ -147,7 +147,7 @@ extension AppStore {
                 .execute()
                 .value
             guard let rawProfile = rows.first else { return nil }
-            let profile = await hydrateProfile(rawProfile)
+            let profile = await media.hydrateProfile(rawProfile)
 
             let relationship: FollowRelationship
             if userId == me {
@@ -194,7 +194,7 @@ extension AppStore {
                     .limit(50)
                     .execute()
                     .value
-                sessions = await hydrateSessions(rows)
+                sessions = await media.hydrateSessions(rows)
             }
 
             return PublicProfile(
@@ -242,7 +242,7 @@ extension AppStore {
             }
             var hydrated: [ContactMatch] = []
             for match in visibleMatches {
-                hydrated.append(ContactMatch(phone: match.phone, profile: await hydrateProfile(match.profile)))
+                hydrated.append(ContactMatch(phone: match.phone, profile: await media.hydrateProfile(match.profile)))
             }
             contactMatches = hydrated
         } catch {
@@ -275,7 +275,7 @@ extension AppStore {
             let ownId = currentProfile?.id
             var hydrated: [Profile] = []
             for profile in results where profile.id != ownId && profile.hasCompletedOnboarding {
-                hydrated.append(await hydrateProfile(profile))
+                hydrated.append(await media.hydrateProfile(profile))
             }
             searchResults = hydrated
         } catch {

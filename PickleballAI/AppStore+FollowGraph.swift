@@ -243,7 +243,7 @@ extension AppStore {
             .execute()
             .value
         var hydrated: [UUID: Profile] = [:]
-        for profile in await hydrateProfiles(profiles) {
+        for profile in await media.hydrateProfiles(profiles) {
             hydrated[profile.id] = profile
         }
         return hydrated

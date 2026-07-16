@@ -30,7 +30,7 @@ extension AppStore {
             var hydrated: [RepostRequest] = []
             for var request in rows where request.session?.userId == userId {
                 if let requester = request.requester {
-                    request.requester = await hydrateParticipantProfile(requester)
+                    request.requester = await media.hydrateParticipantProfile(requester)
                 }
                 hydrated.append(request)
             }

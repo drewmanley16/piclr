@@ -67,25 +67,14 @@ struct FollowEntryRow: View {
     @State private var confirmBlock = false
 
     var body: some View {
-        HStack(spacing: 14) {
-            ProfileLink(userId: entry.userId, placeholder: entry.profile) {
-                HStack(spacing: 14) {
-                    ProfileAvatar(profile: entry.profile, size: 40)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(entry.profile?.displayName ?? "Unknown")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(Theme.textPrimary)
-                        if let username = entry.profile?.username {
-                            Text("@\(username)")
-                                .font(.subheadline)
-                                .foregroundStyle(Theme.textSecondary)
-                        }
-                    }
-                }
-            }
-
-            Spacer()
-
+        IdentityRow(
+            avatarURL: entry.profile?.avatarURL,
+            initials: entry.profile?.initials ?? "PB",
+            name: entry.profile?.displayName ?? "Unknown",
+            detail: entry.profile.map { "@\($0.username)" },
+            userId: entry.userId,
+            placeholder: entry.profile
+        ) {
             FollowActionButton(entry: entry)
 
             Menu {

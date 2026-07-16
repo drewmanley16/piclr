@@ -126,7 +126,9 @@ struct InviteCancellationUpdate: Encodable {
     let cancelledAt: String
 
     init(cancelledAt: Date) {
-        self.cancelledAt = ISO8601DateFormatter().string(from: cancelledAt)
+        // DateFormatting.iso matches ISO8601DateFormatter's default options
+        // (.withInternetDateTime), so the wire format is unchanged.
+        self.cancelledAt = DateFormatting.iso.string(from: cancelledAt)
     }
 
     enum CodingKeys: String, CodingKey {

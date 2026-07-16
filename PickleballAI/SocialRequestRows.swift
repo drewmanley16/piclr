@@ -80,47 +80,20 @@ struct FollowRequestRow: View {
     var request: FollowRequest
 
     var body: some View {
-        HStack(spacing: 12) {
-            ProfileLink(userId: request.follower?.id, placeholder: request.follower) {
-                HStack(spacing: 12) {
-                    ProfileAvatar(profile: request.follower, size: 44)
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(request.follower?.displayName ?? "Player")
-                            .font(.headline)
-                            .foregroundStyle(Theme.textPrimary)
-                        Text(request.follower.map { "@\($0.username)" } ?? "Wants to follow you")
-                            .font(.subheadline)
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                }
-            }
-
-            Spacer()
-
-            Button {
-                Haptics.tap()
+        IdentityRow(
+            avatarURL: request.follower?.avatarURL,
+            initials: request.follower?.initials ?? "PB",
+            avatarSize: 44,
+            name: request.follower?.displayName ?? "Player",
+            detail: request.follower.map { "@\($0.username)" } ?? "Wants to follow you",
+            userId: request.follower?.id,
+            placeholder: request.follower
+        ) {
+            AcceptDeclineButtons {
                 Task { await store.respondToFollowRequest(request, accept: false) }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.body.weight(.bold))
-                    .foregroundStyle(Theme.textSecondary)
-                    .frame(width: 38, height: 38)
-                    .background(Theme.surfaceElevated, in: Circle())
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                Haptics.success()
+            } onAccept: {
                 Task { await store.respondToFollowRequest(request, accept: true) }
-            } label: {
-                Image(systemName: "checkmark")
-                    .font(.body.weight(.bold))
-                    .foregroundStyle(Theme.background)
-                    .frame(width: 38, height: 38)
-                    .background(Theme.accent, in: Circle())
             }
-            .buttonStyle(.plain)
         }
         .cardStyle()
     }
@@ -131,48 +104,19 @@ struct RepostRequestRow: View {
     var request: RepostRequest
 
     var body: some View {
-        HStack(spacing: 12) {
-            ProfileLink(userId: request.requester?.id) {
-                HStack(spacing: 12) {
-                    ProfileAvatar(participant: request.requester, size: 40)
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(request.requester?.displayName ?? "Player")
-                            .font(.headline)
-                            .foregroundStyle(Theme.textPrimary)
-                        Text("wants to repost \(sessionLabel)")
-                            .font(.subheadline)
-                            .foregroundStyle(Theme.textSecondary)
-                            .lineLimit(1)
-                    }
-                }
-            }
-
-            Spacer()
-
-            Button {
-                Haptics.tap()
+        IdentityRow(
+            avatarURL: request.requester?.avatarURL,
+            initials: request.requester?.initials ?? "?",
+            avatarSize: 40,
+            name: request.requester?.displayName ?? "Player",
+            detail: "wants to repost \(sessionLabel)",
+            userId: request.requester?.id
+        ) {
+            AcceptDeclineButtons {
                 Task { await store.declineRepost(request) }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.body.weight(.bold))
-                    .foregroundStyle(Theme.textSecondary)
-                    .frame(width: 38, height: 38)
-                    .background(Theme.surfaceElevated, in: Circle())
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                Haptics.success()
+            } onAccept: {
                 Task { await store.approveRepost(request) }
-            } label: {
-                Image(systemName: "checkmark")
-                    .font(.body.weight(.bold))
-                    .foregroundStyle(Theme.background)
-                    .frame(width: 38, height: 38)
-                    .background(Theme.accent, in: Circle())
             }
-            .buttonStyle(.plain)
         }
         .cardStyle()
     }

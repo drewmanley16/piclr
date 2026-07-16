@@ -101,8 +101,8 @@ extension AppStore {
                 focus: firstFocus,
                 takeaway: nil,
                 posted: false,
-                startedAt: Self.iso.string(from: draft.startedAt),
-                endedAt: Self.iso.string(from: now)
+                startedAt: DateFormatting.iso.string(from: draft.startedAt),
+                endedAt: DateFormatting.iso.string(from: now)
             )
             try await supabase.from("sessions").insert(session).execute()
 
@@ -211,8 +211,8 @@ extension AppStore {
                 takeaway: draft.takeaway,
                 durationMinutes: max(1, Int(endedAt.timeIntervalSince(draft.startedAt) / 60)),
                 posted: draft.postToFeed,
-                startedAt: Self.iso.string(from: draft.startedAt),
-                endedAt: Self.iso.string(from: endedAt),
+                startedAt: DateFormatting.iso.string(from: draft.startedAt),
+                endedAt: DateFormatting.iso.string(from: endedAt),
                 photoPath: photoPath ?? "",
                 activities: activities
             )

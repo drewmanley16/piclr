@@ -27,7 +27,7 @@ extension AppStore {
             var hydrated: [AppNotification] = []
             for var notification in rows {
                 if let actor = notification.actor {
-                    notification.actor = await hydrateParticipantProfile(actor)
+                    notification.actor = await media.hydrateParticipantProfile(actor)
                 }
                 hydrated.append(notification)
             }

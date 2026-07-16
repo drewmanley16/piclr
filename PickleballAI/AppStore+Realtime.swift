@@ -8,98 +8,102 @@ extension AppStore {
     /// surface in the feed live, without a manual refresh.
     func startRealtime(userId: UUID) {
         stopRealtime()
-        let channel = supabase.channel("public:sessions")
-        realtimeChannel = channel
-        realtimeTask = Task { [weak self] in
+        sessionsRealtime.start(channelName: "public:sessions") { channel in
             let changes = channel.postgresChange(
                 AnyAction.self,
                 schema: "public",
                 table: "sessions",
                 select: ["id", "user_id", "posted"]
             )
-            await channel.subscribe()
-            for await change in changes {
-                self?.handleSessionChange(change, userId: userId)
-                if Task.isCancelled { break }
-            }
+            return [{ [weak self] in
+                await channel.subscribe()
+                for await change in changes {
+                    self?.handleSessionChange(change, userId: userId)
+                    if Task.isCancelled { break }
+                }
+            }]
         }
 
         // Live badge: reload notifications when a new one arrives for this user.
-        let nChannel = supabase.channel("public:notifications:\(userId.uuidString)")
-        notifChannel = nChannel
-        notifTask = Task { [weak self] in
-            let changes = nChannel.postgresChange(
+        notificationsRealtime.start(channelName: "public:notifications:\(userId.uuidString)") { channel in
+            let changes = channel.postgresChange(
                 AnyAction.self,
                 schema: "public",
                 table: "notifications",
                 filter: "user_id=eq.\(userId.uuidString)"
             )
-            await nChannel.subscribe()
-            for await _ in changes {
-                await self?.loadNotifications(userId: userId)
-                if Task.isCancelled { break }
-            }
+            return [{ [weak self] in
+                await channel.subscribe()
+                for await _ in changes {
+                    await self?.loadNotifications(userId: userId)
+                    if Task.isCancelled { break }
+                }
+            }]
         }
 
         // Live follow graph: reload counts/lists when someone follows or
         // requests me (incoming), or accepts my request (outgoing). Two filters
         // on one channel — Realtime allows a single filter per subscription.
-        let fChannel = supabase.channel("public:follows:\(userId.uuidString)")
-        followsChannel = fChannel
-        let incoming = fChannel.postgresChange(
-            AnyAction.self,
-            schema: "public",
-            table: "follows",
-            filter: "followee_id=eq.\(userId.uuidString)"
-        )
-        let outgoing = fChannel.postgresChange(
-            AnyAction.self,
-            schema: "public",
-            table: "follows",
-            filter: "follower_id=eq.\(userId.uuidString)"
-        )
-        followsInTask = Task { [weak self] in
-            await fChannel.subscribe()
-            for await _ in incoming {
-                // Someone followed/requested me → my counts + request banner.
-                await self?.reloadFollowGraph(userId: userId, refreshFeed: false)
-                if Task.isCancelled { break }
-            }
-        }
-        followsOutTask = Task { [weak self] in
-            for await _ in outgoing {
-                // A request I sent was accepted → I now follow them, so their
-                // sessions belong in my feed.
-                await self?.reloadFollowGraph(userId: userId, refreshFeed: true)
-                if Task.isCancelled { break }
-            }
+        followsRealtime.start(channelName: "public:follows:\(userId.uuidString)") { channel in
+            let incoming = channel.postgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "follows",
+                filter: "followee_id=eq.\(userId.uuidString)"
+            )
+            let outgoing = channel.postgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "follows",
+                filter: "follower_id=eq.\(userId.uuidString)"
+            )
+            return [
+                { [weak self] in
+                    await channel.subscribe()
+                    for await _ in incoming {
+                        // Someone followed/requested me → my counts + request banner.
+                        await self?.reloadFollowGraph(userId: userId, refreshFeed: false)
+                        if Task.isCancelled { break }
+                    }
+                },
+                { [weak self] in
+                    for await _ in outgoing {
+                        // A request I sent was accepted → I now follow them, so their
+                        // sessions belong in my feed.
+                        await self?.reloadFollowGraph(userId: userId, refreshFeed: true)
+                        if Task.isCancelled { break }
+                    }
+                }
+            ]
         }
 
         // Live invites: reload when an invite or an RSVP to one changes.
-        let iChannel = supabase.channel("public:session_invites:\(userId.uuidString)")
-        invitesChannel = iChannel
-        let inviteChanges = iChannel.postgresChange(
-            AnyAction.self,
-            schema: "public",
-            table: "session_invites"
-        )
-        let inviteRecipientChanges = iChannel.postgresChange(
-            AnyAction.self,
-            schema: "public",
-            table: "invite_recipients"
-        )
-        invitesTask = Task { [weak self] in
-            await iChannel.subscribe()
-            for await _ in inviteChanges {
-                await self?.loadActiveInvites(userId: userId)
-                if Task.isCancelled { break }
-            }
-        }
-        inviteRecipientsTask = Task { [weak self] in
-            for await _ in inviteRecipientChanges {
-                await self?.loadActiveInvites(userId: userId)
-                if Task.isCancelled { break }
-            }
+        invitesRealtime.start(channelName: "public:session_invites:\(userId.uuidString)") { channel in
+            let inviteChanges = channel.postgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "session_invites"
+            )
+            let inviteRecipientChanges = channel.postgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "invite_recipients"
+            )
+            return [
+                { [weak self] in
+                    await channel.subscribe()
+                    for await _ in inviteChanges {
+                        await self?.loadActiveInvites(userId: userId)
+                        if Task.isCancelled { break }
+                    }
+                },
+                { [weak self] in
+                    for await _ in inviteRecipientChanges {
+                        await self?.loadActiveInvites(userId: userId)
+                        if Task.isCancelled { break }
+                    }
+                }
+            ]
         }
     }
 
@@ -192,34 +196,10 @@ extension AppStore {
         realtimeNeedsFeedRefresh = false
         realtimeNeedsMySessionsRefresh = false
         realtimeNeedsDiscoverRefresh = false
-        realtimeTask?.cancel()
-        realtimeTask = nil
-        notifTask?.cancel()
-        notifTask = nil
-        followsInTask?.cancel()
-        followsInTask = nil
-        followsOutTask?.cancel()
-        followsOutTask = nil
-        invitesTask?.cancel()
-        invitesTask = nil
-        inviteRecipientsTask?.cancel()
-        inviteRecipientsTask = nil
-        if let channel = invitesChannel {
-            invitesChannel = nil
-            Task { await channel.unsubscribe() }
-        }
-        if let channel = realtimeChannel {
-            realtimeChannel = nil
-            Task { await channel.unsubscribe() }
-        }
-        if let channel = notifChannel {
-            notifChannel = nil
-            Task { await channel.unsubscribe() }
-        }
-        if let channel = followsChannel {
-            followsChannel = nil
-            Task { await channel.unsubscribe() }
-        }
+        sessionsRealtime.stop()
+        notificationsRealtime.stop()
+        followsRealtime.stop()
+        invitesRealtime.stop()
     }
 
     // MARK: - Comments realtime
@@ -228,29 +208,23 @@ extension AppStore {
     /// the view can reload. Keeps Supabase realtime plumbing (channels, filters,
     /// subscribe lifecycle) out of the view layer. Pair with `stopCommentsRealtime()`.
     func startCommentsRealtime(sessionId: UUID, onInsert: @escaping () async -> Void) {
-        stopCommentsRealtime()
-        let channel = supabase.channel("comments:\(sessionId.uuidString)")
-        commentsChannel = channel
-        commentsTask = Task {
+        commentsRealtime.start(channelName: "comments:\(sessionId.uuidString)") { channel in
             let changes = channel.postgresChange(
                 InsertAction.self,
                 schema: "public",
                 table: "comments",
                 filter: "session_id=eq.\(sessionId.uuidString)"
             )
-            await channel.subscribe()
-            for await _ in changes {
-                await onInsert()
-            }
+            return [{
+                await channel.subscribe()
+                for await _ in changes {
+                    await onInsert()
+                }
+            }]
         }
     }
 
     func stopCommentsRealtime() {
-        commentsTask?.cancel()
-        commentsTask = nil
-        if let channel = commentsChannel {
-            commentsChannel = nil
-            Task { await channel.unsubscribe() }
-        }
+        commentsRealtime.stop()
     }
 }

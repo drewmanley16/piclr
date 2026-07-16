@@ -20,14 +20,14 @@ extension AppStore {
                 .from("session_invites")
                 .select(Self.selectInvite)
                 .is("cancelled_at", value: nil)
-                .gte("scheduled_at", value: Self.iso.string(from: Date()))
+                .gte("scheduled_at", value: DateFormatting.iso.string(from: Date()))
                 .order("scheduled_at", ascending: true)
                 .execute()
                 .value
             guard currentProfile?.id == userId else { return }
             var hydrated: [SessionInvite] = []
             for var invite in rows {
-                if let host = invite.host { invite.host = await hydrateParticipantProfile(host) }
+                if let host = invite.host { invite.host = await media.hydrateParticipantProfile(host) }
                 hydrated.append(invite)
             }
             activeInvites = hydrated
@@ -48,7 +48,7 @@ extension AppStore {
                 .execute()
                 .value
             guard var invite = rows.first else { return nil }
-            if let host = invite.host { invite.host = await hydrateParticipantProfile(host) }
+            if let host = invite.host { invite.host = await media.hydrateParticipantProfile(host) }
             return invite
         } catch {
             reportError(error)

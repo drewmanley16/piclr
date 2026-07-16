@@ -65,18 +65,12 @@ final class AppStore: ObservableObject {
     let selectWithCounts = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(\(AppStore.selectProfileLite))))"
     let selectFeedPreview = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), preview_comments:comments(*, author:profiles!comments_user_id_fkey(\(AppStore.selectProfileLite))), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(\(AppStore.selectProfileLite))))"
 
-    var realtimeChannel: RealtimeChannelV2?
-    var realtimeTask: Task<Void, Never>?
-    var notifChannel: RealtimeChannelV2?
-    var notifTask: Task<Void, Never>?
-    var followsChannel: RealtimeChannelV2?
-    var followsInTask: Task<Void, Never>?
-    var followsOutTask: Task<Void, Never>?
-    var commentsChannel: RealtimeChannelV2?
-    var commentsTask: Task<Void, Never>?
-    var invitesChannel: RealtimeChannelV2?
-    var invitesTask: Task<Void, Never>?
-    var inviteRecipientsTask: Task<Void, Never>?
+    // Realtime channel + listener-task lifecycles (see AppStore+Realtime.swift).
+    let sessionsRealtime = RealtimeSubscription()
+    let notificationsRealtime = RealtimeSubscription()
+    let followsRealtime = RealtimeSubscription()
+    let invitesRealtime = RealtimeSubscription()
+    let commentsRealtime = RealtimeSubscription()
     var signedInBackgroundTask: Task<Void, Never>?
     var isFeedRequestInFlight = false
     var pendingFeedRefresh = false
@@ -89,20 +83,8 @@ final class AppStore: ObservableObject {
     var realtimeNeedsMySessionsRefresh = false
     var realtimeNeedsDiscoverRefresh = false
 
-    struct CachedMediaURL {
-        let value: String
-        let validUntil: Date
-    }
-
-    var mediaURLCache: [String: CachedMediaURL] = [:]
-    let signedURLLifetime = 900
-    let signedURLRefreshLeeway: TimeInterval = 60
-
-    static let iso: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime]
-        return f
-    }()
+    /// Signed-URL cache + `hydrate*` helpers for avatars and post photos.
+    let media = MediaHydrator()
 
     static let pushLogger = Logger(subsystem: "com.pickleball.ai", category: "Push")
     static let feedLogger = Logger(subsystem: "com.pickleball.ai", category: "FeedPerf")

@@ -411,6 +411,88 @@ struct ProfileLink<Content: View>: View {
     }
 }
 
+/// The one identity block for person rows: avatar + display-name headline +
+/// optional subtitle, with a trailing `@ViewBuilder` slot for action controls
+/// (accept/decline, follow, overflow menu). Every follower / request / candidate
+/// row is built on this so fonts, spacing, and avatar sizing don't drift per
+/// screen. Pass a `userId` to make the avatar+name block tap-to-open the profile
+/// (routed through `ProfileLink`); the trailing actions stay outside that link so
+/// they remain independently tappable.
+struct IdentityRow<Trailing: View>: View {
+    var avatarURL: String?
+    var initials: String
+    var avatarSize: CGFloat = 40
+    var name: String
+    /// Secondary line (e.g. "@username" or "wants to repost …"). Omitted when nil.
+    var detail: String?
+    /// When set, the avatar+name block navigates to this user's profile.
+    var userId: UUID? = nil
+    var placeholder: Profile? = nil
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ProfileLink(userId: userId, placeholder: placeholder) {
+                HStack(spacing: 12) {
+                    ProfileAvatar(url: avatarURL, initials: initials, size: avatarSize)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(name)
+                            .font(.headline)
+                            .foregroundStyle(Theme.textPrimary)
+                        if let detail {
+                            Text(detail)
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.textSecondary)
+                                .lineLimit(1)
+                        }
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+
+            Spacer(minLength: 0)
+
+            trailing
+        }
+    }
+}
+
+/// The paired decline-(✕) / accept-(✓) circle buttons shown on incoming request
+/// rows (follow requests, repost requests). Fires a light tap haptic on decline
+/// and a success haptic on accept before invoking the handlers.
+struct AcceptDeclineButtons: View {
+    var onDecline: () -> Void
+    var onAccept: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Button {
+                Haptics.tap()
+                onDecline()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(width: 38, height: 38)
+                    .background(Theme.surfaceElevated, in: Circle())
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                Haptics.success()
+                onAccept()
+            } label: {
+                Image(systemName: "checkmark")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(Theme.background)
+                    .frame(width: 38, height: 38)
+                    .background(Theme.accent, in: Circle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
+
 /// Two-or-more-way capsule segmented control — the discoverable replacement for
 /// hiding a mode switch behind a menu. Selection is a plain equatable value so
 /// callers bind their own enum. Fires a light haptic on change.
