@@ -6,6 +6,8 @@ struct Profile: Identifiable, Decodable, Hashable {
     let id: UUID
     var username: String
     var displayName: String
+    var firstName: String?
+    var lastName: String?
     var avatarInitials: String?
     var avatarURL: String?
     var avatarPath: String?
@@ -23,6 +25,8 @@ struct Profile: Identifiable, Decodable, Hashable {
     enum CodingKeys: String, CodingKey {
         case id, username
         case displayName = "display_name"
+        case firstName = "first_name"
+        case lastName = "last_name"
         case avatarInitials = "avatar_initials"
         case avatarURL = "avatar_url"
         case avatarPath = "avatar_path"
@@ -52,6 +56,8 @@ struct Profile: Identifiable, Decodable, Hashable {
         id: UUID,
         username: String,
         displayName: String,
+        firstName: String? = nil,
+        lastName: String? = nil,
         avatarInitials: String? = nil,
         avatarURL: String? = nil,
         avatarPath: String? = nil
@@ -59,6 +65,8 @@ struct Profile: Identifiable, Decodable, Hashable {
         self.id = id
         self.username = username
         self.displayName = displayName
+        self.firstName = firstName
+        self.lastName = lastName
         self.avatarInitials = avatarInitials
         self.avatarURL = avatarURL
         self.avatarPath = avatarPath
@@ -941,6 +949,8 @@ struct NewLike: Encodable {
 }
 
 struct ProfileUpdate: Encodable {
+    let firstName: String
+    let lastName: String
     let displayName: String
     let homeCourt: String?
     let rating: Double?
@@ -948,6 +958,8 @@ struct ProfileUpdate: Encodable {
     let birthday: String?
 
     enum CodingKeys: String, CodingKey {
+        case firstName = "first_name"
+        case lastName = "last_name"
         case displayName = "display_name"
         case homeCourt = "home_court"
         case rating
@@ -1024,6 +1036,8 @@ struct DeleteAccountResponse: Decodable {
 }
 
 struct CompleteOnboardingRequest: Encodable {
+    let firstName: String
+    let lastName: String
     let displayName: String
     let username: String
     let avatarInitials: String
@@ -1031,6 +1045,8 @@ struct CompleteOnboardingRequest: Encodable {
     let duprRating: Double?
 
     enum CodingKeys: String, CodingKey {
+        case firstName = "first_name"
+        case lastName = "last_name"
         case displayName = "display_name"
         case username
         case avatarInitials = "avatar_initials"
@@ -1041,6 +1057,20 @@ struct CompleteOnboardingRequest: Encodable {
 
 struct CompleteOnboardingResponse: Decodable {
     let profile: Profile
+}
+
+struct UsernameAvailabilityRequest: Encodable {
+    let username: String
+    let checkUsernameOnly: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case username
+        case checkUsernameOnly = "check_username_only"
+    }
+}
+
+struct UsernameAvailabilityResponse: Decodable {
+    let available: Bool
 }
 
 struct MatchContactsRequest: Encodable {

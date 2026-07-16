@@ -16,6 +16,8 @@ revoke all on schema private from anon, authenticated;
 create table if not exists public.profiles (
   id                       uuid primary key references auth.users(id) on delete cascade,
   username                 text unique not null,
+  first_name               text,
+  last_name                text,
   display_name             text not null,
   avatar_initials          text,
   avatar_url               text,
@@ -33,6 +35,8 @@ create table if not exists public.profiles (
 
 -- Keep existing projects in sync when this schema is re-run.
 alter table public.profiles add column if not exists avatar_url text;
+alter table public.profiles add column if not exists first_name text;
+alter table public.profiles add column if not exists last_name text;
 alter table public.profiles add column if not exists skill_level text;
 alter table public.profiles add column if not exists onboarding_completed_at timestamptz;
 alter table public.profiles add column if not exists paddle text;
@@ -42,6 +46,42 @@ alter table public.profiles add column if not exists weight_pounds numeric;
 alter table public.profiles add column if not exists shoe_size numeric;
 create unique index if not exists profiles_username_lower_idx on public.profiles (lower(username));
 create index if not exists profiles_onboarding_idx on public.profiles (onboarding_completed_at);
+
+-- Keep structured names compatible with older app versions that only update
+-- display_name. New clients update all three columns together.
+create or replace function private.sync_profile_name_parts()
+returns trigger
+language plpgsql
+set search_path = public, private
+as $$
+begin
+  if tg_op = 'INSERT' then
+    if new.first_name is null and new.last_name is null then
+      new.first_name := nullif(substring(btrim(new.display_name) from '^[^[:space:]]+'), '');
+      new.last_name := nullif(
+        btrim(regexp_replace(btrim(new.display_name), '^[^[:space:]]+[[:space:]]*', '')),
+        ''
+      );
+    end if;
+  elsif new.display_name is distinct from old.display_name
+    and new.first_name is not distinct from old.first_name
+    and new.last_name is not distinct from old.last_name then
+    new.first_name := nullif(substring(btrim(new.display_name) from '^[^[:space:]]+'), '');
+    new.last_name := nullif(
+      btrim(regexp_replace(btrim(new.display_name), '^[^[:space:]]+[[:space:]]*', '')),
+      ''
+    );
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists sync_profile_name_parts on public.profiles;
+create trigger sync_profile_name_parts
+  before insert or update of display_name on public.profiles
+  for each row execute function private.sync_profile_name_parts();
+
 
 -- A session is the loggable + postable unit. It shows in the feed when posted = true.
 -- A session is also a container of activities (practice/match) written on-device.
