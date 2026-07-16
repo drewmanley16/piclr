@@ -362,7 +362,6 @@ struct ProfileView: View {
 
     private var dashboard: some View {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
-            DashboardTile(icon: "chart.line.uptrend.xyaxis", label: "Statistics") { activeSheet = .stats }
             DashboardTile(icon: "trophy.fill", label: "Leaderboard") { activeSheet = .leaderboard }
             DashboardTile(icon: "bag.fill", label: "Gear") { activeSheet = .gear }
             DashboardTile(icon: "figure.stand", label: "Measures") { activeSheet = .measures }
@@ -549,10 +548,13 @@ struct DashboardTile: View {
                 Text(label)
                     .font(.body.weight(.semibold))
                     .foregroundStyle(Theme.textPrimary)
-                Spacer()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
             }
-            .padding(16)
+            .padding(.horizontal, 16)
             .frame(maxWidth: .infinity)
+            .frame(height: 56)
             .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
         }
