@@ -12,8 +12,8 @@ packages:
     from: "2.0.0"
 settings:
   base:
-    MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "14"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "15"
     DEVELOPMENT_TEAM: "X9H68STU8F"
     CODE_SIGN_STYLE: Automatic
 targets:

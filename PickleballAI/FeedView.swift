@@ -207,8 +207,8 @@ struct FindFriendsSheet: View {
 
                     ShareLink(
                         item: URL(string: AppLinks.invite)!,
-                        subject: Text("Get early access to pickleball.ai"),
-                        message: Text("Get early access to pickleball.ai — log every match with your crew.")
+                        subject: Text("Join me on pickleball.ai"),
+                        message: Text("Join me on pickleball.ai — log every match with your crew.")
                     ) {
                         Label("Share invite link", systemImage: "square.and.arrow.up")
                             .font(.headline)

@@ -21,6 +21,13 @@ BUNDLE_ID="com.pickleball.ai"
 : "${ASC_KEY_ID:?Set ASC_KEY_ID to your App Store Connect API key id}"
 : "${ASC_ISSUER_ID:?Set ASC_ISSUER_ID to your App Store Connect issuer id}"
 
+# Build number is derived from the commit count so project.yml never needs a
+# hand-bump per upload. Build numbers 1–14 were already used by manual uploads,
+# so the count is well past that now; if it were ever ≤ 14, bump BASE above 14.
+BASE=0
+BUILD_NUMBER=$((BASE + $(git rev-list --count HEAD)))
+echo "==> Build number: $BUILD_NUMBER"
+
 echo "==> Archiving (device, Release)…"
 xcodebuild -project "$PROJECT" -scheme "$SCHEME" \
   -destination 'generic/platform=iOS' \
@@ -29,6 +36,7 @@ xcodebuild -project "$PROJECT" -scheme "$SCHEME" \
   -authenticationKeyID "$ASC_KEY_ID" \
   -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
   -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
+  CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
   clean archive
 
 # ExportOptions.plist uses manual signing with the "pickleball ai App Store"
