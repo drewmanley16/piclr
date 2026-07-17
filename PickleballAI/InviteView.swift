@@ -306,7 +306,10 @@ struct InviteDetailView: View {
     @State private var isCancelling = false
 
     private var invite: SessionInvite? {
-        fetchedInvite ?? store.activeInvites.first { $0.id == inviteId } ?? preloaded
+        // Prefer the store's copy: after any action (RSVP, cancel) the store is
+        // refreshed, while `fetchedInvite` is a snapshot from the deep-link load
+        // and would otherwise keep rendering the pre-action state.
+        store.activeInvites.first { $0.id == inviteId } ?? fetchedInvite ?? preloaded
     }
 
     private var isHost: Bool { invite?.hostId == store.currentProfile?.id }
