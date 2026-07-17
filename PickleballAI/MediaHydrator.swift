@@ -4,11 +4,18 @@ import Supabase
 
 // MARK: - Media hydration
 
-/// Owns the signed-URL cache and the `hydrate*` helpers that turn private
-/// Storage object paths (avatars, post photos) into short-lived signed URLs on
-/// read models. Extracted from `AppStore` so hydration is one shared dependency
-/// (`store.media.hydrateSessions(...)`) rather than call-after-every-fetch
-/// discipline scattered across the store's extensions.
+/// Owns the signed-URL cache and the `hydrate*` helpers that turn Storage object
+/// paths into renderable URLs on read models. Extracted from `AppStore` so
+/// hydration is one shared dependency (`store.media.hydrateSessions(...)`) rather
+/// than call-after-every-fetch discipline scattered across the store's extensions.
+///
+/// Two buckets, two strategies:
+/// - **avatars** is PUBLIC. Its URLs are *derived* synchronously from the object
+///   path (`getPublicURL`) — no network round-trip, no signing, no cache needed.
+///   `avatar_path` is the single source of truth; the stored `avatar_url` column
+///   is kept truthful for older builds but the app never depends on it.
+/// - **post-photos** is PRIVATE. Its URLs are short-lived signed URLs from a
+///   batch signing request, memoized in `mediaURLCache`.
 ///
 /// Deliberately holds no reference back to `AppStore`: signing failures are
 /// best-effort (logged, then the path resolves to `nil`), never surfaced as a
@@ -35,12 +42,10 @@ final class MediaHydrator {
     }
 
     func hydrateProfiles(_ profiles: [Profile]) async -> [Profile] {
-        let paths = Set(profiles.compactMap(\.avatarPath))
-        let urls = await signedMediaURLs(bucket: "avatars", paths: paths)
         return profiles.map { profile in
             guard let path = profile.avatarPath else { return profile }
             var hydrated = profile
-            hydrated.avatarURL = urls[path]
+            hydrated.avatarURL = Self.publicAvatarURL(for: path)
             return hydrated
         }
     }
@@ -48,15 +53,15 @@ final class MediaHydrator {
     func hydrateParticipantProfile(_ profile: ParticipantProfile) async -> ParticipantProfile {
         guard let path = profile.avatarPath else { return profile }
         var hydrated = profile
-        hydrated.avatarURL = await signedMediaURLs(bucket: "avatars", paths: [path])[path]
+        hydrated.avatarURL = Self.publicAvatarURL(for: path)
         return hydrated
     }
 
-    /// Sign a batch of bare avatar Storage paths into short-lived URLs (path →
-    /// URL), reusing the shared signed-URL cache and one signing request. Used by
-    /// models that carry only a path (e.g. blocked accounts).
+    /// Map a batch of bare avatar Storage paths to their derived public URLs
+    /// (path → URL). Used by models that carry only a path (e.g. blocked
+    /// accounts). No network — the avatars bucket is public.
     func signedAvatarURLs(forPaths paths: Set<String>) async -> [String: String] {
-        await signedMediaURLs(bucket: "avatars", paths: paths)
+        Self.publicAvatarURLs(for: paths)
     }
 
     func hydrateComment(_ comment: Comment) async -> Comment {
@@ -83,11 +88,10 @@ final class MediaHydrator {
             }
         }
 
-        let avatarPathsToSign = avatarPaths
-        let photoPathsToSign = photoPaths
-        async let avatarURLs = signedMediaURLs(bucket: "avatars", paths: avatarPathsToSign)
-        async let photoURLs = signedMediaURLs(bucket: "post-photos", paths: photoPathsToSign)
-        let (avatars, photos) = await (avatarURLs, photoURLs)
+        // Avatars are public → derived synchronously. Only post photos (private)
+        // need the signing round-trip.
+        let avatars = Self.publicAvatarURLs(for: avatarPaths)
+        let photos = await signedMediaURLs(bucket: "post-photos", paths: photoPaths)
 
         return sessions.map { session in
             var copy = session
@@ -119,6 +123,24 @@ final class MediaHydrator {
             }
             return copy
         }
+    }
+
+    /// Derive the public URL for an avatar Storage path. The avatars bucket is
+    /// public, so this is a synchronous string build (no signing, no network).
+    /// Returns `nil` only if the SDK can't form a URL (malformed config), which
+    /// matches the prior best-effort behavior of resolving to `nil`.
+    static func publicAvatarURL(for path: String) -> String? {
+        (try? supabase.storage.from("avatars").getPublicURL(path: path))?.absoluteString
+    }
+
+    /// Batch variant of `publicAvatarURL(for:)` (path → URL), skipping any path
+    /// that fails to resolve.
+    static func publicAvatarURLs(for paths: Set<String>) -> [String: String] {
+        var resolved: [String: String] = [:]
+        for path in paths {
+            if let url = publicAvatarURL(for: path) { resolved[path] = url }
+        }
+        return resolved
     }
 
     private func signedMediaURLs(bucket: String, paths: Set<String>) async -> [String: String] {

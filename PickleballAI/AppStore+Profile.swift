@@ -125,16 +125,24 @@ extension AppStore {
                 // Unique immutable filename → safe to cache for a year.
                 options: FileOptions(cacheControl: "31536000", contentType: "image/jpeg")
             )
+            // `avatar_path` is the source of truth; the app derives avatar URLs
+            // from it. Keep the stored `avatar_url` column truthful too so older
+            // installed builds (which read the column directly) don't 404 on the
+            // just-deleted old object.
+            var update = ["avatar_path": path]
+            if let publicURL = MediaHydrator.publicAvatarURL(for: path) {
+                update["avatar_url"] = publicURL
+            }
             try await supabase.from("profiles")
-                .update(["avatar_path": path])
+                .update(update)
                 .eq("id", value: uid.uuidString)
                 .execute()
             if let oldPath, oldPath != path {
                 try? await supabase.storage.from("avatars").remove(paths: [oldPath])
             }
             await loadProfile(userId: uid)
-            // Refresh embedded author rows so the new signed avatar appears
-            // everywhere without making photo selection wait on every feed.
+            // Refresh embedded author rows so the new avatar appears everywhere
+            // without making photo selection wait on every feed.
             Task { [weak self] in
                 guard let self else { return }
                 await self.loadFeed()
