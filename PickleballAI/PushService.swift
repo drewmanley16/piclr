@@ -1,3 +1,4 @@
+import os
 import UIKit
 import UserNotifications
 
@@ -67,6 +68,8 @@ final class PushService: NSObject, ObservableObject {
 }
 
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    private static let logger = Logger(subsystem: "com.pickleball.ai", category: "Push")
+
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -86,7 +89,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         _ application: UIApplication,
         didFailToRegisterForRemoteNotificationsWithError error: Error
     ) {
-        print("[Push] APNs registration failed: \(error.localizedDescription)")
+        Self.logger.error("APNs registration failed: \(error.localizedDescription, privacy: .public)")
     }
 
     // Show banners even when the app is in the foreground.

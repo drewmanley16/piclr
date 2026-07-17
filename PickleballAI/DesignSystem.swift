@@ -119,6 +119,58 @@ struct StatPill: View {
     }
 }
 
+struct SocialAction: View {
+    var icon: String
+    var count: Int?
+
+    var body: some View {
+        Button {
+        } label: {
+            SocialLabel(icon: icon, count: count)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct SocialLabel: View {
+    var icon: String
+    var count: Int?
+    var isHighlighted = false
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.body.weight(.semibold))
+                // Spring "pop" when the icon becomes highlighted (a like landing).
+                .scaleEffect(isHighlighted ? 1.18 : 1)
+                .animation(.spring(response: 0.28, dampingFraction: 0.45), value: isHighlighted)
+            if let count, count > 0 {
+                Text("\(count)")
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+                    .contentTransition(.numericText(value: Double(count)))
+                    .animation(.snappy, value: count)
+            }
+        }
+        .foregroundStyle(isHighlighted ? Theme.accent : Theme.textSecondary)
+        .frame(minHeight: 44)
+        .animation(.easeInOut(duration: 0.16), value: isHighlighted)
+    }
+}
+
+struct FocusChip: View {
+    var title: String
+
+    var body: some View {
+        Text(title)
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 12)
+            .frame(minHeight: 32)
+            .background(Theme.accentSoft, in: Capsule())
+            .foregroundStyle(Theme.accent)
+    }
+}
+
 /// Loads a remote image with retries so a slow/blipped first load doesn't get
 /// stuck on the placeholder forever (AsyncImage never retries a failed load).
 struct RemoteImage: View {
@@ -185,32 +237,51 @@ struct ProfileAvatar: View {
     var url: String?
     var initials: String
     var size: CGFloat
-    /// The user this avatar represents, when known. Enables `linked`.
+    /// The user this avatar represents. A non-nil id makes the avatar navigate to
+    /// that profile unless `unlinked` opts out.
     var userId: UUID?
-    /// When true (and `userId` is known), tapping the avatar pushes that user's
-    /// profile — routed through `ProfileLink` so navigation stays defined in one
-    /// place. Off by default so avatars in pickers, editors, or rows that are
-    /// already navigation links don't double-navigate.
-    var linked: Bool = false
+    /// Opt out of navigation for an avatar inside an already-tappable container
+    /// (an enclosing `ProfileLink`, card, button, or picker row) where a second
+    /// tap target would double-navigate or fight the parent gesture. Own-profile
+    /// headers use it too — navigating to yourself from yourself is noise.
+    var unlinked: Bool = false
 
-    init(url: String?, initials: String, size: CGFloat = 44, userId: UUID? = nil, linked: Bool = false) {
+    /// A real user's avatar. `userId` is required so a person's avatar can't
+    /// silently become inert — use `init(guest:)`/`init(preview:)` for the
+    /// genuinely profile-less cases instead.
+    init(url: String?, initials: String, size: CGFloat = 44, userId: UUID?, unlinked: Bool = false) {
         self.url = url
         self.initials = initials.isEmpty ? "PB" : initials
         self.size = size
         self.userId = userId
-        self.linked = linked
+        self.unlinked = unlinked
     }
 
-    init(profile: Profile?, size: CGFloat = 44, linked: Bool = false) {
-        self.init(url: profile?.avatarURL, initials: profile?.initials ?? "PB", size: size, userId: profile?.id, linked: linked)
+    init(profile: Profile?, size: CGFloat = 44, unlinked: Bool = false) {
+        self.init(url: profile?.avatarURL, initials: profile?.initials ?? "PB", size: size, userId: profile?.id, unlinked: unlinked)
     }
 
-    init(participant: ParticipantProfile?, size: CGFloat = 44, linked: Bool = false) {
-        self.init(url: participant?.avatarURL, initials: participant?.initials ?? "?", size: size, userId: participant?.id, linked: linked)
+    init(participant: ParticipantProfile?, size: CGFloat = 44, unlinked: Bool = false) {
+        self.init(url: participant?.avatarURL, initials: participant?.initials ?? "?", size: size, userId: participant?.id, unlinked: unlinked)
+    }
+
+    init(person: PersonRef, size: CGFloat = 44, unlinked: Bool = false) {
+        self.init(url: person.avatarURL, initials: person.initials, size: size, userId: person.profileId, unlinked: unlinked)
+    }
+
+    /// A guest player with no account: initials only, never navigable.
+    init(guest initials: String, size: CGFloat = 44) {
+        self.init(url: nil, initials: initials, size: size, userId: nil)
+    }
+
+    /// Fake/marketing avatar for previews and onboarding: initials only, never
+    /// navigable. Renders identically to `guest`; the name states intent.
+    init(preview initials: String, size: CGFloat = 44) {
+        self.init(url: nil, initials: initials, size: size, userId: nil)
     }
 
     var body: some View {
-        if linked, let userId {
+        if !unlinked, let userId {
             ProfileLink(userId: userId) { circle }
         } else {
             circle
@@ -355,6 +426,112 @@ struct ProfileLink<Content: View>: View {
             .buttonStyle(.plain)
         } else {
             content
+        }
+    }
+}
+
+/// The one identity block for person rows: avatar + display-name headline +
+/// optional subtitle, with a trailing `@ViewBuilder` slot for action controls
+/// (accept/decline, follow, overflow menu). Every follower / request / candidate
+/// row is built on this so fonts, spacing, and avatar sizing don't drift per
+/// screen. Pass a `userId` to make the avatar+name block tap-to-open the profile
+/// (routed through `ProfileLink`); the trailing actions stay outside that link so
+/// they remain independently tappable.
+struct IdentityRow<Trailing: View>: View {
+    var avatarURL: String?
+    var initials: String
+    var avatarSize: CGFloat = 40
+    var name: String
+    /// Secondary line (e.g. "@username" or "wants to repost …"). Omitted when nil.
+    var detail: String?
+    /// When set, the avatar+name block navigates to this user's profile.
+    var userId: UUID? = nil
+    var placeholder: Profile? = nil
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ProfileLink(userId: userId, placeholder: placeholder) {
+                HStack(spacing: 12) {
+                    ProfileAvatar(url: avatarURL, initials: initials, size: avatarSize, userId: userId, unlinked: true)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(name)
+                            .font(.headline)
+                            .foregroundStyle(Theme.textPrimary)
+                        if let detail {
+                            Text(detail)
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.textSecondary)
+                                .lineLimit(1)
+                        }
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+
+            Spacer(minLength: 0)
+
+            trailing
+        }
+    }
+}
+
+extension IdentityRow {
+    /// Build a person row straight from a `PersonRef`. A guest ref (nil profile
+    /// id) renders non-navigable by construction; pass `unlinked: true` to
+    /// suppress navigation even for a real account.
+    init(
+        person: PersonRef,
+        avatarSize: CGFloat = 40,
+        detail: String? = nil,
+        unlinked: Bool = false,
+        @ViewBuilder trailing: () -> Trailing
+    ) {
+        self.init(
+            avatarURL: person.avatarURL,
+            initials: person.initials,
+            avatarSize: avatarSize,
+            name: person.displayName,
+            detail: detail ?? person.handle,
+            userId: unlinked ? nil : person.profileId,
+            placeholder: nil,
+            trailing: trailing
+        )
+    }
+}
+
+/// The paired decline-(✕) / accept-(✓) circle buttons shown on incoming request
+/// rows (follow requests, repost requests). Fires a light tap haptic on decline
+/// and a success haptic on accept before invoking the handlers.
+struct AcceptDeclineButtons: View {
+    var onDecline: () -> Void
+    var onAccept: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Button {
+                Haptics.tap()
+                onDecline()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(width: 38, height: 38)
+                    .background(Theme.surfaceElevated, in: Circle())
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                Haptics.success()
+                onAccept()
+            } label: {
+                Image(systemName: "checkmark")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(Theme.background)
+                    .frame(width: 38, height: 38)
+                    .background(Theme.accent, in: Circle())
+            }
+            .buttonStyle(.plain)
         }
     }
 }

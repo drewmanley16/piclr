@@ -2,10 +2,11 @@ import Foundation
 
 /// Your win/loss record against or alongside one player (member or guest).
 struct PlayerRecord: Identifiable {
+    /// Aggregation key (member uid or `guest:<name>`). Distinct from
+    /// `person.id` so the dedup keying stays stable across identity changes.
     let id: String
-    let name: String
-    let handle: String?
-    let avatarInitials: String
+    /// Real identity for avatar + navigation; guests carry initials only.
+    let person: PersonRef
     var wins: Int
     var losses: Int
 
@@ -18,9 +19,8 @@ struct PlayerRecord: Identifiable {
 /// current streak and when you last met. This is what makes an opponent a rival.
 struct Rivalry: Identifiable {
     let id: String
-    let name: String
-    let handle: String?
-    let avatarInitials: String
+    /// Real identity for avatar + navigation; guests carry initials only.
+    let person: PersonRef
     let wins: Int
     let losses: Int
     /// Positive = you're on a win streak over them, negative = they're on you.
@@ -112,7 +112,7 @@ struct SessionStats {
             }
             let r = entry.identity
             return Rivalry(
-                id: r.id, name: r.name, handle: r.handle, avatarInitials: r.avatarInitials,
+                id: r.id, person: r.person,
                 wins: r.wins, losses: r.losses, streak: h2h,
                 lastPlayed: games.first?.date ?? .distantPast
             )
@@ -131,22 +131,16 @@ struct SessionStats {
     }
 
     private static func bump(_ dict: inout [String: PlayerRecord], _ p: ActivityParticipant, won: Bool) {
-        let key = p.profile?.id.uuidString ?? "guest:\(p.guestName ?? p.id.uuidString)"
-        var record = dict[key] ?? PlayerRecord(
-            id: key,
-            name: p.displayName,
-            handle: p.handle,
-            avatarInitials: initials(for: p),
-            wins: 0,
-            losses: 0
-        )
+        let key = Self.key(for: p)
+        var record = dict[key] ?? PlayerRecord(id: key, person: person(for: p), wins: 0, losses: 0)
         if won { record.wins += 1 } else { record.losses += 1 }
         dict[key] = record
     }
 
-    private static func initials(for p: ActivityParticipant) -> String {
-        if let a = p.profile?.avatarInitials, !a.isEmpty { return a }
-        let letters = p.displayName.split(separator: " ").prefix(2).compactMap { $0.first }
-        return letters.isEmpty ? "?" : String(letters).uppercased()
+    /// Real identity for a participant: a linked profile when present, else a
+    /// guest ref (initials only, non-navigable by construction).
+    private static func person(for p: ActivityParticipant) -> PersonRef {
+        if let profile = p.profile { return PersonRef(participant: profile) }
+        return PersonRef(guestName: p.displayName)
     }
 }

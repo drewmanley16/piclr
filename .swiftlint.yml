@@ -1,0 +1,51 @@
+# SwiftLint config for pickleball.ai
+#
+# These are TRIPWIRES, not a style linter. We intentionally run ONLY our own
+# custom regex rules (see `only_rules` below) — every default/style rule is
+# disabled so this never floods PRs with 200 cosmetic violations. Each rule
+# encodes a UI-consistency invariant from Phase 4 of CODE_REVIEW_PLAN.md and is
+# verified to have zero violations on the day it lands (`scripts/lint.sh`).
+
+included:
+  - PickleballAI
+  - PickleballAIWidget
+
+# Run our custom rules and nothing else.
+only_rules:
+  - custom_rules
+
+custom_rules:
+  avatar_nil_url:
+    name: "ProfileAvatar(url: nil)"
+    regex: 'ProfileAvatar\(url:\s*nil'
+    message: "Use ProfileAvatar(guest:)/(preview:) for profile-less avatars, or pass the real URL."
+    severity: error
+
+  hardcoded_color:
+    name: "Hardcoded color"
+    # (?<!UI) skips UIColor.white/.black (appearance proxies are unavoidable).
+    # DesignSystem.swift defines the Theme tokens; PickleballAIWidget.swift is
+    # the widget's own token file (it can't import the app's Theme).
+    regex: '(?<!UI)Color\(red:|(?<!UI)Color\.white|(?<!UI)Color\.black|\.foregroundColor\(\.'
+    message: "Use Theme tokens."
+    excluded: '.*(DesignSystem|PickleballAIWidget)\.swift'
+    severity: error
+
+  inline_dateformatter:
+    name: "Inline DateFormatter"
+    # Excluded files hold the cached `static let` formatter declarations that
+    # legitimately construct these (per-call construction is what we forbid).
+    regex: '(DateFormatter|ISO8601DateFormatter)\(\)'
+    message: "Create formatters as static let, not per-call."
+    excluded: '.*(SessionModels|WorkoutCalendarCard|SettingsProfileView)\.swift'
+    severity: error
+
+  manual_profile_nav:
+    name: "Manual profile navigation"
+    # Excluded: DesignSystem (ProfileLink itself), RootView (deep-link
+    # presentation), OtherProfileView (self/nested), NotificationsView
+    # (legit navigationDestination construction, not a tap target).
+    regex: 'OtherProfileView\('
+    message: "Navigate via ProfileLink."
+    excluded: '.*(DesignSystem|RootView|OtherProfileView|NotificationsView)\.swift'
+    severity: error

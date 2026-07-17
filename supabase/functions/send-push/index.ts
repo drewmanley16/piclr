@@ -24,6 +24,7 @@ type NotificationRow = {
 };
 
 Deno.serve(async (req) => {
+  try {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   const secret = Deno.env.get("PUSH_FUNCTION_SECRET");
@@ -124,6 +125,10 @@ Deno.serve(async (req) => {
   }
 
   return json({ delivered });
+  } catch (err) {
+    console.error("send-push unhandled error:", err);
+    return json({ error: "internal error" }, 500);
+  }
 });
 
 function buildMessage(

@@ -20,9 +20,7 @@ struct CommentsView: View {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 18) {
                             if loading {
-                                ProgressView().tint(Theme.accent)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.top, 40)
+                                SkeletonList(rows: 5)
                             } else if comments.isEmpty {
                                 Text("No comments yet — start the conversation.")
                                     .font(.subheadline)
@@ -42,6 +40,7 @@ struct CommentsView: View {
                         }
                         .padding(16)
                     }
+                    .refreshable { await load() }
                     .onChange(of: comments) { _, _ in
                         if let last = comments.last?.id {
                             withAnimation { proxy.scrollTo(last, anchor: .bottom) }
@@ -118,7 +117,7 @@ struct CommentRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             ProfileLink(userId: comment.author?.id) {
-                ProfileAvatar(participant: comment.author, size: 40)
+                ProfileAvatar(participant: comment.author, size: 40, unlinked: true)
             }
 
             VStack(alignment: .leading, spacing: 3) {

@@ -124,7 +124,7 @@ struct OtherProfileView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 20) {
-                ProfileAvatar(profile: profile, size: 76)
+                ProfileAvatar(profile: profile, size: 76, unlinked: true)
 
                 if let loaded, loaded.relationship.canViewContent {
                     // You follow them → their graph is visible (tappable).
