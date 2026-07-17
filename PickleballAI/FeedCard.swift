@@ -23,9 +23,6 @@ struct FeedCard: View {
 
             titleBlock
 
-            // Hevy-style summary strip: the session's substance in one scannable row.
-            SessionSummaryStrip(session: session)
-
             activityList
 
             photoSection
@@ -160,18 +157,22 @@ struct FeedCard: View {
 
     // MARK: Activities
 
-    // Activities as a clean itemized list (Hevy's exercise rows), score inline.
+    // A single match leads with its score; multi-activity sessions lead with a
+    // compact record and keep the same head-to-head language for every match.
     @ViewBuilder
     private var activityList: some View {
-        if !session.sortedActivities.isEmpty {
-            VStack(spacing: 0) {
-                ForEach(Array(session.sortedActivities.enumerated()), id: \.element.id) { index, activity in
-                    if index > 0 {
-                        Divider().overlay(Theme.hairline)
-                    }
-                    ActivityRow(activity: activity)
-                        .padding(.vertical, 10)
-                }
+        if isMultiActivity {
+            SessionMatchList(
+                activities: session.sortedActivities,
+                durationText: session.compactDuration,
+                author: session.author
+            )
+        } else if let solo = session.sortedActivities.first {
+            if solo.isMatch {
+                MatchHeadToHead(activity: solo, author: session.author)
+            } else {
+                DrillRow(activity: solo)
+                    .padding(.vertical, 4)
             }
         }
     }
@@ -284,14 +285,17 @@ struct FeedCard: View {
         }
     }
 
-    /// Focus · location — the quiet context under the title. Duration is deliberately
-    /// excluded (it's a labeled stat) so nothing reads like a second timestamp.
+    /// Focus · location · duration — duration folds into the quiet context when
+    /// there is no aggregate multi-activity summary.
     private var metaSubtitle: String? {
-        let parts = [session.focus, session.location]
+        var parts = [session.focus, session.location]
             .compactMap { $0 }
             .filter { !$0.isEmpty }
+        if !isMultiActivity { parts.append(session.compactDuration) }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
+
+    private var isMultiActivity: Bool { session.sortedActivities.count >= 2 }
 
     private var isOwner: Bool { store.currentProfile?.id == session.userId }
     private var isTagged: Bool {
@@ -324,77 +328,220 @@ struct InlineCommentRow: View {
     }
 }
 
-/// Hevy-style summary strip: the session's substance (duration, matches, record)
-/// as evenly-weighted stat columns, so a glance tells you what happened.
-struct SessionSummaryStrip: View {
-    let session: FeedSession
+/// A multi-game session: one quiet summary line over a list where every match
+/// uses the same head-to-head presentation as a single-match post.
+struct SessionMatchList: View {
+    let activities: [SessionActivity]
+    let durationText: String
+    let author: Profile
 
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(Array(stats.enumerated()), id: \.offset) { index, stat in
-                if index > 0 {
-                    Rectangle()
-                        .fill(Theme.hairline)
-                        .frame(width: 1, height: 26)
+        VStack(alignment: .leading, spacing: 12) {
+            summaryLine
+            VStack(spacing: 0) {
+                ForEach(Array(activities.enumerated()), id: \.element.id) { index, activity in
+                    if index > 0 {
+                        Divider().overlay(Theme.hairline)
+                    }
+                    Group {
+                        if activity.isMatch {
+                            MatchHeadToHead(activity: activity, author: author)
+                        } else {
+                            DrillRow(activity: activity)
+                        }
+                    }
+                    .padding(.vertical, 10)
                 }
-                VStack(spacing: 3) {
-                    Text(stat.value)
-                        .font(.system(size: 17, weight: .bold))
-                        .monospacedDigit()
-                        .foregroundStyle(stat.emphasized ? Theme.accent : Theme.textPrimary)
-                    Text(stat.label)
-                        .font(.caption2.weight(.semibold))
-                        .textCase(.uppercase)
-                        .tracking(0.6)
-                        .foregroundStyle(Theme.textTertiary)
-                }
-                .frame(maxWidth: .infinity)
             }
         }
-        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private struct Stat { let value: String; let label: String; var emphasized = false }
-
-    private var stats: [Stat] {
-        var result: [Stat] = [Stat(value: durationText, label: "Duration")]
-        let matches = session.matchCount
-        if matches > 0 {
-            result.append(Stat(value: "\(matches)", label: matches == 1 ? "Match" : "Matches"))
-            let record = ties > 0 ? "\(wins)–\(losses)–\(ties)" : "\(wins)–\(losses)"
-            result.append(Stat(value: record, label: ties > 0 ? "W–L–T" : "Record", emphasized: wins > 0 && losses == 0 && ties == 0))
-        } else if session.practiceCount > 0 {
-            let drills = session.practiceCount
-            result.append(Stat(value: "\(drills)", label: drills == 1 ? "Drill" : "Drills"))
+    private var summaryLine: some View {
+        Group {
+            if matches.isEmpty {
+                Text(countsLine).foregroundColor(Theme.textSecondary)
+            } else {
+                Text(record).fontWeight(.bold).foregroundColor(recordColor)
+                    + Text(" · \(countsLine)").foregroundColor(Theme.textSecondary)
+            }
         }
-        return result
+        .font(.subheadline)
+        .monospacedDigit()
     }
 
-    private var wins: Int { session.sortedActivities.filter { $0.matchResult == .win }.count }
-    private var losses: Int { session.sortedActivities.filter { $0.matchResult == .loss }.count }
-    private var ties: Int { session.sortedActivities.filter { $0.matchResult == .tie }.count }
+    private var matches: [SessionActivity] { activities.filter(\.isMatch) }
+    private var wins: Int { matches.filter { $0.matchResult == .win }.count }
+    private var losses: Int { matches.filter { $0.matchResult == .loss }.count }
+    private var ties: Int { matches.filter { $0.matchResult == .tie }.count }
+    private var record: String { ties > 0 ? "\(wins)–\(losses)–\(ties)" : "\(wins)–\(losses)" }
 
-    private var durationText: String {
-        let m = session.durationMinutes
-        return m < 60 ? "\(m)m" : "\(m / 60)h \(m % 60)m"
+    private var recordColor: Color {
+        if wins > losses { return Theme.win }
+        if losses > wins { return Theme.loss }
+        return Theme.textPrimary
+    }
+
+    private var countsLine: String {
+        var parts: [String] = []
+        let matchCount = matches.count
+        if matchCount > 0 { parts.append("\(matchCount) game\(matchCount == 1 ? "" : "s")") }
+        let drillCount = activities.count - matchCount
+        if drillCount > 0 { parts.append("\(drillCount) drill\(drillCount == 1 ? "" : "s")") }
+        parts.append(durationText)
+        return parts.joined(separator: " · ")
     }
 }
 
-/// A single activity in the itemized list (Hevy's exercise row). Leading tile,
-/// title + who-played, and — for matches — the score with a compact W/L badge.
-struct ActivityRow: View {
+/// The W/L/T result pip shared by list rows and single-match heroes.
+struct ResultBadge: View {
+    let result: MatchResult
+    var diameter: CGFloat = 22
+
+    var body: some View {
+        Text(result.badge)
+            .font(.system(size: diameter * 0.52, weight: .heavy))
+            .foregroundStyle(result == .tie ? Theme.textPrimary : Theme.background)
+            .frame(width: diameter, height: diameter)
+            .background(result.color, in: Circle())
+    }
+}
+
+/// The shared feed presentation for a scored match: the poster's team and the
+/// opponents face off across a centered score and result badge.
+struct MatchHeadToHead: View {
+    let activity: SessionActivity
+    let author: Profile
+
+    private let avatarSize: CGFloat = 34
+    private let scoreSideWidth: CGFloat = 46
+
+    var body: some View {
+        Group {
+            if activity.opponents.isEmpty {
+                scoreColumn
+            } else {
+                matchup
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var matchup: some View {
+        HStack(alignment: .center, spacing: 10) {
+            side(avatars: teamAvatars, names: teamNames, alignment: .trailing)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            scoreColumn
+                .fixedSize()
+            side(avatars: opponentAvatars, names: opponentNames, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var scoreColumn: some View {
+        VStack(spacing: 6) {
+            if activity.scoreLine != nil {
+                scoreView
+            }
+            if let result = activity.matchResult {
+                ResultBadge(result: result, diameter: 24)
+            }
+        }
+    }
+
+    /// Equal-width score fields keep the dash on the same center axis as W/L.
+    private var scoreView: some View {
+        let color = activity.matchResult?.color ?? Theme.textPrimary
+        let parts = (activity.scoreLine ?? "").components(separatedBy: "–")
+        return HStack(spacing: 5) {
+            if parts.count == 2 {
+                Text(parts[0])
+                    .lineLimit(1)
+                    .frame(width: scoreSideWidth, alignment: .trailing)
+                Capsule().fill(color).frame(width: 12, height: 4)
+                Text(parts[1])
+                    .lineLimit(1)
+                    .frame(width: scoreSideWidth, alignment: .leading)
+            } else {
+                Text(activity.scoreLine ?? "")
+            }
+        }
+        .font(.system(size: 30, weight: .bold))
+        .monospacedDigit()
+        .foregroundStyle(color)
+    }
+
+    private func side(avatars: [ProfileAvatar], names: String, alignment: HorizontalAlignment) -> some View {
+        VStack(alignment: alignment, spacing: 5) {
+            FacePile(avatars: avatars)
+            Text(names)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(Theme.textSecondary)
+                .lineLimit(1)
+        }
+    }
+
+    private var teamAvatars: [ProfileAvatar] {
+        [ProfileAvatar(profile: author, size: avatarSize)]
+            + activity.partners.map { $0.avatarView(size: avatarSize) }
+    }
+    private var opponentAvatars: [ProfileAvatar] {
+        activity.opponents.map { $0.avatarView(size: avatarSize) }
+    }
+    private var teamNames: String {
+        ([authorShortName] + activity.partners.map(\.shortName)).joined(separator: ", ")
+    }
+    private var opponentNames: String {
+        activity.opponents.map(\.shortName).joined(separator: ", ")
+    }
+    private var authorShortName: String {
+        author.displayName.split(separator: " ").first.map(String.init) ?? author.displayName
+    }
+}
+
+struct FacePile: View {
+    let avatars: [ProfileAvatar]
+
+    var body: some View {
+        HStack(spacing: -10) {
+            ForEach(avatars.indices, id: \.self) { index in
+                avatars[index].overlay(Circle().strokeBorder(Theme.surface, lineWidth: 2))
+            }
+        }
+    }
+}
+
+extension ActivityParticipant {
+    func avatarView(size: CGFloat) -> ProfileAvatar {
+        profile != nil
+            ? ProfileAvatar(participant: profile, size: size)
+            : ProfileAvatar(guest: Self.initials(from: displayName), size: size)
+    }
+
+    var shortName: String { displayName.split(separator: " ").first.map(String.init) ?? displayName }
+
+    static func initials(from name: String) -> String {
+        let letters = name.split(separator: " ").prefix(2).compactMap { $0.first }
+        return letters.isEmpty ? "?" : String(letters).uppercased()
+    }
+}
+
+/// A drill/practice entry has no score or opponent, so it stays a quiet row.
+struct DrillRow: View {
     let activity: SessionActivity
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: activity.isMatch ? "flag.checkered" : "figure.pickleball")
+            Image(systemName: "figure.pickleball")
                 .font(.footnote.weight(.bold))
                 .foregroundStyle(Theme.textSecondary)
                 .frame(width: 36, height: 36)
                 .background(Theme.surfaceElevated, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(activity.isMatch ? "Match" : activity.title)
+                Text(activity.title)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Theme.textPrimary)
                 if let detail {
@@ -406,37 +553,12 @@ struct ActivityRow: View {
             }
 
             Spacer(minLength: 8)
-
-            if activity.isMatch, let score = activity.scoreLine {
-                HStack(spacing: 8) {
-                    Text(score)
-                        .font(.callout.weight(.bold))
-                        .monospacedDigit()
-                        .foregroundStyle(activity.matchResult?.color ?? Theme.textPrimary)
-                    if let result = activity.matchResult {
-                        Text(result.badge)
-                            .font(.caption.weight(.heavy))
-                            .foregroundStyle(result == .tie ? Theme.textPrimary : Theme.background)
-                            .frame(width: 22, height: 22)
-                            .background(result.color, in: Circle())
-                    }
-                }
-            }
         }
         .accessibilityElement(children: .combine)
     }
 
     private var detail: String? {
-        if activity.isMatch {
-            var parts: [String] = []
-            let partners = activity.partners.map { $0.handle ?? $0.displayName }
-            let opps = activity.opponents.map { $0.handle ?? $0.displayName }
-            if !partners.isEmpty { parts.append("with " + partners.joined(separator: ", ")) }
-            if !opps.isEmpty { parts.append("vs " + opps.joined(separator: ", ")) }
-            return parts.isEmpty ? nil : parts.joined(separator: " · ")
-        } else {
-            let bits = [activity.reps, activity.notes].compactMap { $0 }.filter { !$0.isEmpty }
-            return bits.isEmpty ? nil : bits.joined(separator: " — ")
-        }
+        let bits = [activity.reps, activity.notes].compactMap { $0 }.filter { !$0.isEmpty }
+        return bits.isEmpty ? nil : bits.joined(separator: " — ")
     }
 }
