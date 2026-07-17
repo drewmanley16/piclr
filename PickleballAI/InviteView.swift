@@ -79,7 +79,7 @@ struct InviteComposerSheet: View {
     @State private var isSubmitting = false
 
     var body: some View {
-        NavigationStack {
+        ProfileNavigationStack {
             Form {
                 Section("Court") {
                     Button {

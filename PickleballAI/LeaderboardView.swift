@@ -14,7 +14,7 @@ struct LeaderboardSheet: View {
     private var unranked: [LeaderboardEntry] { store.leaderboard.filter { $0.matches == 0 } }
 
     var body: some View {
-        NavigationStack {
+        ProfileNavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if !loaded && store.leaderboard.isEmpty {

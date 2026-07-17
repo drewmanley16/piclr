@@ -12,7 +12,7 @@ struct StatsSheet: View {
     private var stats: SessionStats { SessionStats(sessions: store.mySessions) }
 
     var body: some View {
-        NavigationStack {
+        ProfileNavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
                     let s = stats

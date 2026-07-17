@@ -73,6 +73,7 @@ A session in progress is `store.activeDraft: SessionDraft?`. It persists at the 
 
 - **Person rows use `IdentityRow`** (or `ProfileAvatar` directly when the row shape genuinely diverges — leaderboard ranks, comment replies). Models representing people carry `PersonRef`.
 - **Avatars always navigate when a profile exists.** `ProfileAvatar` links by default; `unlinked: true` is the documented opt-out and needs a reason (inside an enclosing link/tappable card, own-profile, pickers). Use `guest:`/`preview:` for profile-less avatars.
+- **Any sheet containing navigable people must use `ProfileNavigationStack`, not a bare `NavigationStack`** — otherwise `openProfile` resolves to the presenting screen's stack and pushes *behind* the sheet.
 - **Every list screen ships skeleton loading (`SkeletonList`) + an empty state + `.refreshable`.**
 - **User-initiated state changes fire `Haptics`** (impact / tap / success per `Haptics.swift`'s doc).
 - **Colors, spacing, and fonts come from `Theme`** — no hardcoded values.

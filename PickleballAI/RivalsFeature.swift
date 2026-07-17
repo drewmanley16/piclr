@@ -52,7 +52,7 @@ struct RivalsSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
+        ProfileNavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     if rivalries.isEmpty {
