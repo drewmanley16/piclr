@@ -98,6 +98,11 @@ struct FeedSession: Identifiable, Decodable, Hashable {
         return "Session"
     }
 
+    /// Compact duration label (23m / 1h 5m) for chips and meta lines.
+    var compactDuration: String {
+        durationMinutes < 60 ? "\(durationMinutes)m" : "\(durationMinutes / 60)h \(durationMinutes % 60)m"
+    }
+
     /// Human-readable subtitle: focus · duration · location (no chips).
     var metaLine: String {
         var parts: [String] = []
