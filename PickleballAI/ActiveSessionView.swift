@@ -19,6 +19,7 @@ struct ActiveSessionView: View {
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var showLocationPicker = false
     @State private var showCelebration = false
+    @State private var celebrationTitle = "Session posted"
 
     init(existingSession: FeedSession? = nil, isLive: Bool = false) {
         self.existingSession = existingSession
@@ -86,7 +87,7 @@ struct ActiveSessionView: View {
         }
         .overlay {
             if showCelebration {
-                CelebrationView(title: "Session posted")
+                CelebrationView(title: celebrationTitle)
                     .transition(.opacity)
             }
         }
@@ -287,9 +288,18 @@ struct ActiveSessionView: View {
                 Haptics.success()
                 dismiss()
             }
-        } else if await store.postSession(draft) {
+        } else {
+            let streakBefore = SessionStats(sessions: store.mySessions).weeklyStreak
+            guard await store.postSession(draft) else { return }
             Haptics.success()
             if isLive { store.discardLiveSession() }
+            // postSession reloaded mySessions — a milestone celebration only when
+            // this post pushed the weekly streak onto a milestone.
+            let streakAfter = SessionStats(sessions: store.mySessions).weeklyStreak
+            let milestones: Set<Int> = [4, 12, 26, 52]
+            celebrationTitle = (streakAfter > streakBefore && milestones.contains(streakAfter))
+                ? "\(streakAfter)-week streak!"
+                : "Session posted"
             withAnimation { showCelebration = true }
             try? await Task.sleep(nanoseconds: 1_050_000_000)
             dismiss()

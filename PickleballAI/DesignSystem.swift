@@ -694,6 +694,7 @@ struct SectionHeader: View {
 /// a trailing slot for action controls on the right. Replaces large nav titles.
 struct AppHeader<Trailing: View>: View {
     var title: String
+    var titleFont: Font = .title.weight(.bold)
     var showsChevron: Bool = false
     var onTitleTap: (() -> Void)?
     @ViewBuilder var trailing: Trailing
@@ -705,8 +706,10 @@ struct AppHeader<Trailing: View>: View {
             } label: {
                 HStack(spacing: 8) {
                     Text(title)
-                        .font(.title.weight(.bold))
+                        .font(titleFont)
                         .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     if showsChevron {
                         Image(systemName: "chevron.down")
                             .font(.caption.weight(.bold))

@@ -35,8 +35,9 @@ struct ProfileView: View {
             }
             .background(Theme.background.ignoresSafeArea())
             .safeAreaInset(edge: .top) {
-                AppHeader(title: profile?.username ?? "Profile") {
+                AppHeader(title: profile?.username ?? "Profile", titleFont: .title2.weight(.bold)) {
                     HeaderPill {
+                        streakBadge
                         ShareLink(item: shareText) {
                             Image(systemName: "square.and.arrow.up")
                                 .font(.body.weight(.semibold))
@@ -186,6 +187,27 @@ struct ProfileView: View {
         .cardStyle()
     }
 
+    // MARK: Streak
+
+    /// Consistency-streak indicator that sits inside the header pill alongside the
+    /// action icons. Only appears once there's an active streak (no clutter at zero).
+    @ViewBuilder
+    private var streakBadge: some View {
+        let weeks = stats.weeklyStreak
+        if weeks > 0 {
+            HStack(spacing: 3) {
+                Image(systemName: "circle.hexagongrid.fill")
+                    .font(.body.weight(.bold))
+                Text("\(weeks)")
+                    .font(.headline.weight(.heavy))
+                    .monospacedDigit()
+            }
+            .foregroundStyle(Theme.accent)
+            .fixedSize()
+            .accessibilityLabel("\(weeks) week streak")
+        }
+    }
+
     // MARK: Record
 
     private var stats: SessionStats { SessionStats(sessions: store.mySessions) }
@@ -212,7 +234,7 @@ struct ProfileView: View {
                         Divider().frame(height: 30).overlay(Theme.hairline)
                         recordStat("\(s.winRate)%", "Win rate")
                         Divider().frame(height: 30).overlay(Theme.hairline)
-                        recordStat(s.streakLabel, "Streak")
+                        recordStat(s.streakLabel, "Win streak")
                     }
 
                     if !s.partners.isEmpty {

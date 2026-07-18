@@ -151,6 +151,7 @@ function buildMessage(
       return { title: "RSVP update", message: `${handle} ${verb} for your invite` };
     }
     case "rivalry":         return { title: "Rivalry update", message: detail ?? `${handle} played you` };
+    case "streak":          return { title: "Keep your streak", message: detail ?? "Your streak ends Sunday — log a session to keep it alive." };
     default:                return { title: "pickleball.ai", message: `${handle} interacted with your post` };
   }
 }
