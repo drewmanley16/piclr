@@ -195,14 +195,15 @@ struct ProfileView: View {
     private var streakBadge: some View {
         let weeks = stats.weeklyStreak
         if weeks > 0 {
-            HStack(spacing: 4) {
+            HStack(spacing: 3) {
                 Image(systemName: "circle.hexagongrid.fill")
-                    .font(.body.weight(.semibold))
+                    .font(.body.weight(.bold))
                 Text("\(weeks)")
-                    .font(.subheadline.weight(.bold))
+                    .font(.headline.weight(.heavy))
                     .monospacedDigit()
             }
             .foregroundStyle(Theme.accent)
+            .fixedSize()
             .accessibilityLabel("\(weeks) week streak")
         }
     }
