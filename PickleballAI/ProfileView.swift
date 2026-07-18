@@ -196,7 +196,7 @@ struct ProfileView: View {
         let weeks = s.weeklyStreak
         let playedThisWeek = thisWeekCount > 0
         return HStack(spacing: 16) {
-            Image(systemName: "flame.fill")
+            Image(systemName: "circle.hexagongrid.fill")
                 .font(.system(size: 26, weight: .bold))
                 .foregroundStyle(weeks > 0 ? Theme.accent : Theme.textTertiary)
                 .frame(width: 52, height: 52)

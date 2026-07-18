@@ -298,7 +298,7 @@ struct ActiveSessionView: View {
             let streakAfter = SessionStats(sessions: store.mySessions).weeklyStreak
             let milestones: Set<Int> = [4, 12, 26, 52]
             celebrationTitle = (streakAfter > streakBefore && milestones.contains(streakAfter))
-                ? "🔥 \(streakAfter)-week streak!"
+                ? "\(streakAfter)-week streak!"
                 : "Session posted"
             withAnimation { showCelebration = true }
             try? await Task.sleep(nanoseconds: 1_050_000_000)
