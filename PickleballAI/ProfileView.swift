@@ -22,6 +22,7 @@ struct ProfileView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     profileRow
+                    streakCard
                     if !store.incomingFollowRequests.isEmpty { followRequestsBanner }
                     if completion < 1 && !dismissedCompletion { completionBanner }
                     recordCard
@@ -186,6 +187,48 @@ struct ProfileView: View {
         .cardStyle()
     }
 
+    // MARK: Streak
+
+    /// Consistency streak hero. Celebratory when active; a gentle nudge at zero
+    /// (no guilt) so lapsed/new users see how to start one.
+    private var streakCard: some View {
+        let s = stats
+        let weeks = s.weeklyStreak
+        let playedThisWeek = thisWeekCount > 0
+        return HStack(spacing: 16) {
+            Image(systemName: "flame.fill")
+                .font(.system(size: 26, weight: .bold))
+                .foregroundStyle(weeks > 0 ? Theme.accent : Theme.textTertiary)
+                .frame(width: 52, height: 52)
+                .background(weeks > 0 ? Theme.accentSoft : Theme.surfaceElevated, in: Circle())
+
+            if weeks > 0 {
+                VStack(alignment: .leading, spacing: 2) {
+                    (Text("\(weeks)").font(.title2.weight(.heavy)).foregroundStyle(Theme.accent)
+                        + Text(" week streak").font(.headline).foregroundStyle(Theme.textPrimary))
+                    Text(playedThisWeek
+                         ? "Locked in this week · longest \(s.longestWeeklyStreak) wk"
+                         : "Play this week to keep it going")
+                        .font(.caption)
+                        .foregroundStyle(playedThisWeek ? Theme.textSecondary : Theme.loss)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Start a streak").font(.headline).foregroundStyle(Theme.textPrimary)
+                    Text("Log a session this week to begin.").font(.caption).foregroundStyle(Theme.textSecondary)
+                }
+            }
+            Spacer()
+        }
+        .cardStyle()
+    }
+
+    private var thisWeekCount: Int {
+        let cal = Calendar.current
+        let weekStart = cal.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
+        return store.mySessions.filter { $0.date >= weekStart }.count
+    }
+
     // MARK: Record
 
     private var stats: SessionStats { SessionStats(sessions: store.mySessions) }
@@ -212,7 +255,7 @@ struct ProfileView: View {
                         Divider().frame(height: 30).overlay(Theme.hairline)
                         recordStat("\(s.winRate)%", "Win rate")
                         Divider().frame(height: 30).overlay(Theme.hairline)
-                        recordStat(s.streakLabel, "Streak")
+                        recordStat(s.streakLabel, "Win streak")
                     }
 
                     if !s.partners.isEmpty {

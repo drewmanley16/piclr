@@ -137,7 +137,7 @@ struct WorkoutView: View {
 
     private var weekStrip: some View {
         let hours = Double(thisWeek.reduce(0) { $0 + $1.durationMinutes }) / 60
-        let streak = SessionStats(sessions: store.mySessions).streakLabel
+        let streak = SessionStats(sessions: store.mySessions).weeklyStreakLabel
         return HStack(spacing: 0) {
             weekStat("\(thisWeek.count)", "sessions")
             Divider().frame(height: 30).overlay(Theme.hairline)

@@ -75,7 +75,7 @@ private struct RecordHero: View {
                 Divider().frame(height: 28).overlay(Theme.hairline)
                 HeroStat(value: "\(stats.matches)", label: "Matches")
                 Divider().frame(height: 28).overlay(Theme.hairline)
-                HeroStat(value: stats.streakLabel, label: "Streak")
+                HeroStat(value: stats.streakLabel, label: "Win streak")
             }
         }
         .frame(maxWidth: .infinity)

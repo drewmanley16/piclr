@@ -54,7 +54,19 @@ struct SessionStats {
     /// with streak + recency, for the Rivals surface.
     let rivalries: [Rivalry]
 
+    /// Consecutive calendar weeks (ending at the current/most-recent week) in
+    /// which the user logged at least one session. The retention "streak" — a
+    /// separate concept from the win streak above. The current week counts as
+    /// in-progress and doesn't break the chain until a full empty week elapses.
+    let weeklyStreak: Int
+    /// Longest weekly streak ever achieved.
+    let longestWeeklyStreak: Int
+
     init(sessions: [FeedSession]) {
+        let weekly = Self.weeklyStreaks(from: sessions.map(\.date))
+        weeklyStreak = weekly.current
+        longestWeeklyStreak = weekly.longest
+
         var results: [(won: Bool, date: Date, position: Int)] = []
         var opp: [String: PlayerRecord] = [:]
         var part: [String: PlayerRecord] = [:]
@@ -124,10 +136,56 @@ struct SessionStats {
         p.profile?.id.uuidString ?? "guest:\(p.guestName ?? p.id.uuidString)"
     }
 
+    /// Win/loss streak label (a performance stat — labeled "Win streak" in UI).
     var streakLabel: String {
         if currentStreak > 0 { return "W\(currentStreak)" }
         if currentStreak < 0 { return "L\(-currentStreak)" }
         return "—"
+    }
+
+    /// Consistency streak label, e.g. "6 wk" or "—".
+    var weeklyStreakLabel: String {
+        weeklyStreak > 0 ? "\(weeklyStreak) wk" : "—"
+    }
+
+    /// Weekly play-streak from a list of session dates. Returns the current streak
+    /// (consecutive weeks ending at the current or last week) and the longest run.
+    static func weeklyStreaks(from dates: [Date]) -> (current: Int, longest: Int) {
+        guard !dates.isEmpty else { return (0, 0) }
+        var cal = Calendar.current
+        cal.firstWeekday = 2 // Monday-based weeks; stable regardless of locale
+        func weekStart(_ d: Date) -> Date {
+            cal.dateInterval(of: .weekOfYear, for: d)?.start ?? cal.startOfDay(for: d)
+        }
+        func prevWeek(_ d: Date) -> Date {
+            cal.date(byAdding: .weekOfYear, value: -1, to: d) ?? d
+        }
+
+        let played = Set(dates.map(weekStart))
+        let thisWeek = weekStart(Date())
+        let lastWeek = prevWeek(thisWeek)
+
+        // Anchor: start counting from this week if played, else last week (this
+        // week is still in progress). If neither, a full empty week elapsed → 0.
+        var current = 0
+        if played.contains(thisWeek) || played.contains(lastWeek) {
+            var cursor = played.contains(thisWeek) ? thisWeek : lastWeek
+            while played.contains(cursor) {
+                current += 1
+                cursor = prevWeek(cursor)
+            }
+        }
+
+        // Longest: walk all played weeks oldest→newest, counting consecutive runs.
+        let sorted = played.sorted()
+        var longest = 0, run = 0
+        var previous: Date?
+        for w in sorted {
+            if let p = previous, prevWeek(w) == p { run += 1 } else { run = 1 }
+            longest = max(longest, run)
+            previous = w
+        }
+        return (current, max(longest, current))
     }
 
     private static func bump(_ dict: inout [String: PlayerRecord], _ p: ActivityParticipant, won: Bool) {
