@@ -22,7 +22,6 @@ struct ProfileView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     profileRow
-                    streakCard
                     if !store.incomingFollowRequests.isEmpty { followRequestsBanner }
                     if completion < 1 && !dismissedCompletion { completionBanner }
                     recordCard
@@ -36,8 +35,9 @@ struct ProfileView: View {
             }
             .background(Theme.background.ignoresSafeArea())
             .safeAreaInset(edge: .top) {
-                AppHeader(title: profile?.username ?? "Profile") {
+                AppHeader(title: profile?.username ?? "Profile", titleFont: .title2.weight(.bold)) {
                     HeaderPill {
+                        streakBadge
                         ShareLink(item: shareText) {
                             Image(systemName: "square.and.arrow.up")
                                 .font(.body.weight(.semibold))
@@ -189,44 +189,22 @@ struct ProfileView: View {
 
     // MARK: Streak
 
-    /// Consistency streak hero. Celebratory when active; a gentle nudge at zero
-    /// (no guilt) so lapsed/new users see how to start one.
-    private var streakCard: some View {
-        let s = stats
-        let weeks = s.weeklyStreak
-        let playedThisWeek = thisWeekCount > 0
-        return HStack(spacing: 16) {
-            Image(systemName: "circle.hexagongrid.fill")
-                .font(.system(size: 26, weight: .bold))
-                .foregroundStyle(weeks > 0 ? Theme.accent : Theme.textTertiary)
-                .frame(width: 52, height: 52)
-                .background(weeks > 0 ? Theme.accentSoft : Theme.surfaceElevated, in: Circle())
-
-            if weeks > 0 {
-                VStack(alignment: .leading, spacing: 2) {
-                    (Text("\(weeks)").font(.title2.weight(.heavy)).foregroundStyle(Theme.accent)
-                        + Text(" week streak").font(.headline).foregroundStyle(Theme.textPrimary))
-                    Text(playedThisWeek
-                         ? "Locked in this week · longest \(s.longestWeeklyStreak) wk"
-                         : "Play this week to keep it going")
-                        .font(.caption)
-                        .foregroundStyle(playedThisWeek ? Theme.textSecondary : Theme.loss)
-                }
-            } else {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Start a streak").font(.headline).foregroundStyle(Theme.textPrimary)
-                    Text("Log a session this week to begin.").font(.caption).foregroundStyle(Theme.textSecondary)
-                }
+    /// Consistency-streak indicator that sits inside the header pill alongside the
+    /// action icons. Only appears once there's an active streak (no clutter at zero).
+    @ViewBuilder
+    private var streakBadge: some View {
+        let weeks = stats.weeklyStreak
+        if weeks > 0 {
+            HStack(spacing: 4) {
+                Image(systemName: "circle.hexagongrid.fill")
+                    .font(.body.weight(.semibold))
+                Text("\(weeks)")
+                    .font(.subheadline.weight(.bold))
+                    .monospacedDigit()
             }
-            Spacer()
+            .foregroundStyle(Theme.accent)
+            .accessibilityLabel("\(weeks) week streak")
         }
-        .cardStyle()
-    }
-
-    private var thisWeekCount: Int {
-        let cal = Calendar.current
-        let weekStart = cal.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
-        return store.mySessions.filter { $0.date >= weekStart }.count
     }
 
     // MARK: Record
