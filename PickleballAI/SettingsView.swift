@@ -51,7 +51,8 @@ struct SettingsSheet: View {
         Button {
             Task {
                 await subscriptions.restore()
-                restoreToast = subscriptions.isPro ? "Purchases restored" : "No purchases to restore"
+                // On failure/no-op the store sets errorText; success leaves it nil.
+                restoreToast = subscriptions.errorText ?? "Purchases restored"
             }
         } label: {
             HStack(spacing: 14) {

@@ -353,9 +353,7 @@ final class SubscriptionStore: ObservableObject {
         Haptics.success()
         paywallContext = nil
     }
-    #endif
 
-    #if DEBUG
     /// Dev-only: flip Pro without the paywall so gated UI can be exercised.
     /// Note the next customerInfo emission overwrites it when the SDK is live.
     func debugTogglePro() { isPro.toggle() }
