@@ -9,3 +9,6 @@ build/
 
 # Supabase secrets (copy Supabase.example.plist -> Supabase.plist and fill in)
 PickleballAI/Supabase.plist
+
+# RevenueCat SDK key (copy RevenueCat.example.plist -> RevenueCat.plist and fill in)
+PickleballAI/RevenueCat.plist

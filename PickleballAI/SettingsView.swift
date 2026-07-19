@@ -4,7 +4,9 @@ import SwiftUI
 
 struct SettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var showSavedToast = false
+    @State private var restoreToast: String?
 
     var body: some View {
         NavigationStack {
@@ -15,6 +17,9 @@ struct SettingsSheet: View {
                     }
                     SettingsMenuRow(icon: "slider.horizontal.3", title: "Preferences", subtitle: "Notifications, blocked accounts") {
                         SettingsPreferencesView()
+                    }
+                    if subscriptions.monetizationEnabled {
+                        restorePurchasesRow
                     }
                     SettingsMenuRow(icon: "person.crop.circle.badge.exclamationmark", title: "Account", subtitle: "Version, log out, delete account") {
                         SettingsAccountView(onDismissAll: { dismiss() })
@@ -35,6 +40,46 @@ struct SettingsSheet: View {
             }
         }
         .toast(isPresented: $showSavedToast, message: "Profile saved")
+        .toast(isPresented: .init(get: { restoreToast != nil }, set: { if !$0 { restoreToast = nil } }),
+               message: restoreToast ?? "")
+    }
+
+    /// Re-syncs App Store purchases (required subscription-app affordance for
+    /// reinstalls / new devices). The paywall footer has the same action; this
+    /// one is reachable without a paywall trigger.
+    private var restorePurchasesRow: some View {
+        Button {
+            Task {
+                await subscriptions.restore()
+                restoreToast = subscriptions.isPro ? "Purchases restored" : "No purchases to restore"
+            }
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "arrow.clockwise.circle")
+                    .font(.title3)
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: 40, height: 40)
+                    .background(Theme.accentSoft, in: Circle())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Restore Purchases")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("Re-sync your Pro subscription")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+
+                Spacer()
+
+                if subscriptions.isWorking {
+                    ProgressView().tint(Theme.accent)
+                }
+            }
+            .cardStyle()
+        }
+        .buttonStyle(.plain)
+        .disabled(subscriptions.isWorking)
     }
 }
 

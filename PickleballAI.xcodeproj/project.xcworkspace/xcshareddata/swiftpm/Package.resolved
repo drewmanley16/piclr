@@ -1,5 +1,5 @@
 {
-  "originHash" : "1e263dae356096effa8f37f7ba9d0226b3ec40c6c4f5d3305d56b556327c7443",
+  "originHash" : "9f0454799f6bd944b18a3d27791d19aa2e9c66dbd241c11b3a52f0a37df49a98",
   "pins" : [
     {
       "identity" : "phonenumberkit",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "ab06a8333394f4a4fb6eecca447dae0aa06c1eca",
         "version" : "5.0.4"
+      }
+    },
+    {
+      "identity" : "purchases-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/RevenueCat/purchases-ios",
+      "state" : {
+        "revision" : "4b28e6817c746be6bb710f2bcc0a7e8d9f9e3afa",
+        "version" : "5.81.1"
       }
     },
     {

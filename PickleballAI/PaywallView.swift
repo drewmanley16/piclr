@@ -112,7 +112,7 @@ struct PaywallView: View {
     }
 
     private var selectedPlan: PlanOption {
-        sub.plans.first { $0.id == sub.selectedPlanID } ?? SubscriptionStore.annual
+        sub.plans.first { $0.id == sub.selectedPlanID } ?? SubscriptionStore.fallbackAnnual
     }
     private var ctaTitle: String {
         selectedPlan.trialDays != nil ? "Start free trial" : "Continue"
@@ -225,6 +225,19 @@ private struct PlanCard: View {
             )
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// Filled "PRO" pill marking a subscribed user (profile header). Distinct from
+/// `ProLockBadge`, which marks locked features for non-subscribers.
+struct ProStatusBadge: View {
+    var body: some View {
+        Text("PRO")
+            .font(.caption2.weight(.heavy))
+            .foregroundStyle(Theme.background)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Theme.accent, in: Capsule())
     }
 }
 

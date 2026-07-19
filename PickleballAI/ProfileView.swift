@@ -84,6 +84,11 @@ struct ProfileView: View {
     private var profileRow: some View {
         HStack(spacing: 20) {
             ProfileAvatar(profile: profile, size: 76, unlinked: true)
+                .overlay(alignment: .bottom) {
+                    if subscriptions.monetizationEnabled && subscriptions.isPro {
+                        ProStatusBadge().offset(y: 5)
+                    }
+                }
 
             ProfileStat(label: "Sessions", value: "\(store.mySessions.count)")
 

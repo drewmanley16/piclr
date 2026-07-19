@@ -12,6 +12,7 @@
 		079E74A9F84E8B1B2C9406BD /* ShareCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43B84DB1AF26B28199D3B9F9 /* ShareCard.swift */; };
 		09769653678BBE3A0E31E1CB /* PickleballAIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81B8CE679ACD5A6F4E5DCB13 /* PickleballAIApp.swift */; };
 		0C149EF49C81B28648ED3BA8 /* Supabase.example.plist in Resources */ = {isa = PBXBuildFile; fileRef = DD24443783672F30DD360A7A /* Supabase.example.plist */; };
+		12137FA9EDD1588C7B1641B1 /* RevenueCat.plist in Resources */ = {isa = PBXBuildFile; fileRef = AF6FF037B809FB38076632ED /* RevenueCat.plist */; };
 		13E2AFEB96A070D6E439D80C /* SessionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF61E92F5637DA5570EACB1F /* SessionModels.swift */; };
 		16DD6B39109593928B5583A3 /* ContactsImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EC4FAB3BC7409E94B9F0E1 /* ContactsImporter.swift */; };
 		182BCA3925FD2E77C836B44D /* NotificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0385A0D1A212395E5B9D2720 /* NotificationModels.swift */; };
@@ -33,6 +34,7 @@
 		4A8C0B26C66CA2BCA86EFF37 /* SettingsSubscreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 612A1DDA53F21DD025421CC8 /* SettingsSubscreens.swift */; };
 		4BA0FAC781BDC3A8DB6C1A00 /* GearSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D169CF8E4C9FDD09C74432A3 /* GearSheets.swift */; };
 		4CD5BF0B95A969D397E3038D /* PickleballAIWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EE4100E53AC518E09293CA1 /* PickleballAIWidget.swift */; };
+		53A4ED9BBF46A833CDCD422A /* RevenueCatService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DABB61C500760EEE65FB5F65 /* RevenueCatService.swift */; };
 		5871B4D2606B7AC392C95451 /* OtherProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72609C0E290C1E3683A88921 /* OtherProfileView.swift */; };
 		5E9F8ED09A2B926B38FFE0C8 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC1B8FB7392D5C5FC8C4D640 /* LiveActivityManager.swift */; };
 		63CF72EC30CBFEC89BF39639 /* LiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF3D5A5AC51AF989571223E /* LiveActivityAttributes.swift */; };
@@ -44,6 +46,7 @@
 		70BDBEC5410A84333DDF1F8A /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 54014EB97F18D699B5E8FE5C /* Supabase */; };
 		713CDC37F05C373C2A4C9DFB /* DraftModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C792A7AC8B56AE02E63F640 /* DraftModels.swift */; };
 		73DE9030ECD0D2F03C110221 /* SafetyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBC7525B8F6249F516308D94 /* SafetyModels.swift */; };
+		764B9F591118B3E43193DF7D /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 66CF591F09E5BA78E2CB40A1 /* RevenueCat */; };
 		7BE71A2B865DA409C8734967 /* AppStore+Safety.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D9CC3B49A2B1A43B0002C5D /* AppStore+Safety.swift */; };
 		7DF814116828AB723F79A1E6 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 9A893407FB7651D422D87CC7 /* PrivacyInfo.xcprivacy */; };
 		80E343E6CCC9B13005C13F64 /* PhoneNumberKit in Frameworks */ = {isa = PBXBuildFile; productRef = D9F05A75F7C706F36CE49926 /* PhoneNumberKit */; };
@@ -52,6 +55,7 @@
 		87D01228FF06C0D2738B7AD4 /* AppStore+Profile.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4AD24F0F56C50EAF397CF74 /* AppStore+Profile.swift */; };
 		89FF47F0442F182F044AEB75 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A26F3CB239971947B6371E26 /* RootView.swift */; };
 		8C3EFF8CB712B5C7D9670B4B /* AppStore+Comments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B79D9A1A8FC0E949BBF88D6 /* AppStore+Comments.swift */; };
+		8F4F2063447038819A1AE2A3 /* RevenueCat.example.plist in Resources */ = {isa = PBXBuildFile; fileRef = C105A93AC708CD4765D2974D /* RevenueCat.example.plist */; };
 		9068203395D5B18A6507DF1D /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1DA9EA8FD022D18FABEBD5A /* NotificationsView.swift */; };
 		91C1312E7498D846C328A74E /* PushService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49D15DAFAF823EF6B673ADE /* PushService.swift */; };
 		95C8A46DA87219F98DD0A143 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38D466C6F8E7D2FD8E302914 /* AuthView.swift */; };
@@ -168,13 +172,16 @@
 		81B8CE679ACD5A6F4E5DCB13 /* PickleballAIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickleballAIApp.swift; sourceTree = "<group>"; };
 		8D1FBA77BA526A6415502267 /* RealtimeSubscription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeSubscription.swift; sourceTree = "<group>"; };
 		92AD1866882A183DAB69974D /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
+		97B5C832B1229AFF94F3859C /* PickleballAI.storekit */ = {isa = PBXFileReference; path = PickleballAI.storekit; sourceTree = "<group>"; };
 		99DE6EB174F4713D18400199 /* AppStore+Gear.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Gear.swift"; sourceTree = "<group>"; };
 		9A893407FB7651D422D87CC7 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A1ADA23D176823BB8CF93823 /* MediaHydrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaHydrator.swift; sourceTree = "<group>"; };
 		A26F3CB239971947B6371E26 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		AF61E92F5637DA5570EACB1F /* SessionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionModels.swift; sourceTree = "<group>"; };
+		AF6FF037B809FB38076632ED /* RevenueCat.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = RevenueCat.plist; sourceTree = "<group>"; };
 		B10025ED05CD5F456B2D1934 /* RivalsFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RivalsFeature.swift; sourceTree = "<group>"; };
 		B3FA4363BCD03C413DB5D6C4 /* LogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogView.swift; sourceTree = "<group>"; };
+		C105A93AC708CD4765D2974D /* RevenueCat.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = RevenueCat.example.plist; sourceTree = "<group>"; };
 		C3ABA2151D296CFDE399EDFD /* Subscription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Subscription.swift; sourceTree = "<group>"; };
 		C42C76AB4A636C3E1CF856C1 /* AppStore+Realtime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Realtime.swift"; sourceTree = "<group>"; };
 		C49D15DAFAF823EF6B673ADE /* PushService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushService.swift; sourceTree = "<group>"; };
@@ -184,6 +191,7 @@
 		D169CF8E4C9FDD09C74432A3 /* GearSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearSheets.swift; sourceTree = "<group>"; };
 		D1DA9EA8FD022D18FABEBD5A /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		D4ABDD948BF6204089C4CACF /* SessionStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStats.swift; sourceTree = "<group>"; };
+		DABB61C500760EEE65FB5F65 /* RevenueCatService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevenueCatService.swift; sourceTree = "<group>"; };
 		DBC7525B8F6249F516308D94 /* SafetyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyModels.swift; sourceTree = "<group>"; };
 		DC1B8FB7392D5C5FC8C4D640 /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
 		DD24443783672F30DD360A7A /* Supabase.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Supabase.example.plist; sourceTree = "<group>"; };
@@ -206,6 +214,7 @@
 			files = (
 				80E343E6CCC9B13005C13F64 /* PhoneNumberKit in Frameworks */,
 				70BDBEC5410A84333DDF1F8A /* Supabase in Frameworks */,
+				764B9F591118B3E43193DF7D /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -285,6 +294,7 @@
 				192E99F8896BE798A879F57E /* PaywallView.swift */,
 				7475D1FF28E4358A4858B1E4 /* PhoneNumberFormatting.swift */,
 				212C7D515516C3E07230F457 /* PickleballAI.entitlements */,
+				97B5C832B1229AFF94F3859C /* PickleballAI.storekit */,
 				81B8CE679ACD5A6F4E5DCB13 /* PickleballAIApp.swift */,
 				9A893407FB7651D422D87CC7 /* PrivacyInfo.xcprivacy */,
 				1C1946954DF585AB3AA78971 /* ProfileIdentityValidation.swift */,
@@ -292,6 +302,9 @@
 				528729889F780FEF8B81D160 /* ProfileView.swift */,
 				C49D15DAFAF823EF6B673ADE /* PushService.swift */,
 				8D1FBA77BA526A6415502267 /* RealtimeSubscription.swift */,
+				C105A93AC708CD4765D2974D /* RevenueCat.example.plist */,
+				AF6FF037B809FB38076632ED /* RevenueCat.plist */,
+				DABB61C500760EEE65FB5F65 /* RevenueCatService.swift */,
 				B10025ED05CD5F456B2D1934 /* RivalsFeature.swift */,
 				A26F3CB239971947B6371E26 /* RootView.swift */,
 				DBC7525B8F6249F516308D94 /* SafetyModels.swift */,
@@ -345,6 +358,7 @@
 			packageProductDependencies = (
 				D9F05A75F7C706F36CE49926 /* PhoneNumberKit */,
 				54014EB97F18D699B5E8FE5C /* Supabase */,
+				66CF591F09E5BA78E2CB40A1 /* RevenueCat */,
 			);
 			productName = PickleballAI;
 			productReference = 6BAF5E29E3E19941F0F544FB /* PickleballAI.app */;
@@ -397,6 +411,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				F84EFEDD26C6AB5BBC042042 /* XCRemoteSwiftPackageReference "PhoneNumberKit" */,
+				C41764CB2AC0391442A1C7DA /* XCRemoteSwiftPackageReference "purchases-ios" */,
 				445F1CEC4B259418C30009CB /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -417,6 +432,8 @@
 			files = (
 				D60B10153096A64D929AE1AC /* Assets.xcassets in Resources */,
 				7DF814116828AB723F79A1E6 /* PrivacyInfo.xcprivacy in Resources */,
+				8F4F2063447038819A1AE2A3 /* RevenueCat.example.plist in Resources */,
+				12137FA9EDD1588C7B1641B1 /* RevenueCat.plist in Resources */,
 				0C149EF49C81B28648ED3BA8 /* Supabase.example.plist in Resources */,
 				F9D4FE283820E25A05692966 /* Supabase.plist in Resources */,
 			);
@@ -493,6 +510,7 @@
 				C5338F649A3DC6D11AE71F0B /* ProfileView.swift in Sources */,
 				91C1312E7498D846C328A74E /* PushService.swift in Sources */,
 				67003847FAE65E98968EFA9E /* RealtimeSubscription.swift in Sources */,
+				53A4ED9BBF46A833CDCD422A /* RevenueCatService.swift in Sources */,
 				C470D17C473DC9B0C2DAF579 /* RivalsFeature.swift in Sources */,
 				89FF47F0442F182F044AEB75 /* RootView.swift in Sources */,
 				73DE9030ECD0D2F03C110221 /* SafetyModels.swift in Sources */,
@@ -772,6 +790,14 @@
 				minimumVersion = 2.0.0;
 			};
 		};
+		C41764CB2AC0391442A1C7DA /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
 		F84EFEDD26C6AB5BBC042042 /* XCRemoteSwiftPackageReference "PhoneNumberKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/PhoneNumberKit/PhoneNumberKit";
@@ -787,6 +813,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 445F1CEC4B259418C30009CB /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
+		};
+		66CF591F09E5BA78E2CB40A1 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C41764CB2AC0391442A1C7DA /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
 		};
 		D9F05A75F7C706F36CE49926 /* PhoneNumberKit */ = {
 			isa = XCSwiftPackageProductDependency;
