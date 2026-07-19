@@ -48,6 +48,11 @@ extension AppStore {
                 )
             }
             stopRealtime()
+            // Local-only sign-out: clears the (now-dead) keychain session and
+            // emits a .signedOut auth event so observers (RevenueCat identity
+            // in SubscriptionStore) react — the server user is already gone,
+            // so a global sign-out would just fail against the network.
+            try? await supabase.auth.signOut(scope: .local)
             clearSignedInState()
             return true
         } catch {

@@ -12,6 +12,7 @@
 		079E74A9F84E8B1B2C9406BD /* ShareCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43B84DB1AF26B28199D3B9F9 /* ShareCard.swift */; };
 		09769653678BBE3A0E31E1CB /* PickleballAIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81B8CE679ACD5A6F4E5DCB13 /* PickleballAIApp.swift */; };
 		0C149EF49C81B28648ED3BA8 /* Supabase.example.plist in Resources */ = {isa = PBXBuildFile; fileRef = DD24443783672F30DD360A7A /* Supabase.example.plist */; };
+		12137FA9EDD1588C7B1641B1 /* RevenueCat.plist in Resources */ = {isa = PBXBuildFile; fileRef = AF6FF037B809FB38076632ED /* RevenueCat.plist */; };
 		13E2AFEB96A070D6E439D80C /* SessionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF61E92F5637DA5570EACB1F /* SessionModels.swift */; };
 		16DD6B39109593928B5583A3 /* ContactsImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EC4FAB3BC7409E94B9F0E1 /* ContactsImporter.swift */; };
 		182BCA3925FD2E77C836B44D /* NotificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0385A0D1A212395E5B9D2720 /* NotificationModels.swift */; };
@@ -21,6 +22,7 @@
 		33C8ACB4E3D0F1DAE5FC4EEF /* CommentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F6C03EC3ED4D2A8C098B84F /* CommentsView.swift */; };
 		376C9B601A4FC26F598DE83D /* AppStore+MediaHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6BDD0A44254DC8637A543CE /* AppStore+MediaHelpers.swift */; };
 		391FAF94DA78C7840C956A01 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6358D9903D36AD9E9F526C34 /* SettingsView.swift */; };
+		3C079EEC453B813B1EB1752C /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 192E99F8896BE798A879F57E /* PaywallView.swift */; };
 		3D6C3B86141C26738F80B2A1 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BCD8F33D0E442DCBB8E637F /* LeaderboardView.swift */; };
 		3E53197B3ACF8315533AA7C2 /* AppStore+Reposts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19CC43FBB53DAF94FA9E78D3 /* AppStore+Reposts.swift */; };
 		4021BD23A165270D556A2FA3 /* ActiveSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12CAF21561DAF374E9A5348A /* ActiveSessionView.swift */; };
@@ -32,6 +34,7 @@
 		4A8C0B26C66CA2BCA86EFF37 /* SettingsSubscreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 612A1DDA53F21DD025421CC8 /* SettingsSubscreens.swift */; };
 		4BA0FAC781BDC3A8DB6C1A00 /* GearSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D169CF8E4C9FDD09C74432A3 /* GearSheets.swift */; };
 		4CD5BF0B95A969D397E3038D /* PickleballAIWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EE4100E53AC518E09293CA1 /* PickleballAIWidget.swift */; };
+		53A4ED9BBF46A833CDCD422A /* RevenueCatService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DABB61C500760EEE65FB5F65 /* RevenueCatService.swift */; };
 		5871B4D2606B7AC392C95451 /* OtherProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72609C0E290C1E3683A88921 /* OtherProfileView.swift */; };
 		5E9F8ED09A2B926B38FFE0C8 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC1B8FB7392D5C5FC8C4D640 /* LiveActivityManager.swift */; };
 		63CF72EC30CBFEC89BF39639 /* LiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF3D5A5AC51AF989571223E /* LiveActivityAttributes.swift */; };
@@ -43,6 +46,7 @@
 		70BDBEC5410A84333DDF1F8A /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 54014EB97F18D699B5E8FE5C /* Supabase */; };
 		713CDC37F05C373C2A4C9DFB /* DraftModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C792A7AC8B56AE02E63F640 /* DraftModels.swift */; };
 		73DE9030ECD0D2F03C110221 /* SafetyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBC7525B8F6249F516308D94 /* SafetyModels.swift */; };
+		764B9F591118B3E43193DF7D /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 66CF591F09E5BA78E2CB40A1 /* RevenueCat */; };
 		7BE71A2B865DA409C8734967 /* AppStore+Safety.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D9CC3B49A2B1A43B0002C5D /* AppStore+Safety.swift */; };
 		7DF814116828AB723F79A1E6 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 9A893407FB7651D422D87CC7 /* PrivacyInfo.xcprivacy */; };
 		80E343E6CCC9B13005C13F64 /* PhoneNumberKit in Frameworks */ = {isa = PBXBuildFile; productRef = D9F05A75F7C706F36CE49926 /* PhoneNumberKit */; };
@@ -51,12 +55,14 @@
 		87D01228FF06C0D2738B7AD4 /* AppStore+Profile.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4AD24F0F56C50EAF397CF74 /* AppStore+Profile.swift */; };
 		89FF47F0442F182F044AEB75 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A26F3CB239971947B6371E26 /* RootView.swift */; };
 		8C3EFF8CB712B5C7D9670B4B /* AppStore+Comments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B79D9A1A8FC0E949BBF88D6 /* AppStore+Comments.swift */; };
+		8F4F2063447038819A1AE2A3 /* RevenueCat.example.plist in Resources */ = {isa = PBXBuildFile; fileRef = C105A93AC708CD4765D2974D /* RevenueCat.example.plist */; };
 		9068203395D5B18A6507DF1D /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1DA9EA8FD022D18FABEBD5A /* NotificationsView.swift */; };
 		91C1312E7498D846C328A74E /* PushService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49D15DAFAF823EF6B673ADE /* PushService.swift */; };
 		95C8A46DA87219F98DD0A143 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38D466C6F8E7D2FD8E302914 /* AuthView.swift */; };
 		987C065BEC871C430815F0D5 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92AD1866882A183DAB69974D /* FeedView.swift */; };
 		A7AB3CB17285CB9C76938F9B /* SessionEditors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F3DE89404F54F718B1D071B /* SessionEditors.swift */; };
 		A87ED053E1361D2193395A82 /* PickleballAIWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5BC068B87E22A474B35B0E61 /* PickleballAIWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		ADB24CAF72BB58C2CBF4D628 /* Subscription.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3ABA2151D296CFDE399EDFD /* Subscription.swift */; };
 		B11B01B9A357B172C22B077E /* LocationPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60A7FE208AB50A6DC053231 /* LocationPicker.swift */; };
 		B1259F60FD1CDB256B4E430A /* SafetySheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52D13E9ABB0B1772747DBB02 /* SafetySheets.swift */; };
 		B582D55DDDCD4C2E47573059 /* SocialModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812D44B60A7EA37D8E8F26CA /* SocialModels.swift */; };
@@ -79,6 +85,7 @@
 		E610A0298FD18084A62FDD82 /* EdgeFunctionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 594C30F607DCAA2E5D2E6245 /* EdgeFunctionModels.swift */; };
 		E95EB337AB3BC80E320E2F32 /* AppStore+Invites.swift in Sources */ = {isa = PBXBuildFile; fileRef = 501DC922351647C18A6F314D /* AppStore+Invites.swift */; };
 		F2618610586DB9C3345C94C8 /* Celebration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30A6ECDA3C89862D17F1C81 /* Celebration.swift */; };
+		F84C0C2709EA5C0BCBB1DBBA /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CA98BE610EB60AB332917D5 /* FeatureFlags.swift */; };
 		F9D4FE283820E25A05692966 /* Supabase.plist in Resources */ = {isa = PBXBuildFile; fileRef = 110EB1A0604D9D68DD50D886 /* Supabase.plist */; };
 		FAAE8C4DF4AA21A371F4F0DF /* AppStore+Feed.swift in Sources */ = {isa = PBXBuildFile; fileRef = E027CA4D49372EC880E7A7BA /* AppStore+Feed.swift */; };
 		FBC5CA0F99C49D8AC902D659 /* ProfileIdentityValidation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C1946954DF585AB3AA78971 /* ProfileIdentityValidation.swift */; };
@@ -117,6 +124,7 @@
 		110EB1A0604D9D68DD50D886 /* Supabase.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Supabase.plist; sourceTree = "<group>"; };
 		12CAF21561DAF374E9A5348A /* ActiveSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveSessionView.swift; sourceTree = "<group>"; };
 		14EC4FAB3BC7409E94B9F0E1 /* ContactsImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsImporter.swift; sourceTree = "<group>"; };
+		192E99F8896BE798A879F57E /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		19CC43FBB53DAF94FA9E78D3 /* AppStore+Reposts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Reposts.swift"; sourceTree = "<group>"; };
 		1C1946954DF585AB3AA78971 /* ProfileIdentityValidation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileIdentityValidation.swift; sourceTree = "<group>"; };
 		1DF3D5A5AC51AF989571223E /* LiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityAttributes.swift; sourceTree = "<group>"; };
@@ -136,6 +144,7 @@
 		43B84DB1AF26B28199D3B9F9 /* ShareCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCard.swift; sourceTree = "<group>"; };
 		44D81CAB89B41706FD9E8701 /* FeedCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedCard.swift; sourceTree = "<group>"; };
 		475451E24481504893FFE7ED /* ProfileModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileModels.swift; sourceTree = "<group>"; };
+		4CA98BE610EB60AB332917D5 /* FeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureFlags.swift; sourceTree = "<group>"; };
 		4D28EC049E2380767AA0A2B6 /* OnboardingPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPreview.swift; sourceTree = "<group>"; };
 		4F6C03EC3ED4D2A8C098B84F /* CommentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentsView.swift; sourceTree = "<group>"; };
 		501DC922351647C18A6F314D /* AppStore+Invites.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Invites.swift"; sourceTree = "<group>"; };
@@ -163,13 +172,17 @@
 		81B8CE679ACD5A6F4E5DCB13 /* PickleballAIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickleballAIApp.swift; sourceTree = "<group>"; };
 		8D1FBA77BA526A6415502267 /* RealtimeSubscription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeSubscription.swift; sourceTree = "<group>"; };
 		92AD1866882A183DAB69974D /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
+		97B5C832B1229AFF94F3859C /* PickleballAI.storekit */ = {isa = PBXFileReference; path = PickleballAI.storekit; sourceTree = "<group>"; };
 		99DE6EB174F4713D18400199 /* AppStore+Gear.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Gear.swift"; sourceTree = "<group>"; };
 		9A893407FB7651D422D87CC7 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A1ADA23D176823BB8CF93823 /* MediaHydrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaHydrator.swift; sourceTree = "<group>"; };
 		A26F3CB239971947B6371E26 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		AF61E92F5637DA5570EACB1F /* SessionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionModels.swift; sourceTree = "<group>"; };
+		AF6FF037B809FB38076632ED /* RevenueCat.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = RevenueCat.plist; sourceTree = "<group>"; };
 		B10025ED05CD5F456B2D1934 /* RivalsFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RivalsFeature.swift; sourceTree = "<group>"; };
 		B3FA4363BCD03C413DB5D6C4 /* LogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogView.swift; sourceTree = "<group>"; };
+		C105A93AC708CD4765D2974D /* RevenueCat.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = RevenueCat.example.plist; sourceTree = "<group>"; };
+		C3ABA2151D296CFDE399EDFD /* Subscription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Subscription.swift; sourceTree = "<group>"; };
 		C42C76AB4A636C3E1CF856C1 /* AppStore+Realtime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Realtime.swift"; sourceTree = "<group>"; };
 		C49D15DAFAF823EF6B673ADE /* PushService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushService.swift; sourceTree = "<group>"; };
 		C60A7FE208AB50A6DC053231 /* LocationPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPicker.swift; sourceTree = "<group>"; };
@@ -178,6 +191,7 @@
 		D169CF8E4C9FDD09C74432A3 /* GearSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearSheets.swift; sourceTree = "<group>"; };
 		D1DA9EA8FD022D18FABEBD5A /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		D4ABDD948BF6204089C4CACF /* SessionStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStats.swift; sourceTree = "<group>"; };
+		DABB61C500760EEE65FB5F65 /* RevenueCatService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevenueCatService.swift; sourceTree = "<group>"; };
 		DBC7525B8F6249F516308D94 /* SafetyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyModels.swift; sourceTree = "<group>"; };
 		DC1B8FB7392D5C5FC8C4D640 /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
 		DD24443783672F30DD360A7A /* Supabase.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Supabase.example.plist; sourceTree = "<group>"; };
@@ -200,6 +214,7 @@
 			files = (
 				80E343E6CCC9B13005C13F64 /* PhoneNumberKit in Frameworks */,
 				70BDBEC5410A84333DDF1F8A /* Supabase in Frameworks */,
+				764B9F591118B3E43193DF7D /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -252,6 +267,7 @@
 				2C2F55C19C493784AFEFC588 /* DesignSystem.swift */,
 				2C792A7AC8B56AE02E63F640 /* DraftModels.swift */,
 				594C30F607DCAA2E5D2E6245 /* EdgeFunctionModels.swift */,
+				4CA98BE610EB60AB332917D5 /* FeatureFlags.swift */,
 				44D81CAB89B41706FD9E8701 /* FeedCard.swift */,
 				92AD1866882A183DAB69974D /* FeedView.swift */,
 				7854EB879EEA122DFA7E5FE1 /* FollowListView.swift */,
@@ -275,8 +291,10 @@
 				D1DA9EA8FD022D18FABEBD5A /* NotificationsView.swift */,
 				4D28EC049E2380767AA0A2B6 /* OnboardingPreview.swift */,
 				72609C0E290C1E3683A88921 /* OtherProfileView.swift */,
+				192E99F8896BE798A879F57E /* PaywallView.swift */,
 				7475D1FF28E4358A4858B1E4 /* PhoneNumberFormatting.swift */,
 				212C7D515516C3E07230F457 /* PickleballAI.entitlements */,
+				97B5C832B1229AFF94F3859C /* PickleballAI.storekit */,
 				81B8CE679ACD5A6F4E5DCB13 /* PickleballAIApp.swift */,
 				9A893407FB7651D422D87CC7 /* PrivacyInfo.xcprivacy */,
 				1C1946954DF585AB3AA78971 /* ProfileIdentityValidation.swift */,
@@ -284,6 +302,9 @@
 				528729889F780FEF8B81D160 /* ProfileView.swift */,
 				C49D15DAFAF823EF6B673ADE /* PushService.swift */,
 				8D1FBA77BA526A6415502267 /* RealtimeSubscription.swift */,
+				C105A93AC708CD4765D2974D /* RevenueCat.example.plist */,
+				AF6FF037B809FB38076632ED /* RevenueCat.plist */,
+				DABB61C500760EEE65FB5F65 /* RevenueCatService.swift */,
 				B10025ED05CD5F456B2D1934 /* RivalsFeature.swift */,
 				A26F3CB239971947B6371E26 /* RootView.swift */,
 				DBC7525B8F6249F516308D94 /* SafetyModels.swift */,
@@ -298,6 +319,7 @@
 				812D44B60A7EA37D8E8F26CA /* SocialModels.swift */,
 				0482FE19F7FE0F2A6DD0872C /* SocialRequestRows.swift */,
 				CF895DB874A0AA5FBE3CB948 /* StatsSheet.swift */,
+				C3ABA2151D296CFDE399EDFD /* Subscription.swift */,
 				DD24443783672F30DD360A7A /* Supabase.example.plist */,
 				110EB1A0604D9D68DD50D886 /* Supabase.plist */,
 				812326B10CE11A6D68558757 /* SupabaseService.swift */,
@@ -336,6 +358,7 @@
 			packageProductDependencies = (
 				D9F05A75F7C706F36CE49926 /* PhoneNumberKit */,
 				54014EB97F18D699B5E8FE5C /* Supabase */,
+				66CF591F09E5BA78E2CB40A1 /* RevenueCat */,
 			);
 			productName = PickleballAI;
 			productReference = 6BAF5E29E3E19941F0F544FB /* PickleballAI.app */;
@@ -388,6 +411,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				F84EFEDD26C6AB5BBC042042 /* XCRemoteSwiftPackageReference "PhoneNumberKit" */,
+				C41764CB2AC0391442A1C7DA /* XCRemoteSwiftPackageReference "purchases-ios" */,
 				445F1CEC4B259418C30009CB /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -408,6 +432,8 @@
 			files = (
 				D60B10153096A64D929AE1AC /* Assets.xcassets in Resources */,
 				7DF814116828AB723F79A1E6 /* PrivacyInfo.xcprivacy in Resources */,
+				8F4F2063447038819A1AE2A3 /* RevenueCat.example.plist in Resources */,
+				12137FA9EDD1588C7B1641B1 /* RevenueCat.plist in Resources */,
 				0C149EF49C81B28648ED3BA8 /* Supabase.example.plist in Resources */,
 				F9D4FE283820E25A05692966 /* Supabase.plist in Resources */,
 			);
@@ -453,6 +479,7 @@
 				664317151FD26AFB65FCFB64 /* DesignSystem.swift in Sources */,
 				713CDC37F05C373C2A4C9DFB /* DraftModels.swift in Sources */,
 				E610A0298FD18084A62FDD82 /* EdgeFunctionModels.swift in Sources */,
+				F84C0C2709EA5C0BCBB1DBBA /* FeatureFlags.swift in Sources */,
 				864554706E770DC971174E0E /* FeedCard.swift in Sources */,
 				987C065BEC871C430815F0D5 /* FeedView.swift in Sources */,
 				BACB683507C15BE288E50D3C /* FollowListView.swift in Sources */,
@@ -475,6 +502,7 @@
 				9068203395D5B18A6507DF1D /* NotificationsView.swift in Sources */,
 				337E8774FB64CFE5D6978913 /* OnboardingPreview.swift in Sources */,
 				5871B4D2606B7AC392C95451 /* OtherProfileView.swift in Sources */,
+				3C079EEC453B813B1EB1752C /* PaywallView.swift in Sources */,
 				42845FCF98B5DFD1F5D3BB16 /* PhoneNumberFormatting.swift in Sources */,
 				09769653678BBE3A0E31E1CB /* PickleballAIApp.swift in Sources */,
 				FBC5CA0F99C49D8AC902D659 /* ProfileIdentityValidation.swift in Sources */,
@@ -482,6 +510,7 @@
 				C5338F649A3DC6D11AE71F0B /* ProfileView.swift in Sources */,
 				91C1312E7498D846C328A74E /* PushService.swift in Sources */,
 				67003847FAE65E98968EFA9E /* RealtimeSubscription.swift in Sources */,
+				53A4ED9BBF46A833CDCD422A /* RevenueCatService.swift in Sources */,
 				C470D17C473DC9B0C2DAF579 /* RivalsFeature.swift in Sources */,
 				89FF47F0442F182F044AEB75 /* RootView.swift in Sources */,
 				73DE9030ECD0D2F03C110221 /* SafetyModels.swift in Sources */,
@@ -496,6 +525,7 @@
 				B582D55DDDCD4C2E47573059 /* SocialModels.swift in Sources */,
 				BC1C0D7301EDFE01BCAB6B78 /* SocialRequestRows.swift in Sources */,
 				CE7E5F4369D9181C9C659C80 /* StatsSheet.swift in Sources */,
+				ADB24CAF72BB58C2CBF4D628 /* Subscription.swift in Sources */,
 				82D712BA16C2330A23E44710 /* SupabaseService.swift in Sources */,
 				496643F409765F3DCE496F80 /* WorkoutCalendarCard.swift in Sources */,
 			);
@@ -760,6 +790,14 @@
 				minimumVersion = 2.0.0;
 			};
 		};
+		C41764CB2AC0391442A1C7DA /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
 		F84EFEDD26C6AB5BBC042042 /* XCRemoteSwiftPackageReference "PhoneNumberKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/PhoneNumberKit/PhoneNumberKit";
@@ -775,6 +813,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 445F1CEC4B259418C30009CB /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
+		};
+		66CF591F09E5BA78E2CB40A1 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C41764CB2AC0391442A1C7DA /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
 		};
 		D9F05A75F7C706F36CE49926 /* PhoneNumberKit */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -37,7 +37,11 @@ There is no test target. "Verification" in this repo means: build succeeds + scr
 
 `PickleballAI/Supabase.plist` is **gitignored** and holds the real project URL + anon key. Copy `Supabase.example.plist` → `Supabase.plist` and fill it in; `SupabaseConfig` (in `SupabaseService.swift`) reads it and exposes the app-wide `supabase` client. Without it the app renders a "config needed" screen.
 
-Backend lives in `supabase/`: `migrations/` (timestamped SQL, applied in order — this is the schema source of truth, not `schema.sql`) and `functions/` (Deno edge functions: `complete-onboarding`, `match-contacts`, `delete-account`, `send-push`).
+Backend lives in `supabase/`: `migrations/` (timestamped SQL, applied in order — this is the schema source of truth, not `schema.sql`) and `functions/` (Deno edge functions: `complete-onboarding`, `match-contacts`, `delete-account`, `send-push`, `revenuecat-webhook`).
+
+## RevenueCat setup (optional — paywall dev only)
+
+`PickleballAI/RevenueCat.plist` is **gitignored**; copy `RevenueCat.example.plist` → `RevenueCat.plist` with the public SDK key (`appl_…`) from the RevenueCat dashboard to develop against real offerings. Without it, DEBUG builds fall back to a stubbed paywall (hardcoded plans, pretend purchase). `FeatureFlags.monetizationEnabled` compiles all payment UI out of Release builds until launch. The run scheme injects `PickleballAI.storekit`, so simulator purchases hit the local StoreKit test store (manage them via Xcode → Debug → StoreKit → Manage Transactions); set the scheme's StoreKit Configuration to None to test Apple sandbox on a device. Server-side entitlement state lives in the `entitlements` table, written only by the `revenuecat-webhook` edge function — clients read Pro status from the RevenueCat SDK, never that table.
 
 ## Architecture
 

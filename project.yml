@@ -10,23 +10,49 @@ packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift
     from: "2.0.0"
+  RevenueCat:
+    url: https://github.com/RevenueCat/purchases-ios
+    from: "5.0.0"
 settings:
   base:
     MARKETING_VERSION: "1.0"
     CURRENT_PROJECT_VERSION: "119"
     DEVELOPMENT_TEAM: "X9H68STU8F"
     CODE_SIGN_STYLE: Automatic
+# Explicit scheme (replaces the auto-generated one) so the run action can attach
+# the local StoreKit configuration file — simulator purchases test against
+# PickleballAI.storekit instead of App Store Connect. Archive stays Release for
+# scripts/testflight.sh.
+schemes:
+  PickleballAI:
+    build:
+      targets:
+        PickleballAI: all
+    run:
+      config: Debug
+      storeKitConfiguration: PickleballAI/PickleballAI.storekit
+    archive:
+      config: Release
+
 targets:
   PickleballAI:
     type: application
     platform: iOS
     sources:
-      - PickleballAI
+      # The .storekit file is a local-testing fixture referenced by the run
+      # scheme — keep it in the project but out of the app bundle.
+      - path: PickleballAI
+        excludes:
+          - PickleballAI.storekit
+      - path: PickleballAI/PickleballAI.storekit
+        buildPhase: none
     dependencies:
       - package: PhoneNumberKit
         product: PhoneNumberKit
       - package: Supabase
         product: Supabase
+      - package: RevenueCat
+        product: RevenueCat
       - target: PickleballAIWidget
     settings:
       base:

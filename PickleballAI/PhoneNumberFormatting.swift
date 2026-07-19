@@ -35,7 +35,12 @@ enum PhoneNumberFormatting {
     }
 
     static func e164(_ rawValue: String) -> String? {
-        guard let number = try? utility.parse(rawValue, withRegion: defaultRegion) else {
+        // ignoreType: accept any plausibly-shaped number (right length, valid
+        // dialing pattern) rather than only numbers assigned in the live
+        // numbering plan. Unassigned ranges like 555 must work — the App Review
+        // demo login (+1 555 555 0123, Supabase Test OTP) depends on it — and
+        // the SMS provider is the real validator anyway.
+        guard let number = try? utility.parse(rawValue, withRegion: defaultRegion, ignoreType: true) else {
             return nil
         }
         return utility.format(number, toType: .e164)

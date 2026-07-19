@@ -390,6 +390,11 @@ verify_jwt = true
 [functions.send-push]
 verify_jwt = false
 
+# Called server-to-server by RevenueCat; it authenticates with its own
+# REVENUECAT_WEBHOOK_SECRET rather than a user JWT.
+[functions.revenuecat-webhook]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
