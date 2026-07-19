@@ -44,6 +44,7 @@ type RCEvent = {
   event_timestamp_ms?: number;
   environment?: string;
   transferred_from?: string[];
+  entitlement_ids?: string[] | null;
 };
 
 Deno.serve(async (req) => {
@@ -74,10 +75,13 @@ Deno.serve(async (req) => {
         .filter((id): id is string => id !== null);
       if (losers.length > 0) {
         const eventAt = new Date(event.event_timestamp_ms ?? 0).toISOString();
+        // Same out-of-order guard as apply_revenuecat_event: a delayed TRANSFER
+        // retry must not stomp a newer state (e.g. the user repurchased).
         const { error } = await admin
           .from("entitlements")
           .update({ status: "TRANSFER", will_renew: false, expires_at: eventAt, last_event_at: eventAt })
-          .in("user_id", losers);
+          .in("user_id", losers)
+          .or(`last_event_at.is.null,last_event_at.lte.${eventAt}`);
         if (error) {
           console.error("revenuecat-webhook transfer update failed:", error);
           return json({ error: "db error" }, 500);
@@ -87,6 +91,13 @@ Deno.serve(async (req) => {
     }
 
     if (!UPSERT_EVENTS.has(event.type)) return json({ ignored: event.type });
+
+    // Only mirror events for the Pro entitlement — a future consumable or
+    // second entitlement must not silently grant server-side Pro. Some event
+    // types omit the field; treat missing as relevant rather than dropping.
+    if (Array.isArray(event.entitlement_ids) && !event.entitlement_ids.includes("pro")) {
+      return json({ skipped: "unrelated entitlement" });
+    }
 
     const userId = resolveUserId(event.app_user_id) ??
       (event.aliases ?? []).map(resolveUserId).find((id) => id !== null) ?? null;

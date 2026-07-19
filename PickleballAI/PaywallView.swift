@@ -88,6 +88,12 @@ struct PaywallView: View {
 
     private var cta: some View {
         VStack(spacing: 10) {
+            if let errorText = sub.errorText {
+                Text(errorText)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.loss)
+                    .multilineTextAlignment(.center)
+            }
             Button {
                 Task { await sub.purchaseSelected() }
             } label: {

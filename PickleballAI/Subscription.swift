@@ -40,8 +40,8 @@ struct PlanOption: Identifiable, Hashable {
 ///   be exercised on the simulator; monetization is compiled out of Release.
 @MainActor
 final class SubscriptionStore: ObservableObject {
-    /// The single switch every premium gate reads.
-    @Published var isPro = false
+    /// The single switch every premium gate reads. Only this class writes it.
+    @Published private(set) var isPro = false
 
     /// Whether the app should surface any paywall / Pro UI. Off in the App Store
     /// build (see `FeatureFlags`), so Pro entry points hide entirely there.
@@ -51,10 +51,15 @@ final class SubscriptionStore: ObservableObject {
     /// monetization is live and the user isn't Pro yet. When monetization is off,
     /// this is false everywhere so gated features simply don't appear.
     var showsLockedFeatures: Bool { monetizationEnabled && !isPro }
+    /// True when the user's Pro status should be celebrated (profile badge etc.).
+    var showsProStatus: Bool { monetizationEnabled && isPro }
     /// Drives the global paywall sheet. Set via `presentPaywall(_:)`.
     @Published var paywallContext: PaywallContext?
     /// In-flight purchase/restore, for button spinners.
     @Published var isWorking = false
+    /// User-facing line for a failed purchase/restore, shown on the paywall.
+    /// Cleared when the paywall re-presents or a new attempt starts.
+    @Published private(set) var errorText: String?
     /// Which plan the paywall has selected. Annual is the default we want picked.
     @Published var selectedPlanID: String = fallbackAnnual.id
     /// Paywall plan cards. Starts as the hardcoded fallback, replaced with
@@ -108,6 +113,7 @@ final class SubscriptionStore: ObservableObject {
     func presentPaywall(_ context: PaywallContext = .general) {
         guard monetizationEnabled else { return }
         Haptics.tap()
+        errorText = nil
         paywallContext = context
     }
 
@@ -274,8 +280,19 @@ final class SubscriptionStore: ObservableObject {
     // MARK: Purchase / restore
 
     func purchaseSelected() async {
+        errorText = nil
         guard purchasesActive else {
+            #if DEBUG
+            // No RevenueCat.plist on this machine — pretend-purchase so the
+            // premium UX can still be walked end to end on the simulator.
             await stubPurchase()
+            #else
+            // Monetization is on but the SDK never configured (plist missing
+            // from the archive). Never pretend-succeed in a shipping build.
+            logger.fault("purchase attempted with unconfigured Purchases SDK")
+            errorText = "Purchases aren't available right now. Please try again later."
+            Haptics.warning()
+            #endif
             return
         }
         isWorking = true
@@ -283,6 +300,7 @@ final class SubscriptionStore: ObservableObject {
 
         if packages[selectedPlanID] == nil { await loadOfferings() }
         guard let package = packages[selectedPlanID] else {
+            errorText = "Can't reach the App Store right now. Check your connection and try again."
             Haptics.warning()
             return
         }
@@ -295,6 +313,7 @@ final class SubscriptionStore: ObservableObject {
         } catch {
             if (error as? RevenueCat.ErrorCode) != .purchaseCancelledError {
                 logger.error("purchase failed: \(error)")
+                errorText = "The purchase couldn't be completed. Please try again."
                 Haptics.warning()
             }
         }
@@ -302,6 +321,7 @@ final class SubscriptionStore: ObservableObject {
 
     func restore() async {
         guard purchasesActive else { return }
+        errorText = nil
         isWorking = true
         defer { isWorking = false }
         do {
@@ -311,16 +331,20 @@ final class SubscriptionStore: ObservableObject {
                 Haptics.success()
                 paywallContext = nil
             } else {
+                errorText = "No purchases to restore for this Apple ID."
                 Haptics.warning()
             }
         } catch {
             logger.error("restore failed: \(error)")
+            errorText = "Couldn't restore purchases. Please try again."
             Haptics.warning()
         }
     }
 
-    /// Pre-RevenueCat pretend purchase, kept for DEBUG builds without a
-    /// RevenueCat.plist so the premium UX can still be walked end to end.
+    #if DEBUG
+    /// Pre-RevenueCat pretend purchase, for DEBUG builds without a
+    /// RevenueCat.plist. Compiled out of Release: an unconfigured store there
+    /// must fail loudly, not silently hand out Pro.
     private func stubPurchase() async {
         isWorking = true
         defer { isWorking = false }
@@ -329,6 +353,7 @@ final class SubscriptionStore: ObservableObject {
         Haptics.success()
         paywallContext = nil
     }
+    #endif
 
     #if DEBUG
     /// Dev-only: flip Pro without the paywall so gated UI can be exercised.

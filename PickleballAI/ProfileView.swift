@@ -85,7 +85,7 @@ struct ProfileView: View {
         HStack(spacing: 20) {
             ProfileAvatar(profile: profile, size: 76, unlinked: true)
                 .overlay(alignment: .bottom) {
-                    if subscriptions.monetizationEnabled && subscriptions.isPro {
+                    if subscriptions.showsProStatus {
                         ProStatusBadge().offset(y: 5)
                     }
                 }
@@ -624,7 +624,9 @@ struct ActivityBucket: Identifiable {
 
         for s in sessions {
             let d = s.date
-            guard d >= startBucket, d <= cal.date(byAdding: .day, value: 1, to: end) ?? end else { continue }
+            // Clip to the range itself, not the (earlier) aligned first bucket,
+            // so the chart total always matches the headline number.
+            guard d >= start, d <= cal.date(byAdding: .day, value: 1, to: end) ?? end else { continue }
             let key = bucketStart(d, unit: unit, cal: cal)
             guard map[key] != nil else { continue }
             map[key]!.hours += Double(s.durationMinutes) / 60
