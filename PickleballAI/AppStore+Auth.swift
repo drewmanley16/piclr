@@ -235,6 +235,7 @@ extension AppStore {
         initialFeedLoadStartedAt = startupBeganAt
         isInitialFeedLoading = feed.isEmpty
         startRealtime(userId: userId)
+        setUpWatchConnectivity()
         await loadFeed()
         debugFeedMetric("initial feed pipeline complete", since: startupBeganAt)
 
@@ -260,6 +261,25 @@ extension AppStore {
     private func initials(from name: String) -> String {
         let letters = name.split(separator: " ").prefix(2).compactMap { $0.first }
         return letters.isEmpty ? "PB" : String(letters).uppercased()
+    }
+
+    // MARK: - Watch connectivity
+
+    /// Activates the WatchConnectivity link and routes inbound watch messages.
+    /// W1 only observes them (logged in the manager); reflecting live scores into
+    /// `activeDraft` and posting from the watch land in later phases.
+    private func setUpWatchConnectivity() {
+        WatchConnectivityManager.shared.onMessage = { [weak self] message in
+            self?.handleWatchMessage(message)
+        }
+        WatchConnectivityManager.shared.activate()
+    }
+
+    /// Placeholder inbound handler. W2 writes `.score` snapshots into
+    /// `activeDraft.liveMatch`; W3 converts `.endGame` into a match activity and
+    /// `.finishSession` into a post.
+    private func handleWatchMessage(_ message: WatchSyncMessage) {
+        // Intentionally a no-op beyond the manager's debug logging for W1.
     }
 
     // MARK: - Push notifications

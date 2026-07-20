@@ -3,6 +3,7 @@ options:
   bundleIdPrefix: com.pickleball
   deploymentTarget:
     iOS: "17.0"
+    watchOS: "10.0"
 packages:
   PhoneNumberKit:
     url: https://github.com/PhoneNumberKit/PhoneNumberKit
@@ -49,6 +50,8 @@ targets:
           - PickleballAI.storekit
       - path: PickleballAI/PickleballAI.storekit
         buildPhase: none
+      # Live-game score model + WC contract, shared with the watch target.
+      - Shared
     dependencies:
       - package: PhoneNumberKit
         product: PhoneNumberKit
@@ -59,6 +62,7 @@ targets:
       - package: PostHog
         product: PostHog
       - target: PickleballAIWidget
+      - target: PickleballAIWatch
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.pickleball.ai
@@ -106,3 +110,27 @@ targets:
         CFBundleDisplayName: "pickleball.ai"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+  # Tethered watch companion: a tap-to-score controller. The phone owns auth,
+  # Supabase networking, and posting; the watch accumulates points locally and
+  # syncs LiveMatchScore snapshots over WatchConnectivity.
+  PickleballAIWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - PickleballAIWatch
+      # Same shared model + WC contract compiled into the iOS app above.
+      - Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.pickleball.ai.watchapp
+        PRODUCT_NAME: PickleballAIWatch
+        TARGETED_DEVICE_FAMILY: "4"
+        INFOPLIST_KEY_CFBundleDisplayName: "pickleball.ai"
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    info:
+      path: PickleballAIWatch/Info.plist
+      properties:
+        CFBundleDisplayName: "pickleball.ai"
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: com.pickleball.ai
