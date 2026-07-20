@@ -8,11 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		01FBF11CB8802B2E11882178 /* GearModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68362579BCA6AA9DB6DC88EE /* GearModels.swift */; };
+		05C1DAFD17F9A950EDFB2408 /* Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F90BCB4C6BD7BCDF83062556 /* Analytics.swift */; };
 		076565ECFC5D40E2EDE1D5E1 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC7CF99A3E687EB8A86C623F /* Models.swift */; };
 		079E74A9F84E8B1B2C9406BD /* ShareCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43B84DB1AF26B28199D3B9F9 /* ShareCard.swift */; };
 		09769653678BBE3A0E31E1CB /* PickleballAIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81B8CE679ACD5A6F4E5DCB13 /* PickleballAIApp.swift */; };
 		0C149EF49C81B28648ED3BA8 /* Supabase.example.plist in Resources */ = {isa = PBXBuildFile; fileRef = DD24443783672F30DD360A7A /* Supabase.example.plist */; };
-		12137FA9EDD1588C7B1641B1 /* RevenueCat.plist in Resources */ = {isa = PBXBuildFile; fileRef = AF6FF037B809FB38076632ED /* RevenueCat.plist */; };
 		13E2AFEB96A070D6E439D80C /* SessionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF61E92F5637DA5570EACB1F /* SessionModels.swift */; };
 		16DD6B39109593928B5583A3 /* ContactsImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EC4FAB3BC7409E94B9F0E1 /* ContactsImporter.swift */; };
 		182BCA3925FD2E77C836B44D /* NotificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0385A0D1A212395E5B9D2720 /* NotificationModels.swift */; };
@@ -84,6 +84,7 @@
 		E31424AEC6D64816D7DFF5ED /* AppStore+FollowGraph.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4660717F1902F691074520D /* AppStore+FollowGraph.swift */; };
 		E610A0298FD18084A62FDD82 /* EdgeFunctionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 594C30F607DCAA2E5D2E6245 /* EdgeFunctionModels.swift */; };
 		E95EB337AB3BC80E320E2F32 /* AppStore+Invites.swift in Sources */ = {isa = PBXBuildFile; fileRef = 501DC922351647C18A6F314D /* AppStore+Invites.swift */; };
+		EC9A44B03684D5CC69440BAF /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = C26069378D184E94FCA09925 /* PostHog */; };
 		F2618610586DB9C3345C94C8 /* Celebration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30A6ECDA3C89862D17F1C81 /* Celebration.swift */; };
 		F84C0C2709EA5C0BCBB1DBBA /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CA98BE610EB60AB332917D5 /* FeatureFlags.swift */; };
 		F9D4FE283820E25A05692966 /* Supabase.plist in Resources */ = {isa = PBXBuildFile; fileRef = 110EB1A0604D9D68DD50D886 /* Supabase.plist */; };
@@ -178,7 +179,6 @@
 		A1ADA23D176823BB8CF93823 /* MediaHydrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaHydrator.swift; sourceTree = "<group>"; };
 		A26F3CB239971947B6371E26 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		AF61E92F5637DA5570EACB1F /* SessionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionModels.swift; sourceTree = "<group>"; };
-		AF6FF037B809FB38076632ED /* RevenueCat.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = RevenueCat.plist; sourceTree = "<group>"; };
 		B10025ED05CD5F456B2D1934 /* RivalsFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RivalsFeature.swift; sourceTree = "<group>"; };
 		B3FA4363BCD03C413DB5D6C4 /* LogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogView.swift; sourceTree = "<group>"; };
 		C105A93AC708CD4765D2974D /* RevenueCat.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = RevenueCat.example.plist; sourceTree = "<group>"; };
@@ -204,6 +204,7 @@
 		F30A6ECDA3C89862D17F1C81 /* Celebration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Celebration.swift; sourceTree = "<group>"; };
 		F4660717F1902F691074520D /* AppStore+FollowGraph.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+FollowGraph.swift"; sourceTree = "<group>"; };
 		F6BDD0A44254DC8637A543CE /* AppStore+MediaHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+MediaHelpers.swift"; sourceTree = "<group>"; };
+		F90BCB4C6BD7BCDF83062556 /* Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Analytics.swift; sourceTree = "<group>"; };
 		FC7CF99A3E687EB8A86C623F /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -215,6 +216,7 @@
 				80E343E6CCC9B13005C13F64 /* PhoneNumberKit in Frameworks */,
 				70BDBEC5410A84333DDF1F8A /* Supabase in Frameworks */,
 				764B9F591118B3E43193DF7D /* RevenueCat in Frameworks */,
+				EC9A44B03684D5CC69440BAF /* PostHog in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -243,6 +245,7 @@
 			isa = PBXGroup;
 			children = (
 				12CAF21561DAF374E9A5348A /* ActiveSessionView.swift */,
+				F90BCB4C6BD7BCDF83062556 /* Analytics.swift */,
 				5D656AFC1851F5D01BC4BB70 /* AppStore.swift */,
 				28C2EBB810FDA81F4A0B4C04 /* AppStore+Auth.swift */,
 				6B79D9A1A8FC0E949BBF88D6 /* AppStore+Comments.swift */,
@@ -303,7 +306,6 @@
 				C49D15DAFAF823EF6B673ADE /* PushService.swift */,
 				8D1FBA77BA526A6415502267 /* RealtimeSubscription.swift */,
 				C105A93AC708CD4765D2974D /* RevenueCat.example.plist */,
-				AF6FF037B809FB38076632ED /* RevenueCat.plist */,
 				DABB61C500760EEE65FB5F65 /* RevenueCatService.swift */,
 				B10025ED05CD5F456B2D1934 /* RivalsFeature.swift */,
 				A26F3CB239971947B6371E26 /* RootView.swift */,
@@ -359,6 +361,7 @@
 				D9F05A75F7C706F36CE49926 /* PhoneNumberKit */,
 				54014EB97F18D699B5E8FE5C /* Supabase */,
 				66CF591F09E5BA78E2CB40A1 /* RevenueCat */,
+				C26069378D184E94FCA09925 /* PostHog */,
 			);
 			productName = PickleballAI;
 			productReference = 6BAF5E29E3E19941F0F544FB /* PickleballAI.app */;
@@ -411,6 +414,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				F84EFEDD26C6AB5BBC042042 /* XCRemoteSwiftPackageReference "PhoneNumberKit" */,
+				3331FCCC0B9ABE639AEC9915 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 				C41764CB2AC0391442A1C7DA /* XCRemoteSwiftPackageReference "purchases-ios" */,
 				445F1CEC4B259418C30009CB /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
@@ -433,7 +437,6 @@
 				D60B10153096A64D929AE1AC /* Assets.xcassets in Resources */,
 				7DF814116828AB723F79A1E6 /* PrivacyInfo.xcprivacy in Resources */,
 				8F4F2063447038819A1AE2A3 /* RevenueCat.example.plist in Resources */,
-				12137FA9EDD1588C7B1641B1 /* RevenueCat.plist in Resources */,
 				0C149EF49C81B28648ED3BA8 /* Supabase.example.plist in Resources */,
 				F9D4FE283820E25A05692966 /* Supabase.plist in Resources */,
 			);
@@ -456,6 +459,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4021BD23A165270D556A2FA3 /* ActiveSessionView.swift in Sources */,
+				05C1DAFD17F9A950EDFB2408 /* Analytics.swift in Sources */,
 				BE92CB4729FBB03CD0B01DB2 /* AppStore+Auth.swift in Sources */,
 				8C3EFF8CB712B5C7D9670B4B /* AppStore+Comments.swift in Sources */,
 				FAAE8C4DF4AA21A371F4F0DF /* AppStore+Feed.swift in Sources */,
@@ -782,6 +786,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		3331FCCC0B9ABE639AEC9915 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.66.0;
+			};
+		};
 		445F1CEC4B259418C30009CB /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/supabase/supabase-swift";
@@ -818,6 +830,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C41764CB2AC0391442A1C7DA /* XCRemoteSwiftPackageReference "purchases-ios" */;
 			productName = RevenueCat;
+		};
+		C26069378D184E94FCA09925 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3331FCCC0B9ABE639AEC9915 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
 		};
 		D9F05A75F7C706F36CE49926 /* PhoneNumberKit */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -8,6 +8,7 @@ struct PickleballAIApp: App {
     @StateObject private var subscriptions = SubscriptionStore()
 
     init() {
+        Analytics.start()
         Self.configureRevenueCat()
     }
 

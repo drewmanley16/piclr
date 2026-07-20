@@ -134,6 +134,7 @@ extension AppStore {
         do {
             let new = NewFollow(followerId: uid, followeeId: profile.id, status: "pending")
             try await supabase.from("follows").insert(new).execute()
+            Analytics.capture(.followSent)
             requestedFollowIds.insert(profile.id)
             await loadFollowState(userId: uid)
         } catch {
@@ -153,6 +154,7 @@ extension AppStore {
                     .eq("follower_id", value: request.followerId.uuidString)
                     .eq("followee_id", value: uid.uuidString)
                     .execute()
+                Analytics.capture(.followAccepted)
             } else {
                 try await supabase
                     .from("follows")

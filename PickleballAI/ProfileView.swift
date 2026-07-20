@@ -347,6 +347,10 @@ struct ProfileView: View {
                 .cardStyle()
             }
             .buttonStyle(.plain)
+            // The card only renders once a real rivalry exists (games >= 2), so
+            // its first appearance is the natural "user has a rival" milestone.
+            // Guarded to fire exactly once per user per device.
+            .onAppear { Analytics.captureOnce(.firstRivalSeen, flag: .firstRivalSeen) }
         }
     }
 

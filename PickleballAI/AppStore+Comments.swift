@@ -33,6 +33,7 @@ extension AppStore {
             try await supabase.from("comments")
                 .insert(NewComment(sessionId: sessionId, userId: uid, body: trimmed))
                 .execute()
+            Analytics.capture(.commentPosted)
             await refreshSessionAcrossFeeds(id: sessionId)
             return true
         } catch {

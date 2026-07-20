@@ -218,6 +218,7 @@ extension AppStore {
                     .from("likes")
                     .insert(NewLike(userId: uid, sessionId: session.id))
                     .execute()
+                Analytics.capture(.sessionLiked)
             }
         } catch {
             if wasLiked {

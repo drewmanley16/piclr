@@ -12,6 +12,7 @@ extension AppStore {
             try await supabase.from("repost_requests")
                 .insert(NewRepostRequest(sessionId: session.id, requesterId: uid))
                 .execute()
+            Analytics.capture(.repostRequested)
             requestedRepostSessionIds.insert(session.id)
         } catch {
             reportError(error)
@@ -54,6 +55,7 @@ extension AppStore {
         guard let uid = currentProfile?.id else { return }
         do {
             try await supabase.rpc("approve_repost", params: ["request_id": request.id.uuidString]).execute()
+            Analytics.capture(.repostApproved)
             await loadRepostRequests(userId: uid)
             await loadFeed()
         } catch {

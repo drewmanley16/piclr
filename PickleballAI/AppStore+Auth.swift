@@ -24,6 +24,7 @@ extension AppStore {
         defer { busyCount -= 1 }
         do {
             try await supabase.auth.verifyOTP(phone: phone, token: token, type: .sms)
+            Analytics.capture(.otpVerified)
             let session = try await supabase.auth.session
             await handleSignedIn(userId: session.user.id)
             return true
@@ -47,6 +48,7 @@ extension AppStore {
                     userInfo: [NSLocalizedDescriptionKey: "The account could not be deleted."]
                 )
             }
+            Analytics.capture(.accountDeleted)
             stopRealtime()
             // Local-only sign-out: clears the (now-dead) keychain session and
             // emits a .signedOut auth event so observers (RevenueCat identity
@@ -87,6 +89,14 @@ extension AppStore {
                     options: FunctionInvokeOptions(body: request)
                 )
             currentProfile = response.profile
+            Analytics.identify(
+                userID: response.profile.id.uuidString,
+                skillLevel: response.profile.skillLevel,
+                hasDuprRating: response.profile.rating != nil
+            )
+            Analytics.capture(.onboardingCompleted, [
+                Analytics.Property.skillLevel: response.profile.skillLevel ?? "unknown"
+            ])
             authState = .signedIn
             await loadSignedInData(userId: response.profile.id)
             return true
@@ -177,6 +187,7 @@ extension AppStore {
         notifications = []
         blockedAccounts = []
         deletePersistedDraft() // the live draft belongs to the signed-in user
+        Analytics.reset()
         authState = .signedOut
     }
 
@@ -202,6 +213,11 @@ extension AppStore {
             return
         }
         if profile.hasCompletedOnboarding {
+            Analytics.identify(
+                userID: profile.id.uuidString,
+                skillLevel: profile.skillLevel,
+                hasDuprRating: profile.rating != nil
+            )
             authState = .signedIn
             await loadSignedInData(userId: userId)
         } else {
@@ -259,7 +275,9 @@ extension AppStore {
             self?.handlePushTap(userInfo)
         }
         if await PushService.shared.authorizationStatus() == .notDetermined {
-            await PushService.shared.requestAuthorizationAndRegister()
+            if await PushService.shared.requestAuthorizationAndRegister() {
+                Analytics.capture(.pushNotificationsEnabled)
+            }
         } else {
             await PushService.shared.registerIfAuthorized()
         }
@@ -268,7 +286,9 @@ extension AppStore {
     /// Prompts for permission and registers. Called from the Settings toggle.
     @discardableResult
     func enablePushNotifications() async -> Bool {
-        await PushService.shared.requestAuthorizationAndRegister()
+        let granted = await PushService.shared.requestAuthorizationAndRegister()
+        if granted { Analytics.capture(.pushNotificationsEnabled) }
+        return granted
     }
 
     /// Routes a tapped push to its target. The payload carries `type`,

@@ -115,6 +115,7 @@ final class SubscriptionStore: ObservableObject {
         Haptics.tap()
         errorText = nil
         paywallContext = context
+        Analytics.capture(.paywallViewed, [Analytics.Property.context: context.id])
     }
 
     // MARK: Entitlement
@@ -130,6 +131,9 @@ final class SubscriptionStore: ObservableObject {
 
     private func apply(_ info: CustomerInfo) {
         isPro = info.entitlements[RevenueCatConfig.entitlementID]?.isActive == true
+        // Keep `is_pro` (super + person property) in lockstep with the entitlement,
+        // whatever changed it — purchase, restore, renewal, expiry, another device.
+        Analytics.setPro(isPro)
         // Whatever activated Pro (purchase, restore, renewal, another device),
         // a visible paywall is now moot — send the user back where they were.
         if isPro, paywallContext != nil {
@@ -308,6 +312,11 @@ final class SubscriptionStore: ObservableObject {
             let result = try await Purchases.shared.purchase(package: package)
             guard !result.userCancelled else { return }
             apply(result.customerInfo)
+            let startedTrial = plans.first { $0.id == selectedPlanID }?.trialDays != nil
+            Analytics.capture(.purchaseCompleted, [
+                Analytics.Property.planID: package.storeProduct.productIdentifier,
+                Analytics.Property.trialStarted: startedTrial
+            ], setUserProperties: [Analytics.Property.isPro: true])
             Haptics.success()
             paywallContext = nil
         } catch {
@@ -328,6 +337,7 @@ final class SubscriptionStore: ObservableObject {
             let info = try await Purchases.shared.restorePurchases()
             apply(info)
             if isPro {
+                Analytics.capture(.purchaseRestored, setUserProperties: [Analytics.Property.isPro: true])
                 Haptics.success()
                 paywallContext = nil
             } else {
@@ -350,6 +360,11 @@ final class SubscriptionStore: ObservableObject {
         defer { isWorking = false }
         try? await Task.sleep(nanoseconds: 700_000_000)
         isPro = true
+        Analytics.setPro(true)
+        Analytics.capture(.purchaseCompleted, [
+            Analytics.Property.planID: selectedPlanID,
+            Analytics.Property.trialStarted: plans.first { $0.id == selectedPlanID }?.trialDays != nil
+        ], setUserProperties: [Analytics.Property.isPro: true])
         Haptics.success()
         paywallContext = nil
     }

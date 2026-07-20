@@ -33,6 +33,7 @@ extension AppStore {
                 brand: brand.isEmpty ? nil : brand
             )
             try await supabase.from("gear").insert(new).execute()
+            Analytics.capture(.gearAdded)
             await loadGear(userId: uid)
             return errorMessage == nil
         } catch {

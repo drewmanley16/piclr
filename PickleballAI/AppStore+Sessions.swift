@@ -75,7 +75,7 @@ extension AppStore {
         draft.startedAt = Date()
         draft.activities = [activity]
         draft.postToFeed = postToFeed
-        return await postSession(draft)
+        return await postSession(draft, isQuickLog: true)
     }
 
     // MARK: - Writes
@@ -83,8 +83,11 @@ extension AppStore {
     /// Write a full multi-activity session built on-device. Inserts the session
     /// unposted, writes activities + tagged participants, then flips `posted`
     /// last so realtime subscribers only see the completed post.
-    func postSession(_ draft: SessionDraft) async -> Bool {
+    func postSession(_ draft: SessionDraft, isQuickLog: Bool = false) async -> Bool {
         guard let uid = currentProfile?.id else { return false }
+        // Derive "first-ever session" from state we already have: no network call
+        // just for analytics. `mySessions` is empty before the user's first post.
+        let isFirstSession = mySessions.isEmpty
         busyCount += 1
         errorMessage = nil
         defer { busyCount -= 1 }
@@ -150,6 +153,14 @@ extension AppStore {
 
             await loadMySessions(userId: uid)
             await loadFeed()
+            let properties: [String: Any] = [
+                Analytics.Property.activityCount: draft.activities.count,
+                Analytics.Property.quickLog: isQuickLog
+            ]
+            Analytics.capture(.sessionLogged, properties)
+            if isFirstSession {
+                Analytics.captureOnce(.firstSessionLogged, flag: .firstSessionLogged, properties)
+            }
             return true
         } catch {
             reportError(error)

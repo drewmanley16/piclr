@@ -80,6 +80,7 @@ struct PaywallView: View {
             ForEach(sub.plans) { plan in
                 PlanCard(plan: plan, isSelected: sub.selectedPlanID == plan.id) {
                     Haptics.tap()
+                    Analytics.capture(.paywallPlanSelected, [Analytics.Property.planID: plan.id])
                     withAnimation(.snappy(duration: 0.2)) { sub.selectedPlanID = plan.id }
                 }
             }
