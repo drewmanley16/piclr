@@ -23,7 +23,8 @@ returns int language sql stable security definer set search_path = public as $$
     where user_id = p_user
   ),
   islands as (
-    select wk, (wk - (row_number() over (order by wk) * 7))::date as grp
+    -- row_number() is bigint; cast to int so `date - int` (a valid operator) applies.
+    select wk, (wk - (row_number() over (order by wk))::int * 7) as grp
     from weeks
   ),
   runs as (
