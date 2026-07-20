@@ -11,9 +11,29 @@ enum Legal {
 
 /// Shared app links used in more than one screen.
 enum AppLinks {
-    /// Destination of "Share invite link" — the App Store listing, so shared
-    /// invites always land somewhere real.
-    static let invite = "https://apps.apple.com/app/id6790183272"
+    /// Web host that also serves the app's universal links.
+    ///
+    /// TODO(referral): for `AppLinks.profile(_:)` to open the installed app
+    /// instead of Safari, this host must (1) serve an
+    /// `/.well-known/apple-app-site-association` file listing the app's
+    /// `applinks:` component for `/u/*`, matching the Associated Domains
+    /// entitlement, and (2) render a real `/u/{userId}` landing page (profile +
+    /// "Get the app" button) for people who don't have the app yet. Until the
+    /// AASA file is deployed the link resolves to the web page only.
+    static let webHost = "pickleball-ai-web.vercel.app"
+
+    /// App Store listing — the fallback when we don't yet know the sharer's id
+    /// (e.g. before a session is restored), so shared invites always land
+    /// somewhere real.
+    static let appStore = "https://apps.apple.com/app/id6790183272"
+
+    /// A sharer's personalized universal link. Opens the installed app straight
+    /// to their profile (with a Follow button) via the deep-link system; without
+    /// the app it lands on the web profile page. The uid is lowercased to match
+    /// the rest of the app's URL conventions.
+    static func profile(_ userId: UUID) -> URL {
+        URL(string: "https://\(webHost)/u/\(userId.uuidString.lowercased())")!
+    }
 }
 
 struct AuthView: View {
@@ -165,6 +185,7 @@ struct AuthView: View {
 
             primaryButton("Send Code", systemImage: "message.fill", disabled: normalizedPhone == nil || !agreedToTerms) {
                 guard let normalizedPhone else { return }
+                Analytics.capture(.signupStarted)
                 Task {
                     if await store.sendPhoneOTP(phone: normalizedPhone) {
                         verifiedPhone = normalizedPhone
@@ -411,10 +432,10 @@ struct AuthView: View {
                 }
             }
 
-            ShareLink(
-                item: URL(string: AppLinks.invite)!,
-                subject: Text("Join me on pickleball.ai"),
-                message: Text("Join me on pickleball.ai — log every match with your crew.")
+            InviteShareLink(
+                message: onboardingInviteMessage,
+                subject: "Join me on pickleball.ai",
+                source: "onboarding"
             ) {
                 Label("Share invite link", systemImage: "square.and.arrow.up")
                     .font(.headline)
@@ -610,6 +631,15 @@ struct AuthView: View {
         case .skill: return "One tap gives the app a useful rating seed."
         case .friends: return "Sync contacts, search a username, or invite the crew yourself."
         }
+    }
+
+    /// Invite copy for the onboarding share. Uses the just-chosen `username`
+    /// (the profile isn't saved yet) and the sharer's personalized profile link.
+    private var onboardingInviteMessage: String {
+        let link = store.myProfileLink.absoluteString
+        let handle = username.trimmed
+        let intro = handle.isEmpty ? "Add me on pickleball.ai" : "Add me on pickleball.ai — @\(handle)"
+        return "\(intro)\n\n\(link)"
     }
 
     private var normalizedPhone: String? {

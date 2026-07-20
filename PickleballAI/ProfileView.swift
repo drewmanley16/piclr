@@ -19,7 +19,7 @@ struct ProfileView: View {
 
     private var shareText: String {
         guard let profile else { return "Find me on pickleball.ai" }
-        return "Add @\(profile.username) on pickleball.ai"
+        return "Add @\(profile.username) on pickleball.ai\n\n\(store.myProfileLink.absoluteString)"
     }
 
     var body: some View {
@@ -342,7 +342,7 @@ struct ProfileView: View {
                             .font(.caption.weight(.bold))
                             .foregroundStyle(Theme.accent)
                     }
-                    RivalRow(rivalry: top, emphasized: true, unlinked: true)
+                    RivalRow(rivalry: top, emphasized: true, unlinked: true, showsInvite: false)
                 }
                 .cardStyle()
             }

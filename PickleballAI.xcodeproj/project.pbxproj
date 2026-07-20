@@ -85,6 +85,7 @@
 		E610A0298FD18084A62FDD82 /* EdgeFunctionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 594C30F607DCAA2E5D2E6245 /* EdgeFunctionModels.swift */; };
 		E95EB337AB3BC80E320E2F32 /* AppStore+Invites.swift in Sources */ = {isa = PBXBuildFile; fileRef = 501DC922351647C18A6F314D /* AppStore+Invites.swift */; };
 		EC9A44B03684D5CC69440BAF /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = C26069378D184E94FCA09925 /* PostHog */; };
+		EFDDBF4113FAE1DADF1C2FD2 /* InviteSharing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29384586246A643B30C868F6 /* InviteSharing.swift */; };
 		F2618610586DB9C3345C94C8 /* Celebration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30A6ECDA3C89862D17F1C81 /* Celebration.swift */; };
 		F84C0C2709EA5C0BCBB1DBBA /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CA98BE610EB60AB332917D5 /* FeatureFlags.swift */; };
 		F9D4FE283820E25A05692966 /* Supabase.plist in Resources */ = {isa = PBXBuildFile; fileRef = 110EB1A0604D9D68DD50D886 /* Supabase.plist */; };
@@ -132,6 +133,7 @@
 		212C7D515516C3E07230F457 /* PickleballAI.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PickleballAI.entitlements; sourceTree = "<group>"; };
 		214162C6EFF74362BE3772CD /* InviteModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteModels.swift; sourceTree = "<group>"; };
 		28C2EBB810FDA81F4A0B4C04 /* AppStore+Auth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Auth.swift"; sourceTree = "<group>"; };
+		29384586246A643B30C868F6 /* InviteSharing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteSharing.swift; sourceTree = "<group>"; };
 		2B4FA8570E3F58A7BED6E97F /* CommentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentModels.swift; sourceTree = "<group>"; };
 		2BCD8F33D0E442DCBB8E637F /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
 		2C2F55C19C493784AFEFC588 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
@@ -280,6 +282,7 @@
 				65F9240942A799CF19EF40AC /* Haptics.swift */,
 				6BF6725B8FBFB5A75FCF41BB /* Info.plist */,
 				214162C6EFF74362BE3772CD /* InviteModels.swift */,
+				29384586246A643B30C868F6 /* InviteSharing.swift */,
 				E9848E60F27125A620DA0B90 /* InviteView.swift */,
 				2BCD8F33D0E442DCBB8E637F /* LeaderboardView.swift */,
 				32CF1AA306E5F578AA3022F7 /* LegalDocuments.swift */,
@@ -492,6 +495,7 @@
 				4BA0FAC781BDC3A8DB6C1A00 /* GearSheets.swift in Sources */,
 				DE6F84AD2314939D4E8C317C /* Haptics.swift in Sources */,
 				BE4F20EBC36E0717FC98E442 /* InviteModels.swift in Sources */,
+				EFDDBF4113FAE1DADF1C2FD2 /* InviteSharing.swift in Sources */,
 				D7F2EE361D4137FD7E546EB4 /* InviteView.swift in Sources */,
 				3D6C3B86141C26738F80B2A1 /* LeaderboardView.swift in Sources */,
 				2C8385E386ACCE3A125AEADA /* LegalDocuments.swift in Sources */,

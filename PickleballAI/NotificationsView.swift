@@ -156,6 +156,7 @@ struct SessionDetailView: View {
             if let session {
                 FeedCard(session: session)
                     .padding(16)
+                guestInvites(for: session)
             } else if isLoading {
                 ProgressView()
                     .tint(Theme.accent)
@@ -185,6 +186,52 @@ struct SessionDetailView: View {
         .sheet(isPresented: $showComments) {
             if let session {
                 CommentsView(session: session)
+            }
+        }
+    }
+
+    /// Guest players in this session are real people who just played a real
+    /// match but aren't on the app yet — the strongest moment to invite them.
+    /// Deduplicated by name across the session's activities.
+    private func guestInvites(for session: FeedSession) -> some View {
+        let guests = session.sortedActivities
+            .flatMap { $0.partners + $0.opponents }
+            .filter(\.isGuest)
+            .reduce(into: [String]()) { names, participant in
+                let name = participant.displayName
+                if !names.contains(where: { $0.caseInsensitiveCompare(name) == .orderedSame }) {
+                    names.append(name)
+                }
+            }
+
+        return Group {
+            if !guests.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("PLAYED WITH")
+                        .font(.caption2.weight(.semibold))
+                        .tracking(1.2)
+                        .foregroundStyle(Theme.textSecondary)
+                    VStack(spacing: 0) {
+                        ForEach(Array(guests.enumerated()), id: \.element) { index, name in
+                            if index > 0 {
+                                Divider().overlay(Theme.hairline).padding(.leading, 52)
+                            }
+                            HStack(spacing: 12) {
+                                ProfileAvatar(guest: ActivityParticipant.initials(from: name), size: 40)
+                                Text(name)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Theme.textPrimary)
+                                    .lineLimit(1)
+                                Spacer()
+                                GuestInviteButton(guestName: name)
+                            }
+                            .padding(.vertical, 12)
+                        }
+                    }
+                    .cardStyle(padding: 14)
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 24)
             }
         }
     }

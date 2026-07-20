@@ -131,13 +131,18 @@ private struct PlayerRecordRow: View {
         // Plain list row with no enclosing link, so default navigation is
         // correct: members tap through to their profile, guests stay inert.
         IdentityRow(person: record.person, avatarSize: 44) {
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(record.recordLine)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(record.wins >= record.losses ? Theme.accent : Theme.textPrimary)
-                Text("\(record.winRate)%")
-                    .font(.caption2)
-                    .foregroundStyle(Theme.textSecondary)
+            HStack(spacing: 10) {
+                if record.person.profileId == nil {
+                    GuestInviteButton(guestName: record.person.displayName)
+                }
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(record.recordLine)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(record.wins >= record.losses ? Theme.accent : Theme.textPrimary)
+                    Text("\(record.winRate)%")
+                        .font(.caption2)
+                        .foregroundStyle(Theme.textSecondary)
+                }
             }
         }
         .padding(.horizontal, 14)

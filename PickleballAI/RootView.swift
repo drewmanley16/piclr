@@ -50,6 +50,14 @@ struct RootView: View {
                 await store.start()
             }
         }
+        // Personalized invite links. Universal links (an installed app opening
+        // https://…/u/{id}) arrive as a browsing user activity; a custom-scheme
+        // fallback would arrive via onOpenURL. Both route into the deep-link
+        // system, which presents the profile once signed in.
+        .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+            if let url = activity.webpageURL { store.handleInviteURL(url) }
+        }
+        .onOpenURL { store.handleInviteURL($0) }
         .sheet(item: $subscriptions.paywallContext) { context in
             PaywallView(context: context)
         }

@@ -10,6 +10,10 @@ struct RivalRow: View {
     /// Opt out of avatar navigation when the row sits inside an already-tappable
     /// container (the profile Rivals card is a button into the Rivals sheet).
     var unlinked: Bool = false
+    /// Guests get an "Invite" chip — but not inside an enclosing tappable card,
+    /// where a nested ShareLink would fight the card's own tap. The profile
+    /// Rivals card passes `false`; the standalone Rivals sheet keeps it on.
+    var showsInvite: Bool = true
 
     var body: some View {
         HStack(spacing: 12) {
@@ -24,6 +28,9 @@ struct RivalRow: View {
                     .foregroundStyle(streakColor)
             }
             Spacer()
+            if showsInvite, rivalry.person.profileId == nil {
+                GuestInviteButton(guestName: rivalry.person.displayName)
+            }
             VStack(alignment: .trailing, spacing: 2) {
                 Text(rivalry.recordLine)
                     .font((emphasized ? Font.title3 : .subheadline).weight(.bold))

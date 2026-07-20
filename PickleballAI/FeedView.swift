@@ -205,10 +205,10 @@ struct FindFriendsSheet: View {
 
                     contactsSection
 
-                    ShareLink(
-                        item: URL(string: AppLinks.invite)!,
-                        subject: Text("Join me on pickleball.ai"),
-                        message: Text("Join me on pickleball.ai — log every match with your crew.")
+                    InviteShareLink(
+                        message: store.inviteShareMessage,
+                        subject: "Join me on pickleball.ai",
+                        source: "find_friends"
                     ) {
                         Label("Share invite link", systemImage: "square.and.arrow.up")
                             .font(.headline)
