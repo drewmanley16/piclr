@@ -193,7 +193,10 @@ extension AppStore {
     private func reloadFollowGraph(userId: UUID, refreshFeed: Bool) async {
         await loadFollowState(userId: userId)
         await loadFollowLists(userId: userId)
-        if refreshFeed { await loadFeed() }
+        if refreshFeed {
+            await loadFeed()
+            if !discoverFeed.isEmpty { await loadDiscover() }
+        }
     }
 
     func stopRealtime() {

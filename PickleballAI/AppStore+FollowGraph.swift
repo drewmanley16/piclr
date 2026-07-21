@@ -188,6 +188,7 @@ extension AppStore {
             await loadFollowState(userId: uid)
             await loadFollowLists(userId: uid)
             await loadFeed()
+            if !discoverFeed.isEmpty { await loadDiscover() }
         } catch {
             reportError(error)
         }
