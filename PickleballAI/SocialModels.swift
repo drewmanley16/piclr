@@ -110,7 +110,7 @@ struct SuggestedAthlete: Identifiable, Hashable {
     let mutualCount: Int
 
     var id: UUID { profile.id }
-    var reasonLabel: String { mutualCount > 0 ? "Followed by \(mutualCount) you know" : "Featured" }
+    var reasonLabel: String { mutualCount > 0 ? "\(mutualCount) mutual" : "Featured" }
 }
 
 /// Directional follow edge write model. follower_id follows followee_id;

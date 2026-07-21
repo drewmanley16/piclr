@@ -44,17 +44,17 @@ struct SuggestedAthletesRow: View {
     }
 
     private var cardSkeleton: some View {
-        VStack(spacing: 10) {
-            Circle().fill(Theme.surfaceElevated).frame(width: 84, height: 84)
+        VStack(spacing: 8) {
+            Circle().fill(Theme.surfaceElevated)
+                .frame(width: SuggestedAthleteCardLayout.avatarSize, height: SuggestedAthleteCardLayout.avatarSize)
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(Theme.surfaceElevated).frame(width: 72, height: 12)
             RoundedRectangle(cornerRadius: 5, style: .continuous)
-                .fill(Theme.surfaceElevated).frame(width: 60, height: 10)
+                .fill(Theme.surfaceElevated).frame(width: 50, height: 10)
             RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous)
-                .fill(Theme.surfaceElevated).frame(height: 40)
+                .fill(Theme.surfaceElevated).frame(height: 36)
         }
         .padding(SuggestedAthleteCardLayout.padding)
-        .padding(.top, 6)
         .frame(width: SuggestedAthleteCardLayout.width)
         .cardStyle(padding: 0)
         .shimmer()
