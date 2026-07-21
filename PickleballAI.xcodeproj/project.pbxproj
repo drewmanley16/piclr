@@ -35,6 +35,7 @@
 		42845FCF98B5DFD1F5D3BB16 /* PhoneNumberFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7475D1FF28E4358A4858B1E4 /* PhoneNumberFormatting.swift */; };
 		449EC4A27D19CBFFFABCB4CC /* ProfileModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 475451E24481504893FFE7ED /* ProfileModels.swift */; };
 		454F25CB28B5C41A3538D5E2 /* LogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3FA4363BCD03C413DB5D6C4 /* LogView.swift */; };
+		47BE162BED8AB1033B9D7F8A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 26A5AD74AFBAB08E7BB33698 /* Assets.xcassets */; };
 		47D67C0BEA142E3C53143B14 /* AppStore+Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 417ED5579B58CC67197FFB16 /* AppStore+Notifications.swift */; };
 		496643F409765F3DCE496F80 /* WorkoutCalendarCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 323771872266981FD4A95C19 /* WorkoutCalendarCard.swift */; };
 		4A8C0B26C66CA2BCA86EFF37 /* SettingsSubscreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 612A1DDA53F21DD025421CC8 /* SettingsSubscreens.swift */; };
@@ -171,6 +172,7 @@
 		1E1748736F7435B3CB977DC7 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
 		212C7D515516C3E07230F457 /* PickleballAI.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PickleballAI.entitlements; sourceTree = "<group>"; };
 		214162C6EFF74362BE3772CD /* InviteModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteModels.swift; sourceTree = "<group>"; };
+		26A5AD74AFBAB08E7BB33698 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		28C2EBB810FDA81F4A0B4C04 /* AppStore+Auth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Auth.swift"; sourceTree = "<group>"; };
 		29384586246A643B30C868F6 /* InviteSharing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteSharing.swift; sourceTree = "<group>"; };
 		2B4FA8570E3F58A7BED6E97F /* CommentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentModels.swift; sourceTree = "<group>"; };
@@ -301,6 +303,7 @@
 		47E08083B173BBE87E4EB5E6 /* PickleballAIWatch */ = {
 			isa = PBXGroup;
 			children = (
+				26A5AD74AFBAB08E7BB33698 /* Assets.xcassets */,
 				43A2D10D5764F0D375B1CCE7 /* GameOverView.swift */,
 				EBB6EBA59EF0E2D2816F9BF4 /* GameSetupView.swift */,
 				D27DDC2F5BDF963F1B298D8A /* Info.plist */,
@@ -463,6 +466,7 @@
 			buildConfigurationList = 0BE325041C0E074CF1B26F7B /* Build configuration list for PBXNativeTarget "PickleballAIWatch" */;
 			buildPhases = (
 				E30573A313EA6C16FDBB38FF /* Sources */,
+				8D9DEAA8FC674C242D6A26D3 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -552,6 +556,14 @@
 				8F4F2063447038819A1AE2A3 /* RevenueCat.example.plist in Resources */,
 				0C149EF49C81B28648ED3BA8 /* Supabase.example.plist in Resources */,
 				F9D4FE283820E25A05692966 /* Supabase.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8D9DEAA8FC674C242D6A26D3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				47BE162BED8AB1033B9D7F8A /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -740,7 +752,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 122;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = X9H68STU8F;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -800,7 +812,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 122;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = X9H68STU8F;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
