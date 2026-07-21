@@ -272,6 +272,15 @@ extension AppStore {
         WatchConnectivityManager.shared.onMessage = { [weak self] message in
             self?.handleWatchMessage(message)
         }
+        WatchConnectivityManager.shared.onConnectionChange = { [weak self] activated, reachable in
+            guard let self, self.activeDraft?.expectsWatchMetrics == true,
+                  self.activeDraft?.workoutMetrics == nil else { return }
+            if reachable {
+                self.requestLiveWorkoutMetrics()
+            } else if activated {
+                self.watchWorkoutStatus = .disconnected
+            }
+        }
         WatchConnectivityManager.shared.activate()
     }
 
@@ -289,6 +298,10 @@ extension AppStore {
             // the game the watch just declared authoritative.
             if activeDraft == nil { activeDraft = SessionDraft() }
             activeDraft?.liveMatch = score
+            if HealthMetricsSharing.isEnabled {
+                activeDraft?.expectsWatchMetrics = true
+                if activeDraft?.watchWorkoutStartedAt == nil { watchWorkoutStatus = .starting }
+            }
 
         case .command(.endGame(let score)):
             // Convert the finished game into a match activity (US → team) and
@@ -298,15 +311,34 @@ extension AppStore {
             activeDraft?.liveMatch = nil
 
         case .command(.finishSession):
-            Task { await postLiveSession() }
+            if activeDraft?.expectsWatchMetrics == true {
+                watchWorkoutStatus = .failed("Apple Watch could not finalize the workout metrics.")
+                errorMessage = "Apple Watch metrics could not be finalized. Retry from the phone, or post without metrics."
+            } else {
+                Task { await postLiveSession() }
+            }
 
         case .command(.workoutStarted(let startedAt)):
             guard activeDraft != nil else { return }
             activeDraft?.watchWorkoutStartedAt = startedAt
+            if HealthMetricsSharing.isEnabled {
+                activeDraft?.expectsWatchMetrics = true
+                watchWorkoutStatus = .waitingForHeartRate
+                requestLiveWorkoutMetrics()
+            }
+
+        case .command(.workoutStartFailed(let message)):
+            guard activeDraft?.expectsWatchMetrics == true else { return }
+            watchWorkoutStatus = .failed(message)
 
         case .command(.liveWorkoutMetrics(let metrics)):
-            guard activeDraft?.watchWorkoutStartedAt != nil, HealthMetricsSharing.isEnabled else { return }
+            guard activeDraft?.expectsWatchMetrics == true, HealthMetricsSharing.isEnabled else { return }
+            guard liveWorkoutMetrics.map({ metrics.sampledAt >= $0.sampledAt }) ?? true else { return }
+            if activeDraft?.watchWorkoutStartedAt == nil {
+                activeDraft?.watchWorkoutStartedAt = activeDraft?.startedAt
+            }
             liveWorkoutMetrics = metrics
+            watchWorkoutStatus = metrics.heartRateBPM == nil ? .waitingForHeartRate : .tracking
 
         case .command(.requestLiveWorkoutMetrics):
             break
@@ -324,7 +356,18 @@ extension AppStore {
                 )
             activeDraft?.watchWorkoutStartedAt = nil
             liveWorkoutMetrics = nil
-            if postSession { Task { await postLiveSession() } }
+            if HealthMetricsSharing.isEnabled, metrics.averageHeartRateBPM == nil {
+                watchWorkoutStatus = .failed(
+                    "No heart-rate samples were received. Check Apple Watch Health permissions and wrist detection."
+                )
+                errorMessage = "Apple Watch finished without heart-rate data. Retry from the phone, or post without metrics."
+            } else {
+                watchWorkoutStatus = .idle
+                if postSession || (shouldPostWhenWatchFinishes && !isWaitingForWatchFinalization) {
+                    shouldPostWhenWatchFinishes = false
+                    Task { await postLiveSession() }
+                }
+            }
 
         case .command(.requestFinishWorkout), .command(.discardWorkout):
             break

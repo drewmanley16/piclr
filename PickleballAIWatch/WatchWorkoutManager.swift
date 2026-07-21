@@ -14,6 +14,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     @Published private(set) var isActive = false
     @Published private(set) var isFinishing = false
     @Published private(set) var currentHeartRateBPM: Int?
+    @Published private(set) var averageHeartRateBPM: Int?
     @Published private(set) var activeCaloriesKcal: Int?
     @Published private(set) var errorMessage: String?
     private(set) var startedAt: Date?
@@ -37,9 +38,17 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     func start(configuration: HKWorkoutConfiguration, at startDate: Date = Date()) {
-        guard !isActive, !isStarting, session == nil else { return }
+        if isActive {
+            WatchConnectivityClient.shared.sendCommand(
+                .workoutStarted(startedAt ?? startDate),
+                immediately: true
+            )
+            sendCurrentMetrics()
+            return
+        }
+        guard !isStarting, session == nil else { return }
         guard HKHealthStore.isHealthDataAvailable() else {
-            errorMessage = "Health data is unavailable."
+            failStart("Health data is unavailable on this Apple Watch.")
             return
         }
 
@@ -54,7 +63,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 guard let self else { return }
                 self.isStarting = false
                 guard granted, error == nil else {
-                    self.errorMessage = "Allow Health access to record heart rate and calories."
+                    self.failStart("Allow Health access on Apple Watch to record heart rate and calories.")
                     return
                 }
                 let authorizedConfiguration = HKWorkoutConfiguration()
@@ -101,6 +110,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 self.builder?.delegate = self
                 self.startedAt = recovered.startDate ?? Date()
                 self.isActive = true
+                WatchConnectivityClient.shared.sendCommand(
+                    .workoutStarted(self.startedAt ?? Date()),
+                    immediately: true
+                )
+                self.sendCurrentMetrics()
             }
         }
     }
@@ -125,7 +139,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 Task { @MainActor in
                     guard let self else { return }
                     guard success, error == nil else {
-                        self.errorMessage = "The workout couldn't start."
+                        self.failStart("The Apple Watch workout couldn't start.")
                         self.reset()
                         return
                     }
@@ -134,7 +148,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 }
             }
         } catch {
-            errorMessage = "Another workout may already be running."
+            failStart("The workout couldn't start. Another workout may already be running.")
             Self.logger.error("workout start failed: \(error.localizedDescription, privacy: .public)")
             reset()
         }
@@ -146,9 +160,13 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         let activeEnergy = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
 
         if collectedTypes.contains(heartRate),
-           let quantity = builder.statistics(for: heartRate)?.mostRecentQuantity() {
+           let statistics = builder.statistics(for: heartRate),
+           let quantity = statistics.mostRecentQuantity() {
             let unit = HKUnit.count().unitDivided(by: .minute())
             currentHeartRateBPM = Int(quantity.doubleValue(for: unit).rounded())
+            averageHeartRateBPM = statistics.averageQuantity().map {
+                Int($0.doubleValue(for: unit).rounded())
+            }
         }
         if collectedTypes.contains(activeEnergy),
            let quantity = builder.statistics(for: activeEnergy)?.sumQuantity() {
@@ -158,10 +176,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     func sendCurrentMetrics() {
-        guard isActive, currentHeartRateBPM != nil || activeCaloriesKcal != nil else { return }
+        guard isActive else { return }
         WatchConnectivityClient.shared.sendLiveWorkoutMetrics(
             LiveWorkoutMetrics(
                 heartRateBPM: currentHeartRateBPM,
+                averageHeartRateBPM: averageHeartRateBPM,
                 activeCaloriesKcal: activeCaloriesKcal
             )
         )
@@ -174,19 +193,6 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             return
         }
 
-        let heartRate = HKQuantityType.quantityType(forIdentifier: .heartRate)!
-        let activeEnergy = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
-        let heartUnit = HKUnit.count().unitDivided(by: .minute())
-        let heartStats = builder.statistics(for: heartRate)
-        let energyStats = builder.statistics(for: activeEnergy)
-        let metrics = WorkoutMetrics(
-            averageHeartRateBPM: heartStats?.averageQuantity().map { Int($0.doubleValue(for: heartUnit).rounded()) },
-            maximumHeartRateBPM: heartStats?.maximumQuantity().map { Int($0.doubleValue(for: heartUnit).rounded()) },
-            activeCaloriesKcal: energyStats?.sumQuantity().map { Int($0.doubleValue(for: .kilocalorie()).rounded()) },
-            startedAt: startedAt ?? session.startDate ?? endDate,
-            endedAt: endDate
-        )
-
         builder.endCollection(withEnd: endDate) { [weak self] success, error in
             guard success, error == nil else {
                 Task { @MainActor in
@@ -195,20 +201,50 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 }
                 return
             }
-            builder.finishWorkout { [weak self] _, error in
-                Task { @MainActor in
-                    guard let self else { return }
-                    if let error {
-                        Self.logger.error("workout save failed: \(error.localizedDescription, privacy: .public)")
-                        self.pendingFinish?(nil)
-                    } else {
-                        self.pendingFinish?(metrics)
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                // Read aggregate statistics only after HealthKit confirms that
+                // collection has ended, so the final sensor samples are included.
+                let metrics = self.finalMetrics(from: builder, session: session, endDate: endDate)
+                builder.finishWorkout { [weak self] _, error in
+                    Task { @MainActor in
+                        guard let self else { return }
+                        if let error {
+                            Self.logger.error("workout save failed: \(error.localizedDescription, privacy: .public)")
+                            self.pendingFinish?(nil)
+                        } else {
+                            self.pendingFinish?(metrics)
+                        }
+                        session.end()
+                        self.reset()
                     }
-                    session.end()
-                    self.reset()
                 }
             }
         }
+    }
+
+    private func finalMetrics(
+        from builder: HKLiveWorkoutBuilder,
+        session: HKWorkoutSession,
+        endDate: Date
+    ) -> WorkoutMetrics {
+        let heartRate = HKQuantityType.quantityType(forIdentifier: .heartRate)!
+        let activeEnergy = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
+        let heartUnit = HKUnit.count().unitDivided(by: .minute())
+        let heartStats = builder.statistics(for: heartRate)
+        let energyStats = builder.statistics(for: activeEnergy)
+        return WorkoutMetrics(
+            averageHeartRateBPM: heartStats?.averageQuantity().map { Int($0.doubleValue(for: heartUnit).rounded()) },
+            maximumHeartRateBPM: heartStats?.maximumQuantity().map { Int($0.doubleValue(for: heartUnit).rounded()) },
+            activeCaloriesKcal: energyStats?.sumQuantity().map { Int($0.doubleValue(for: .kilocalorie()).rounded()) },
+            startedAt: startedAt ?? session.startDate ?? endDate,
+            endedAt: endDate
+        )
+    }
+
+    private func failStart(_ message: String) {
+        errorMessage = message
+        WatchConnectivityClient.shared.sendCommand(.workoutStartFailed(message), immediately: true)
     }
 
     private func reset() {
@@ -220,6 +256,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         isFinishing = false
         isStarting = false
         currentHeartRateBPM = nil
+        averageHeartRateBPM = nil
         activeCaloriesKcal = nil
     }
 }

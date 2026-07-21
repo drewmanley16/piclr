@@ -110,6 +110,9 @@ struct SessionDraft: Codable, Equatable {
     var liveMatch: LiveMatchScore?
     /// Set only after Apple Watch confirms its HealthKit session is collecting.
     var watchWorkoutStartedAt: Date?
+    /// Set before launching the Watch app. Posting must not silently omit
+    /// metrics merely because the startup acknowledgement was delayed or lost.
+    var expectsWatchMetrics: Bool? = false
     /// Aggregate metrics received when the Watch finalizes its HealthKit workout.
     var workoutMetrics: WorkoutMetrics?
     var postToFeed: Bool = true

@@ -26,6 +26,7 @@ final class WatchGameStore: ObservableObject {
     var workoutIsActive: Bool { workout.isActive }
     var workoutIsFinishing: Bool { workout.isFinishing }
     var currentHeartRateBPM: Int? { workout.currentHeartRateBPM }
+    var averageHeartRateBPM: Int? { workout.averageHeartRateBPM }
     var activeCaloriesKcal: Int? { workout.activeCaloriesKcal }
     var workoutErrorMessage: String? { workout.errorMessage }
 
@@ -41,6 +42,10 @@ final class WatchGameStore: ObservableObject {
         }
         client.onMessage = { [weak self] message in
             self?.handleInbound(message)
+        }
+        client.onReachabilityChange = { [weak self] reachable in
+            guard reachable else { return }
+            self?.workout.sendCurrentMetrics()
         }
         client.activate()
     }
@@ -139,7 +144,7 @@ final class WatchGameStore: ObservableObject {
                 game = LiveMatchScore(target: game.target, winByTwo: game.winByTwo)
                 phase = .setup
                 clearPersistence()
-            case .workoutStarted, .liveWorkoutMetrics, .workoutFinished:
+            case .workoutStarted, .workoutStartFailed, .liveWorkoutMetrics, .workoutFinished:
                 break
             case .startGame(let s), .newGame(let s):
                 game = s
@@ -160,7 +165,10 @@ final class WatchGameStore: ObservableObject {
             if let metrics {
                 self.client.sendCommand(.workoutFinished(metrics, postSession: postSession), immediately: true)
             } else if postSession {
-                self.client.sendCommand(.finishSession)
+                self.client.sendCommand(
+                    .workoutStartFailed("Apple Watch couldn't finalize heart-rate metrics. Retry from your iPhone."),
+                    immediately: true
+                )
             } else {
                 let now = Date()
                 let emptyMetrics = WorkoutMetrics(

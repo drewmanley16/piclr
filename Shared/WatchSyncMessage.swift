@@ -84,6 +84,8 @@ public enum WatchCommand: Hashable, Sendable {
     case finishSession
     /// Confirms that HealthKit sensor collection is running on the watch.
     case workoutStarted(Date)
+    /// The Watch app launched but could not begin HealthKit collection.
+    case workoutStartFailed(String)
     /// Phone asks the watch to resend its most recent live sensor values.
     case requestLiveWorkoutMetrics
     /// Ephemeral sensor values for the active iPhone session screen. This case
@@ -101,6 +103,7 @@ public enum WatchCommand: Hashable, Sendable {
         static let action = "action"
         static let score = "score"
         static let date = "date"
+        static let message = "message"
         static let metrics = "metrics"
         static let postSession = "postSession"
     }
@@ -110,6 +113,7 @@ public enum WatchCommand: Hashable, Sendable {
         static let newGame = "newGame"
         static let finishSession = "finishSession"
         static let workoutStarted = "workoutStarted"
+        static let workoutStartFailed = "workoutStartFailed"
         static let requestLiveWorkoutMetrics = "requestLiveWorkoutMetrics"
         static let liveWorkoutMetrics = "liveWorkoutMetrics"
         static let requestFinishWorkout = "requestFinishWorkout"
@@ -129,6 +133,8 @@ public enum WatchCommand: Hashable, Sendable {
             return [Key.action: Action.finishSession]
         case .workoutStarted(let date):
             return [Key.action: Action.workoutStarted, Key.date: WatchSyncCoding.encode(date)]
+        case .workoutStartFailed(let message):
+            return [Key.action: Action.workoutStartFailed, Key.message: message]
         case .requestLiveWorkoutMetrics:
             return [Key.action: Action.requestLiveWorkoutMetrics]
         case .liveWorkoutMetrics(let metrics):
@@ -171,6 +177,9 @@ public enum WatchCommand: Hashable, Sendable {
         case Action.workoutStarted:
             guard let date = decode(Date.self, key: Key.date) else { return nil }
             self = .workoutStarted(date)
+        case Action.workoutStartFailed:
+            guard let message = payload[Key.message] as? String else { return nil }
+            self = .workoutStartFailed(message)
         case Action.requestLiveWorkoutMetrics:
             self = .requestLiveWorkoutMetrics
         case Action.liveWorkoutMetrics:
