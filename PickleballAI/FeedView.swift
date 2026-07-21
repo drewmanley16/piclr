@@ -12,43 +12,23 @@ struct HomeView: View {
     @State private var showLeaderboard = false
     @State private var feedMode: FeedMode = .following
 
-    private var currentFeed: [FeedSession] {
-        feedMode == .following ? store.feed : store.discoverFeed
+    private func feed(for mode: FeedMode) -> [FeedSession] {
+        mode == .following ? store.feed : store.discoverFeed
     }
-    private var reachedEnd: Bool {
-        feedMode == .following ? store.feedReachedEnd : store.discoverReachedEnd
+    private func reachedEnd(for mode: FeedMode) -> Bool {
+        mode == .following ? store.feedReachedEnd : store.discoverReachedEnd
     }
 
     var body: some View {
         ProfileNavigationStack {
-        ScrollView {
-            LazyVStack(spacing: 12) {
-                if currentFeed.isEmpty {
-                    if feedMode == .following && store.isInitialFeedLoading {
-                        ForEach(0..<3, id: \.self) { _ in FeedCardSkeleton() }
-                    } else {
-                        emptyState
-                    }
-                } else {
-                    ForEach(Array(currentFeed.enumerated()), id: \.element.id) { index, session in
-                        FeedCard(session: session)
-                            .onAppear { loadMoreIfNeeded(session) }
-                        if feedMode == .following && index == 0 && (store.isSuggestedAthletesLoading || !store.suggestedAthletes.isEmpty) {
-                            SuggestedAthletesRow(isLoading: store.isSuggestedAthletesLoading)
-                        }
-                    }
-                    if !reachedEnd {
-                        ProgressView().tint(Theme.accent)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 24)
+        TabView(selection: $feedMode) {
+            feedPage(for: .following)
+                .tag(FeedMode.following)
+            feedPage(for: .discover)
+                .tag(FeedMode.discover)
         }
+        .tabViewStyle(.page(indexDisplayMode: .never))
         .background(Theme.background.ignoresSafeArea())
-        .refreshable { await refresh() }
         .task(id: feedMode) {
             if feedMode == .discover && store.discoverFeed.isEmpty { await store.loadDiscover() }
         }
@@ -106,8 +86,40 @@ struct HomeView: View {
     }
 
     @ViewBuilder
-    private var emptyState: some View {
-        if feedMode == .following {
+    private func feedPage(for mode: FeedMode) -> some View {
+        let sessions = feed(for: mode)
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                if sessions.isEmpty {
+                    if mode == .following && store.isInitialFeedLoading {
+                        ForEach(0..<3, id: \.self) { _ in FeedCardSkeleton() }
+                    } else {
+                        emptyState(for: mode)
+                    }
+                } else {
+                    ForEach(Array(sessions.enumerated()), id: \.element.id) { index, session in
+                        FeedCard(session: session)
+                            .onAppear { loadMoreIfNeeded(session, mode: mode) }
+                        if mode == .following && index == 0 && (store.isSuggestedAthletesLoading || !store.suggestedAthletes.isEmpty) {
+                            SuggestedAthletesRow(isLoading: store.isSuggestedAthletesLoading)
+                        }
+                    }
+                    if !reachedEnd(for: mode) {
+                        ProgressView().tint(Theme.accent)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 24)
+        }
+        .refreshable { await refresh(mode: mode) }
+    }
+
+    @ViewBuilder
+    private func emptyState(for mode: FeedMode) -> some View {
+        if mode == .following {
             EmptyFeedState { showFindFriends = true }
                 .padding(.top, 80)
         } else {
@@ -129,10 +141,10 @@ struct HomeView: View {
         }
     }
 
-    private func loadMoreIfNeeded(_ session: FeedSession) {
-        guard session.id == currentFeed.last?.id, !reachedEnd else { return }
+    private func loadMoreIfNeeded(_ session: FeedSession, mode: FeedMode) {
+        guard session.id == feed(for: mode).last?.id, !reachedEnd(for: mode) else { return }
         Task {
-            if feedMode == .following {
+            if mode == .following {
                 await store.loadFeed(reset: false)
             } else {
                 await store.loadDiscover(reset: false)
@@ -140,8 +152,8 @@ struct HomeView: View {
         }
     }
 
-    private func refresh() async {
-        if feedMode == .following {
+    private func refresh(mode: FeedMode) async {
+        if mode == .following {
             await store.loadFeed()
         } else {
             await store.loadDiscover()

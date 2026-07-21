@@ -200,7 +200,8 @@ struct FeedCard: View {
             )
         } else if let solo = session.postActivities.first {
             if solo.isMatch {
-                MatchHeadToHead(activity: solo, author: session.postAuthor)
+                MatchScorecard(activity: solo, author: session.postAuthor)
+                    .padding(.vertical, 4)
             } else {
                 DrillRow(activity: solo)
                     .padding(.vertical, 4)
@@ -413,7 +414,7 @@ struct SessionMatchList: View {
                     }
                     Group {
                         if activity.isMatch {
-                            MatchHeadToHead(activity: activity, author: author)
+                            MatchScorecard(activity: activity, author: author)
                         } else {
                             DrillRow(activity: activity)
                         }
@@ -461,93 +462,57 @@ struct SessionMatchList: View {
     }
 }
 
-/// The W/L/T result pip shared by list rows and single-match heroes.
-struct ResultBadge: View {
-    let result: MatchResult
-    var diameter: CGFloat = 22
-
-    var body: some View {
-        Text(result.badge)
-            .font(.system(size: diameter * 0.52, weight: .heavy))
-            .foregroundStyle(result == .tie ? Theme.textPrimary : Theme.background)
-            .frame(width: diameter, height: diameter)
-            .background(result.color, in: Circle())
-    }
-}
-
-/// The shared feed presentation for a scored match: the poster's team and the
-/// opponents face off across a centered score and result badge.
-struct MatchHeadToHead: View {
+/// A single scored game rendered as a two-row box score. Each team gets its own
+/// row (facepile · names · score) and the winning team's row is accented — lime
+/// when the poster's team won the game, clay when they lost. This keeps "who
+/// won" (the row highlight) visually separate from the raw score (the numbers),
+/// which the old centered head-to-head layout crammed together.
+struct MatchScorecard: View {
     let activity: SessionActivity
     let author: Profile
 
-    private let avatarSize: CGFloat = 34
-    private let scoreSideWidth: CGFloat = 46
+    private let avatarSize: CGFloat = 28
+    private let railHeight: CGFloat = 24
 
     var body: some View {
-        Group {
-            if activity.opponents.isEmpty {
-                scoreColumn
-            } else {
-                matchup
-            }
+        VStack(spacing: 4) {
+            teamRow(
+                avatars: teamAvatars,
+                names: teamNames,
+                score: activity.teamScore,
+                accent: activity.matchResult == .win ? Theme.win : nil
+            )
+            teamRow(
+                avatars: opponentAvatars,
+                names: opponentNames.isEmpty ? "Opponent" : opponentNames,
+                score: activity.opponentScore,
+                accent: activity.matchResult == .loss ? Theme.loss : nil
+            )
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
     }
 
-    private var matchup: some View {
-        HStack(alignment: .center, spacing: 10) {
-            side(avatars: teamAvatars, names: teamNames, alignment: .trailing)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-            scoreColumn
-                .fixedSize()
-            side(avatars: opponentAvatars, names: opponentNames, alignment: .leading)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
+    private func teamRow(avatars: [ProfileAvatar], names: String, score: Int?, accent: Color?) -> some View {
+        HStack(spacing: 10) {
+            Capsule()
+                .fill(accent ?? .clear)
+                .frame(width: 3, height: railHeight)
 
-    private var scoreColumn: some View {
-        VStack(spacing: 6) {
-            if activity.scoreLine != nil {
-                scoreView
+            if !avatars.isEmpty {
+                FacePile(avatars: avatars)
             }
-            if let result = activity.matchResult {
-                ResultBadge(result: result, diameter: 24)
-            }
-        }
-    }
 
-    /// Equal-width score fields keep the dash on the same center axis as W/L.
-    private var scoreView: some View {
-        let color = activity.matchResult?.color ?? Theme.textPrimary
-        let parts = (activity.scoreLine ?? "").components(separatedBy: "–")
-        return HStack(spacing: 5) {
-            if parts.count == 2 {
-                Text(parts[0])
-                    .lineLimit(1)
-                    .frame(width: scoreSideWidth, alignment: .trailing)
-                Capsule().fill(color).frame(width: 12, height: 4)
-                Text(parts[1])
-                    .lineLimit(1)
-                    .frame(width: scoreSideWidth, alignment: .leading)
-            } else {
-                Text(activity.scoreLine ?? "")
-            }
-        }
-        .font(.system(size: 30, weight: .bold))
-        .monospacedDigit()
-        .foregroundStyle(color)
-    }
-
-    private func side(avatars: [ProfileAvatar], names: String, alignment: HorizontalAlignment) -> some View {
-        VStack(alignment: alignment, spacing: 5) {
-            FacePile(avatars: avatars)
             Text(names)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(Theme.textSecondary)
+                .font(.subheadline.weight(accent != nil ? .semibold : .regular))
+                .foregroundStyle(accent != nil ? Theme.textPrimary : Theme.textSecondary)
                 .lineLimit(1)
+
+            Spacer(minLength: 8)
+
+            Text(score.map(String.init) ?? "—")
+                .font(.title3.weight(.bold).monospacedDigit())
+                .foregroundStyle(accent ?? Theme.textSecondary)
         }
     }
 
