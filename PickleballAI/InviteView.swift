@@ -186,6 +186,10 @@ struct InviteCard: View {
     @EnvironmentObject private var store: AppStore
     let invite: SessionInvite
     var showsInlineCancel = true
+    /// Set false when this card is already the content of `InviteDetailView` —
+    /// otherwise tapping it would push another (identical) detail screen on
+    /// top of itself.
+    var isNavigable = true
 
     @State private var showCancelConfirmation = false
     @State private var isCancelling = false
@@ -195,66 +199,18 @@ struct InviteCard: View {
     private var myResponse: RSVPStatus? { myId.flatMap { invite.myResponse(userId: $0) } }
 
     var body: some View {
-        NavigationLink {
-            InviteDetailView(inviteId: invite.id, preloaded: invite)
-        } label: {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 10) {
-                    ProfileAvatar(participant: invite.host, size: 36)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(invite.court?.name ?? "Court")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Theme.textPrimary)
-                        Text("\(isHost ? "You" : invite.host?.displayName ?? "Someone") · \(invite.scheduledAtDate.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute()))")
-                            .font(.caption)
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                    Spacer()
-                    if isHost && showsInlineCancel && !invite.isCancelled && !invite.isPast {
-                        Button {
-                            showCancelConfirmation = true
-                        } label: {
-                            if isCancelling {
-                                ProgressView().controlSize(.small).tint(Theme.loss)
-                            } else {
-                                Image(systemName: "xmark.circle")
-                                    .font(.subheadline)
-                            }
-                        }
-                        .foregroundStyle(Theme.loss)
-                        .disabled(isCancelling)
-                    }
+        Group {
+            if isNavigable {
+                NavigationLink {
+                    InviteDetailView(inviteId: invite.id, preloaded: invite)
+                } label: {
+                    cardContent
                 }
-
-                if let note = invite.note, !note.isEmpty {
-                    Text(note)
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.textSecondary)
-                }
-
-                HStack {
-                    if invite.isCancelled {
-                        Label("Canceled", systemImage: "xmark.circle.fill")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Theme.loss)
-                    } else if invite.isPast {
-                        Label("Ended", systemImage: "clock.fill")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Theme.textTertiary)
-                    } else if invite.yesCount > 0 {
-                        Text("\(invite.yesCount) in")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Theme.accent)
-                    }
-                    Spacer()
-                    if !isHost && !invite.isCancelled && !invite.isPast {
-                        RSVPButtons(invite: invite, current: myResponse)
-                    }
-                }
+                .buttonStyle(.plain)
+            } else {
+                cardContent
             }
-            .cardStyle()
         }
-        .buttonStyle(.plain)
         .confirmationDialog("Cancel this invite?", isPresented: $showCancelConfirmation, titleVisibility: .visible) {
             Button("Cancel Invite", role: .destructive) {
                 Haptics.tap()
@@ -269,6 +225,112 @@ struct InviteCard: View {
             Text("Everyone invited will be notified that it was canceled.")
         }
     }
+
+    private var cardContent: some View {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Theme.accentSoft)
+                        Image(systemName: "figure.pickleball")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(Theme.accent)
+                    }
+                    .frame(width: 44, height: 44)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(invite.court?.name ?? "Court")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1)
+                        Text(isHost ? "Hosted by you" : "Hosted by \(invite.host?.displayName ?? "Someone")")
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    HStack(spacing: 6) {
+                        statusPill
+                        if isNavigable {
+                            Image(systemName: "chevron.right")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(Theme.textTertiary)
+                        }
+                    }
+                }
+
+                if let note = invite.note, !note.isEmpty {
+                    Text(note)
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(2)
+                }
+
+                Divider().overlay(Theme.hairline)
+
+                HStack {
+                    Label(
+                        invite.scheduledAtDate.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute()),
+                        systemImage: "clock"
+                    )
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Theme.textSecondary)
+
+                    Spacer()
+
+                    if isHost && showsInlineCancel && !invite.isCancelled && !invite.isPast {
+                        Button {
+                            showCancelConfirmation = true
+                        } label: {
+                            if isCancelling {
+                                ProgressView().controlSize(.small).tint(Theme.loss)
+                            } else {
+                                Label("Cancel", systemImage: "xmark.circle")
+                                    .font(.caption.weight(.semibold))
+                            }
+                        }
+                        .foregroundStyle(Theme.loss)
+                        .disabled(isCancelling)
+                    } else if !isHost && !invite.isCancelled && !invite.isPast {
+                        RSVPButtons(invite: invite, current: myResponse)
+                    }
+                }
+            }
+            .cardStyle()
+    }
+
+    @ViewBuilder
+    private var statusPill: some View {
+        if invite.isCancelled {
+            pill("Canceled", color: Theme.loss)
+        } else if invite.isPast {
+            pill("Ended", color: Theme.textTertiary)
+        } else if !isHost, let myResponse, myResponse != .pending {
+            pill(myResponse.label, color: rsvpColor(myResponse))
+        } else if invite.yesCount > 0 {
+            pill("\(invite.yesCount) in", color: Theme.accent)
+        }
+    }
+
+    private func pill(_ text: String, color: Color) -> some View {
+        Text(text)
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.14), in: Capsule())
+    }
+}
+
+func rsvpColor(_ status: RSVPStatus) -> Color {
+    switch status {
+    case .yes: return Theme.accent
+    case .no: return Theme.loss
+    case .maybe: return Theme.textSecondary
+    case .pending: return Theme.textTertiary
+    }
 }
 
 private struct RSVPButtons: View {
@@ -278,20 +340,25 @@ private struct RSVPButtons: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            rsvpButton(.yes, label: "Yes")
-            rsvpButton(.maybe, label: "Maybe")
-            rsvpButton(.no, label: "No")
+            rsvpButton(.no, icon: "xmark")
+            rsvpButton(.maybe, icon: "questionmark")
+            rsvpButton(.yes, icon: "checkmark")
         }
     }
 
-    private func rsvpButton(_ status: RSVPStatus, label: String) -> some View {
+    private func rsvpButton(_ status: RSVPStatus, icon: String) -> some View {
         let isSelected = current == status
-        return Button(label) { Haptics.tap(); Task { await store.respondToInvite(invite, status: status) } }
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(isSelected ? Theme.background : Theme.textSecondary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(isSelected ? Theme.accent : Theme.hairline, in: Capsule())
+        return Button {
+            Haptics.tap()
+            Task { await store.respondToInvite(invite, status: status) }
+        } label: {
+            Image(systemName: icon)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(isSelected ? Theme.background : Theme.textSecondary)
+                .frame(width: 30, height: 30)
+                .background(isSelected ? rsvpColor(status) : Theme.surfaceElevated, in: Circle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -318,7 +385,7 @@ struct InviteDetailView: View {
         ScrollView {
             if let invite {
                 VStack(alignment: .leading, spacing: 16) {
-                    InviteCard(invite: invite, showsInlineCancel: false)
+                    InviteCard(invite: invite, showsInlineCancel: false, isNavigable: false)
 
                     if invite.isCancelled {
                         statusBanner(
@@ -338,24 +405,39 @@ struct InviteDetailView: View {
 
                     if let recipients = invite.recipients, !recipients.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("Invited").font(.headline).foregroundStyle(Theme.textPrimary)
-                            ForEach(recipients) { recipient in
-                                HStack(spacing: 10) {
-                                    ProfileAvatar(participant: recipient.user, size: 32)
-                                    Text(recipient.user?.displayName ?? "Player")
-                                        .font(.subheadline)
-                                        .foregroundStyle(Theme.textPrimary)
-                                    Spacer()
-                                    Text(RSVPStatus(rawValue: recipient.status)?.label ?? "Pending")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(recipient.status == "yes" ? Theme.accent : Theme.textSecondary)
+                            Text("Invited (\(recipients.count))")
+                                .font(.headline)
+                                .foregroundStyle(Theme.textPrimary)
+
+                            VStack(spacing: 0) {
+                                ForEach(recipients) { recipient in
+                                    if recipient.id != recipients.first?.id {
+                                        Divider().overlay(Theme.hairline).padding(.leading, 52)
+                                    }
+                                    IdentityRow(
+                                        avatarURL: recipient.user?.avatarURL,
+                                        initials: recipient.user?.initials ?? "?",
+                                        avatarSize: 36,
+                                        name: recipient.user?.displayName ?? "Player",
+                                        userId: recipient.user?.id
+                                    ) {
+                                        let status = RSVPStatus(rawValue: recipient.status) ?? .pending
+                                        Text(status.label)
+                                            .font(.caption2.weight(.bold))
+                                            .foregroundStyle(rsvpColor(status))
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 5)
+                                            .background(rsvpColor(status).opacity(0.14), in: Capsule())
+                                    }
+                                    .padding(.vertical, 8)
                                 }
                             }
+                            .cardStyle()
                         }
                     }
 
                     if isHost && !invite.isCancelled && !invite.isPast {
-                        Button(role: .destructive) {
+                        Button {
                             showCancelConfirmation = true
                         } label: {
                             HStack {
@@ -364,12 +446,15 @@ struct InviteDetailView: View {
                                     ProgressView().tint(Theme.loss)
                                 } else {
                                     Label("Cancel Invite", systemImage: "xmark.circle")
+                                        .font(.subheadline.weight(.semibold))
                                 }
                                 Spacer()
                             }
+                            .foregroundStyle(Theme.loss)
+                            .padding(.vertical, 12)
+                            .background(Theme.loss.opacity(0.12), in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
                         }
-                        .buttonStyle(.bordered)
-                        .tint(Theme.loss)
+                        .buttonStyle(.plain)
                         .disabled(isCancelling)
                     }
                 }
