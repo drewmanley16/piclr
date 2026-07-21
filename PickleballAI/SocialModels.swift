@@ -92,6 +92,27 @@ struct FollowListEntry: Identifiable, Hashable {
     var id: UUID { userId }
 }
 
+/// A raw row from the `suggested_athletes()` RPC (before profile hydration).
+struct SuggestedAthleteRow: Decodable, Hashable {
+    let userId: UUID
+    let mutualCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case mutualCount = "mutual_count"
+    }
+}
+
+/// A ranked follow suggestion for the Home feed's "Suggested Athletes" row,
+/// hydrated client-side from a `SuggestedAthleteRow` + its `Profile`.
+struct SuggestedAthlete: Identifiable, Hashable {
+    let profile: Profile
+    let mutualCount: Int
+
+    var id: UUID { profile.id }
+    var reasonLabel: String { mutualCount > 0 ? "Followed by \(mutualCount) you know" : "Featured" }
+}
+
 /// Directional follow edge write model. follower_id follows followee_id;
 /// the request starts `pending` until the followee accepts.
 struct NewFollow: Encodable {
