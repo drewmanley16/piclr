@@ -34,6 +34,8 @@ final class AppStore: ObservableObject {
     @Published var followers: [FollowListEntry] = []
     @Published var following: [FollowListEntry] = []
     @Published var contactMatches: [ContactMatch] = []
+    @Published var suggestedAthletes: [SuggestedAthlete] = []
+    @Published var isSuggestedAthletesLoading = false
     @Published var searchResults: [Profile] = []
     @Published var requestedFollowIds: Set<UUID> = []
     @Published var gear: [GearItem] = []

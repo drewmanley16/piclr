@@ -136,6 +136,7 @@ extension AppStore {
             try await supabase.from("follows").insert(new).execute()
             Analytics.capture(.followSent)
             requestedFollowIds.insert(profile.id)
+            suggestedAthletes.removeAll { $0.id == profile.id }
             await loadFollowState(userId: uid)
         } catch {
             reportError(error)
@@ -211,6 +212,50 @@ extension AppStore {
             await loadFollowState(userId: uid)
             await loadFollowLists(userId: uid)
         } catch {
+            reportError(error)
+        }
+    }
+
+    /// Loads ranked follow suggestions from `suggested_athletes()` and
+    /// hydrates them with profiles for the Home feed's "Suggested Athletes" row.
+    func loadSuggestedAthletes() async {
+        guard let uid = currentProfile?.id else { return }
+        isSuggestedAthletesLoading = true
+        defer {
+            if currentProfile?.id == uid {
+                isSuggestedAthletesLoading = false
+            }
+        }
+        do {
+            let rows: [SuggestedAthleteRow] = try await supabase
+                .rpc("suggested_athletes")
+                .execute()
+                .value
+            let byId = try await profilesByID(for: rows.map(\.userId))
+            guard currentProfile?.id == uid, !Task.isCancelled else { return }
+            suggestedAthletes = rows.compactMap { row in
+                byId[row.userId].map { SuggestedAthlete(profile: $0, mutualCount: row.mutualCount) }
+            }
+        } catch {
+            reportError(error)
+        }
+    }
+
+    /// Dismisses a suggested athlete: removes the card immediately and
+    /// persists the dismissal so it doesn't reappear. Rolls back on failure.
+    func dismissSuggestion(userId: UUID) async {
+        guard let uid = currentProfile?.id else { return }
+        let removed = suggestedAthletes.first { $0.id == userId }
+        suggestedAthletes.removeAll { $0.id == userId }
+        do {
+            try await supabase
+                .from("dismissed_suggestions")
+                .insert(["user_id": uid.uuidString, "dismissed_user_id": userId.uuidString])
+                .execute()
+        } catch {
+            if let removed, !suggestedAthletes.contains(where: { $0.id == userId }) {
+                suggestedAthletes.append(removed)
+            }
             reportError(error)
         }
     }

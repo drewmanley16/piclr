@@ -30,9 +30,12 @@ struct HomeView: View {
                         emptyState
                     }
                 } else {
-                    ForEach(currentFeed) { session in
+                    ForEach(Array(currentFeed.enumerated()), id: \.element.id) { index, session in
                         FeedCard(session: session)
                             .onAppear { loadMoreIfNeeded(session) }
+                        if feedMode == .following && index == 0 && (store.isSuggestedAthletesLoading || !store.suggestedAthletes.isEmpty) {
+                            SuggestedAthletesRow(isLoading: store.isSuggestedAthletesLoading)
+                        }
                     }
                     if !reachedEnd {
                         ProgressView().tint(Theme.accent)
