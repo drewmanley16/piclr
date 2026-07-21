@@ -175,6 +175,9 @@ struct FeedCard: View {
     // lives in the stat strip, so it can't be mistaken for a timestamp).
     private var titleBlock: some View {
         VStack(alignment: .leading, spacing: 3) {
+            if let weeks = session.postStreakWeek, weeks >= 2 {
+                StreakBadge(weeks: weeks)
+            }
             Text(session.postDisplayTitle)
                 .font(.headline)
                 .foregroundStyle(Theme.textPrimary)
@@ -593,5 +596,31 @@ struct DrillRow: View {
     private var detail: String? {
         let bits = [activity.reps, activity.notes].compactMap { $0 }.filter { !$0.isEmpty }
         return bits.isEmpty ? nil : bits.joined(separator: " — ")
+    }
+}
+
+/// A small "N week streak" pill for a post that extended the poster's weekly
+/// play streak. Uses the same `circle.hexagongrid.fill` streak mark as the
+/// profile header for consistency. Milestone weeks (multiples of 4) get a filled
+/// accent treatment; ordinary weeks get a subtle tinted chip. Frozen at post
+/// time (see `sessions.streak_week`).
+struct StreakBadge: View {
+    let weeks: Int
+
+    private var isMilestone: Bool { weeks % 4 == 0 }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "circle.hexagongrid.fill")
+            Text("\(weeks) week streak")
+        }
+        .font(.caption2.weight(.bold))
+        .foregroundStyle(isMilestone ? Theme.background : Theme.accent)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(
+            Capsule().fill(isMilestone ? Theme.accent : Theme.accent.opacity(0.15))
+        )
+        .accessibilityLabel("\(weeks) week play streak")
     }
 }
