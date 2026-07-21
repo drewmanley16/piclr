@@ -1,67 +1,171 @@
 import SwiftUI
 
 struct CommentsView: View {
+    let session: FeedSession
+
+    var body: some View {
+        // The screen lives inside the stack so its @mention taps resolve to this
+        // stack's profile destination (see ProfileNavigationStack / openProfile).
+        ProfileNavigationStack {
+            CommentsScreen(session: session)
+        }
+    }
+}
+
+private struct CommentsScreen: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openProfile) private var openProfile
     @EnvironmentObject private var store: AppStore
     let session: FeedSession
 
     @State private var comments: [Comment] = []
     @State private var draft = ""
     @State private var loading = true
+    @State private var mentionSuggestions: [MentionCandidate] = []
 
     private var canSend: Bool {
         !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !store.isBusy
     }
 
+    /// People taggable from this thread: the session's players + who you follow.
+    private var mentionCandidates: [MentionCandidate] {
+        var seen = Set<UUID>()
+        var out: [MentionCandidate] = []
+        for activity in session.postActivities {
+            for participant in activity.participants ?? [] {
+                if let profile = participant.profile, seen.insert(profile.id).inserted {
+                    out.append(MentionCandidate(profile))
+                }
+            }
+        }
+        for entry in store.following {
+            if let profile = entry.profile, seen.insert(profile.id).inserted {
+                out.append(MentionCandidate(profile))
+            }
+        }
+        let me = store.currentProfile?.id
+        return out.filter { $0.id != me }
+    }
+
+    /// username → id for rendering: candidates plus everyone who has commented,
+    /// so mentions of thread participants always resolve to a tappable link.
+    private var mentionResolver: [String: UUID] {
+        var map: [String: UUID] = [:]
+        for candidate in mentionCandidates { map[candidate.username.lowercased()] = candidate.id }
+        for comment in comments {
+            if let author = comment.author { map[author.username.lowercased()] = author.id }
+        }
+        return map
+    }
+
     var body: some View {
-        ProfileNavigationStack {
-            VStack(spacing: 0) {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 18) {
-                            if loading {
-                                SkeletonList(rows: 5)
-                            } else if comments.isEmpty {
-                                Text("No comments yet — start the conversation.")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Theme.textSecondary)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.top, 40)
-                            } else {
-                                ForEach(comments) { comment in
-                                    CommentRow(
-                                        comment: comment,
-                                        sessionOwnerId: session.userId,
-                                        onDeleted: { Task { await load() } }
-                                    )
-                                    .id(comment.id)
-                                }
+        VStack(spacing: 0) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 18) {
+                        if loading {
+                            SkeletonList(rows: 5)
+                        } else if comments.isEmpty {
+                            Text("No comments yet — start the conversation.")
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.textSecondary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 40)
+                        } else {
+                            ForEach(comments) { comment in
+                                CommentRow(
+                                    comment: comment,
+                                    sessionOwnerId: session.userId,
+                                    resolver: mentionResolver,
+                                    onDeleted: { Task { await load() } }
+                                )
+                                .id(comment.id)
                             }
                         }
-                        .padding(16)
                     }
-                    .refreshable { await load() }
-                    .onChange(of: comments) { _, _ in
-                        if let last = comments.last?.id {
-                            withAnimation { proxy.scrollTo(last, anchor: .bottom) }
-                        }
+                    .padding(16)
+                }
+                .refreshable { await load() }
+                .onChange(of: comments) { _, _ in
+                    if let last = comments.last?.id {
+                        withAnimation { proxy.scrollTo(last, anchor: .bottom) }
                     }
                 }
+            }
 
-                composer
+            if !mentionSuggestions.isEmpty {
+                mentionBar
             }
-            .background(Theme.background.ignoresSafeArea())
-            .navigationTitle("Comments")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
-            }
-            .task {
-                await load()
-                store.startCommentsRealtime(sessionId: session.id) { await load() }
-            }
-            .onDisappear { store.stopCommentsRealtime() }
+            composer
         }
+        .background(Theme.background.ignoresSafeArea())
+        .navigationTitle("Comments")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
+        }
+        // Taps on a rendered @mention (pmention://<uuid>) open that profile.
+        .environment(\.openURL, OpenURLAction { url in
+            guard url.scheme == "pmention", let id = UUID(uuidString: url.host() ?? "") else {
+                return .systemAction
+            }
+            openProfile(id)
+            return .handled
+        })
+        .task {
+            await load()
+            store.startCommentsRealtime(sessionId: session.id) { await load() }
+        }
+        .onDisappear { store.stopCommentsRealtime() }
+    }
+
+    // MARK: Mention autocomplete
+
+    private var mentionBar: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                ForEach(mentionSuggestions) { candidate in
+                    Button {
+                        draft = CommentMentions.insert(candidate.username, into: draft)
+                        mentionSuggestions = []
+                        Haptics.tap()
+                    } label: {
+                        HStack(spacing: 10) {
+                            ProfileAvatar(participant: candidate.profile, size: 30, unlinked: true)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(candidate.displayName)
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(Theme.textPrimary)
+                                Text("@\(candidate.username)")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.textSecondary)
+                            }
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .frame(maxHeight: 160)
+        .background(Theme.surface)
+        .overlay(Divider().overlay(Theme.hairline), alignment: .top)
+    }
+
+    private func updateMentionSuggestions() {
+        guard let (_, prefix) = CommentMentions.activeQuery(in: draft) else {
+            mentionSuggestions = []
+            return
+        }
+        let matches = mentionCandidates.filter { candidate in
+            prefix.isEmpty
+                || candidate.username.lowercased().hasPrefix(prefix)
+                || candidate.displayName.lowercased().contains(prefix)
+        }
+        mentionSuggestions = Array(matches.prefix(6))
     }
 
     private var composer: some View {
@@ -72,6 +176,7 @@ struct CommentsView: View {
                 .padding(.vertical, 10)
                 .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
+                .onChange(of: draft) { _, _ in updateMentionSuggestions() }
 
             Button {
                 Task { await send() }
@@ -96,6 +201,7 @@ struct CommentsView: View {
     private func send() async {
         let body = draft
         draft = ""
+        mentionSuggestions = []
         if await store.addComment(sessionId: session.id, body: body) {
             Haptics.success()
             await load()
@@ -109,6 +215,7 @@ struct CommentRow: View {
     @EnvironmentObject private var store: AppStore
     let comment: Comment
     let sessionOwnerId: UUID
+    var resolver: [String: UUID] = [:]
     var onDeleted: () -> Void
 
     @State private var confirmDelete = false
@@ -162,9 +269,10 @@ struct CommentRow: View {
                         .accessibilityLabel("Comment actions")
                     }
                 }
-                Text(comment.body)
+                Text(CommentMentions.attributed(comment.body, resolver: resolver, accent: Theme.accent))
                     .font(.subheadline)
                     .foregroundStyle(Theme.textPrimary)
+                    .tint(Theme.accent)
             }
             Spacer(minLength: 0)
         }

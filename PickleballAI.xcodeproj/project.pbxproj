@@ -44,6 +44,7 @@
 		53A4ED9BBF46A833CDCD422A /* RevenueCatService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DABB61C500760EEE65FB5F65 /* RevenueCatService.swift */; };
 		5871B4D2606B7AC392C95451 /* OtherProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72609C0E290C1E3683A88921 /* OtherProfileView.swift */; };
 		5E9F8ED09A2B926B38FFE0C8 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC1B8FB7392D5C5FC8C4D640 /* LiveActivityManager.swift */; };
+		612BCA3A3A91F6EEBBC287BF /* CommentMentions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B007A00EBC21777270E6C5C /* CommentMentions.swift */; };
 		63CF72EC30CBFEC89BF39639 /* LiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF3D5A5AC51AF989571223E /* LiveActivityAttributes.swift */; };
 		6431A39E667DF61B6E39C123 /* MediaHydrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1ADA23D176823BB8CF93823 /* MediaHydrator.swift */; };
 		664317151FD26AFB65FCFB64 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C2F55C19C493784AFEFC588 /* DesignSystem.swift */; };
@@ -184,6 +185,7 @@
 		323771872266981FD4A95C19 /* WorkoutCalendarCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutCalendarCard.swift; sourceTree = "<group>"; };
 		32CF1AA306E5F578AA3022F7 /* LegalDocuments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDocuments.swift; sourceTree = "<group>"; };
 		38D466C6F8E7D2FD8E302914 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
+		3B007A00EBC21777270E6C5C /* CommentMentions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentMentions.swift; sourceTree = "<group>"; };
 		40894D3797C7D56547B9FDF2 /* AppleWatchWorkoutLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleWatchWorkoutLauncher.swift; sourceTree = "<group>"; };
 		417ED5579B58CC67197FFB16 /* AppStore+Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Notifications.swift"; sourceTree = "<group>"; };
 		43A2D10D5764F0D375B1CCE7 /* GameOverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameOverView.swift; sourceTree = "<group>"; };
@@ -341,6 +343,7 @@
 				524C92C8AF8A9C6D3ADE7AC4 /* AuthComponents.swift */,
 				38D466C6F8E7D2FD8E302914 /* AuthView.swift */,
 				F30A6ECDA3C89862D17F1C81 /* Celebration.swift */,
+				3B007A00EBC21777270E6C5C /* CommentMentions.swift */,
 				2B4FA8570E3F58A7BED6E97F /* CommentModels.swift */,
 				4F6C03EC3ED4D2A8C098B84F /* CommentsView.swift */,
 				14EC4FAB3BC7409E94B9F0E1 /* ContactsImporter.swift */,
@@ -603,6 +606,7 @@
 				B7840EC1684B9C2ECA85EAD7 /* AuthComponents.swift in Sources */,
 				95C8A46DA87219F98DD0A143 /* AuthView.swift in Sources */,
 				F2618610586DB9C3345C94C8 /* Celebration.swift in Sources */,
+				612BCA3A3A91F6EEBBC287BF /* CommentMentions.swift in Sources */,
 				1DE50B08C3685F46E9394C4E /* CommentModels.swift in Sources */,
 				33C8ACB4E3D0F1DAE5FC4EEF /* CommentsView.swift in Sources */,
 				16DD6B39109593928B5583A3 /* ContactsImporter.swift in Sources */,

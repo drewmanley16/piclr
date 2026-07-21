@@ -141,6 +141,7 @@ function buildMessage(
   switch (type) {
     case "like":            return { title: "New like", message: `${handle} liked your session` };
     case "comment":         return { title: "New comment", message: `${handle} commented: ${comment}` };
+    case "mention":         return { title: "You were mentioned", message: `${handle} mentioned you: ${comment}` };
     case "follow":          return { title: "New follower", message: `${handle} started following you` };
     case "tag":             return { title: "You were tagged", message: `${handle} tagged you in a session` };
     case "repost_approved": return { title: "Repost approved", message: `${handle} approved your repost` };
