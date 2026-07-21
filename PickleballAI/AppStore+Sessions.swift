@@ -55,11 +55,41 @@ extension AppStore {
         activeDraft = draft
     }
 
-    func startLiveSession() {
+    func startLiveSession(trackOnWatch: Bool = true) {
+        liveWorkoutMetrics = nil
         if activeDraft == nil { activeDraft = SessionDraft() }
+        if trackOnWatch { AppleWatchWorkoutLauncher.shared.startWorkout() }
     }
 
-    func discardLiveSession() { activeDraft = nil }
+    func requestLiveWorkoutMetrics() {
+        guard activeDraft?.watchWorkoutStartedAt != nil else { return }
+        WatchConnectivityManager.shared.sendCommand(.requestLiveWorkoutMetrics)
+    }
+
+    func discardLiveSession() {
+        if activeDraft?.watchWorkoutStartedAt != nil {
+            WatchConnectivityManager.shared.sendCommand(.discardWorkout)
+        }
+        liveWorkoutMetrics = nil
+        activeDraft = nil
+    }
+
+    /// Waits briefly for Apple Watch to finalize HealthKit so its aggregate
+    /// values are part of the same insert. If tracking never started, posts now.
+    func finishAndPostLiveSession() async -> Bool {
+        guard activeDraft != nil else { return false }
+        guard activeDraft?.watchWorkoutStartedAt != nil else {
+            return await postLiveSession()
+        }
+
+        WatchConnectivityManager.shared.sendCommand(.requestFinishWorkout)
+        for _ in 0..<48 {
+            if activeDraft?.workoutMetrics != nil { return await postLiveSession() }
+            try? await Task.sleep(for: .milliseconds(250))
+        }
+        errorMessage = "Apple Watch is still finishing the workout. Keep this screen open and try again."
+        return false
+    }
 
     /// Posts the live session and clears it on success.
     func postLiveSession() async -> Bool {
@@ -105,7 +135,10 @@ extension AppStore {
                 takeaway: nil,
                 posted: false,
                 startedAt: DateFormatting.iso.string(from: draft.startedAt),
-                endedAt: DateFormatting.iso.string(from: now)
+                endedAt: DateFormatting.iso.string(from: now),
+                averageHeartRateBPM: draft.workoutMetrics?.averageHeartRateBPM,
+                maximumHeartRateBPM: draft.workoutMetrics?.maximumHeartRateBPM,
+                activeCaloriesKcal: draft.workoutMetrics?.activeCaloriesKcal
             )
             try await supabase.from("sessions").insert(session).execute()
 

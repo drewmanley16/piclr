@@ -158,10 +158,11 @@ enum LegalText {
     • Content — sessions, comments, likes, and other content you create.
     • Contacts — if you choose to find friends, we match your contacts' phone numbers once to look for existing users. Contacts are matched in the moment and are not stored.
     • Device tokens — if you enable notifications, we store a push token to deliver them.
+    • Apple Watch workout metrics — if you enable Watch metric sharing, your latest rounded heart rate and active-calorie total are relayed temporarily to the open iPhone app. We store average and maximum heart rate and active calories with the session you post. Raw heart-rate samples remain in Apple Health, and live readings are not stored or uploaded.
     • Basic usage/diagnostic data needed to operate the service.
 
     **2. How we use information**
-    We use your information to operate the App: to authenticate you, show your feed and profile, deliver notifications, enable social features (follows, comments, contact matching), and to keep the community safe (handling reports, blocks, and abuse).
+    We use your information to operate the App: to authenticate you, show your feed and profile, record workouts, display Watch workout summaries on sessions you choose to post, deliver notifications, enable social features (follows, comments, contact matching), and to keep the community safe (handling reports, blocks, and abuse). Health and fitness data is never used for advertising or analytics.
 
     **3. How information is shared**
     We share information with service providers who help us run the App, including our backend host (Supabase), our SMS provider (Twilio, to send your login code), and Apple Push Notification service (to deliver notifications). We do not sell your personal information. We may disclose information if required by law.
@@ -170,7 +171,7 @@ enum LegalText {
     We keep your information for as long as your account is active. You can permanently delete your account and associated content at any time from Settings → Account → Delete Account.
 
     **5. Your choices**
-    You control your profile information, whether to grant Contacts and Notifications permissions, and can block or report other users at any time.
+    You control your profile information, whether to grant Contacts, Notifications, and Health permissions, and whether future public sessions include Apple Watch metrics. You can change Watch metric sharing in Settings → Preferences and manage Health access in system Settings. You can block or report other users at any time.
 
     **6. Children**
     The App is not intended for children under 13, and we do not knowingly collect information from them.

@@ -42,8 +42,24 @@ final class WatchConnectivityClient: NSObject {
 
     /// Send a lifecycle command over the guaranteed-delivery queue so it lands
     /// even if the phone is briefly unreachable (in a bag courtside).
-    func sendCommand(_ command: WatchCommand) {
-        session.transferUserInfo(WatchSyncMessage.command(command).payload)
+    func sendCommand(_ command: WatchCommand, immediately: Bool = false) {
+        let payload = WatchSyncMessage.command(command).payload
+        session.transferUserInfo(payload)
+        if immediately, session.isReachable {
+            session.sendMessage(payload, replyHandler: nil) { error in
+                Self.logger.debug("sendMessage(command) failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+    }
+
+    /// Streams a live sensor snapshot only while the iPhone app is reachable.
+    /// Unlike lifecycle commands, samples are not queued for later delivery.
+    func sendLiveWorkoutMetrics(_ metrics: LiveWorkoutMetrics) {
+        guard session.isReachable else { return }
+        let payload = WatchSyncMessage.command(.liveWorkoutMetrics(metrics)).payload
+        session.sendMessage(payload, replyHandler: nil) { error in
+            Self.logger.debug("sendMessage(live metrics) failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     // MARK: Inbound plumbing

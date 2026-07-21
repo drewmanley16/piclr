@@ -96,12 +96,18 @@ create table if not exists public.sessions (
   posted           boolean not null default true,
   started_at       timestamptz,
   ended_at         timestamptz,
+  average_heart_rate_bpm smallint,
+  maximum_heart_rate_bpm smallint,
+  active_calories_kcal integer,
   reposted_from    uuid references public.sessions(id) on delete cascade,
   created_at       timestamptz not null default now()
 );
 -- Keep existing projects in sync when this schema is re-run.
 alter table public.sessions add column if not exists started_at timestamptz;
 alter table public.sessions add column if not exists ended_at   timestamptz;
+alter table public.sessions add column if not exists average_heart_rate_bpm smallint;
+alter table public.sessions add column if not exists maximum_heart_rate_bpm smallint;
+alter table public.sessions add column if not exists active_calories_kcal integer;
 alter table public.sessions add column if not exists reposted_from uuid references public.sessions(id) on delete cascade;
 create index if not exists sessions_user_created_idx on public.sessions (user_id, created_at desc);
 create unique index if not exists sessions_repost_target_idx
@@ -684,10 +690,12 @@ revoke insert, update on public.sessions from authenticated;
 revoke insert (reposted_from), update (reposted_from) on public.sessions from authenticated;
 grant insert (
   id, user_id, title, location, duration_minutes, focus, takeaway, posted,
-  started_at, ended_at, created_at
+  started_at, ended_at, average_heart_rate_bpm, maximum_heart_rate_bpm,
+  active_calories_kcal, created_at
 ) on public.sessions to authenticated;
 grant update (
-  title, location, duration_minutes, focus, takeaway, posted, started_at, ended_at
+  title, location, duration_minutes, focus, takeaway, posted, started_at, ended_at,
+  average_heart_rate_bpm, maximum_heart_rate_bpm, active_calories_kcal
 ) on public.sessions to authenticated;
 grant select, insert, delete on public.likes to authenticated;
 grant select, insert, delete on public.comments to authenticated;

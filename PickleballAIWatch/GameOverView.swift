@@ -20,6 +20,8 @@ struct GameOverView: View {
                     .font(.system(size: 34, weight: .bold, design: .rounded))
                     .monospacedDigit()
 
+                WatchWorkoutMetricsView()
+
                 Button {
                     store.newGame()
                 } label: {
@@ -44,6 +46,7 @@ struct GameOverView: View {
                 .padding(.vertical, 10)
                 .background(Color.white.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
+                .disabled(store.workoutIsFinishing)
 
                 Button("Undo last point") { store.undo() }
                     .font(.caption2)

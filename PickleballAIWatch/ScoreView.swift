@@ -15,6 +15,7 @@ struct ScoreView: View {
 
     var body: some View {
         VStack(spacing: 4) {
+            WatchWorkoutMetricsView()
             sideButton(.us)
             sideButton(.them)
         }
