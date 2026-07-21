@@ -33,18 +33,27 @@ struct SessionLiveActivity: Widget {
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.white)
                         Spacer()
-                        Text(activityLabel(context.state.activityCount))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                        Text(subtitle(for: context.state))
+                            .font(.subheadline.weight(context.state.hasLiveGame ? .bold : .regular))
+                            .foregroundStyle(context.state.hasLiveGame ? accent : .secondary)
+                            .monospacedDigit()
                     }
                 }
             } compactLeading: {
                 Image(systemName: "figure.pickleball").foregroundStyle(accent)
             } compactTrailing: {
-                Text(context.attributes.startedAt, style: .timer)
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(accent)
-                    .frame(maxWidth: 44)
+                // Show the live score when a game is on, else the running timer.
+                if let score = liveScore(context.state) {
+                    Text(score)
+                        .font(.caption2.weight(.bold).monospacedDigit())
+                        .foregroundStyle(accent)
+                        .frame(maxWidth: 44)
+                } else {
+                    Text(context.attributes.startedAt, style: .timer)
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(accent)
+                        .frame(maxWidth: 44)
+                }
             } minimal: {
                 Image(systemName: "figure.pickleball").foregroundStyle(accent)
             }
@@ -66,9 +75,10 @@ private struct LockScreenView: View {
                     .font(.headline)
                     .foregroundStyle(.white)
                     .lineLimit(1)
-                Text(activityLabel(context.state.activityCount))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                Text(subtitle(for: context.state))
+                    .font(.subheadline.weight(context.state.hasLiveGame ? .bold : .regular))
+                    .foregroundStyle(context.state.hasLiveGame ? accent : .secondary)
+                    .monospacedDigit()
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 3) {
@@ -87,6 +97,17 @@ private struct LockScreenView: View {
 
 private func activityLabel(_ count: Int) -> String {
     count == 0 ? "Tap to log a game" : (count == 1 ? "1 game logged" : "\(count) games logged")
+}
+
+/// "US 7 – 5 THEM" while a watch game is live, else the games-logged label.
+private func subtitle(for state: SessionActivityAttributes.ContentState) -> String {
+    liveScore(state).map { "US \($0) THEM" } ?? activityLabel(state.activityCount)
+}
+
+/// Compact "7 – 5" of the live game, or nil when no game is streaming.
+private func liveScore(_ state: SessionActivityAttributes.ContentState) -> String? {
+    guard let us = state.us, let them = state.them else { return nil }
+    return "\(us) – \(them)"
 }
 
 @main

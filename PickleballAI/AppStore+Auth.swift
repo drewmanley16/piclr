@@ -235,6 +235,7 @@ extension AppStore {
         initialFeedLoadStartedAt = startupBeganAt
         isInitialFeedLoading = feed.isEmpty
         startRealtime(userId: userId)
+        setUpWatchConnectivity()
         await loadFeed()
         debugFeedMetric("initial feed pipeline complete", since: startupBeganAt)
 
@@ -260,6 +261,58 @@ extension AppStore {
     private func initials(from name: String) -> String {
         let letters = name.split(separator: " ").prefix(2).compactMap { $0.first }
         return letters.isEmpty ? "PB" : String(letters).uppercased()
+    }
+
+    // MARK: - Watch connectivity
+
+    /// Activates the WatchConnectivity link and routes inbound watch messages.
+    /// W1 only observes them (logged in the manager); reflecting live scores into
+    /// `activeDraft` and posting from the watch land in later phases.
+    private func setUpWatchConnectivity() {
+        WatchConnectivityManager.shared.onMessage = { [weak self] message in
+            self?.handleWatchMessage(message)
+        }
+        WatchConnectivityManager.shared.activate()
+    }
+
+    /// Routes messages from the watch into the live session. Score snapshots
+    /// stream into `activeDraft.liveMatch` (driving the Live Activity); lifecycle
+    /// commands open the session, convert a finished game into a match activity,
+    /// or post the whole session.
+    private func handleWatchMessage(_ message: WatchSyncMessage) {
+        switch message {
+        case .score(let score):
+            adoptWatchScore(score)
+
+        case .command(.startGame(let score)), .command(.newGame(let score)):
+            // A snapshot may have already opened the session; either way, adopt
+            // the game the watch just declared authoritative.
+            if activeDraft == nil { activeDraft = SessionDraft() }
+            activeDraft?.liveMatch = score
+
+        case .command(.endGame(let score)):
+            // Convert the finished game into a match activity (US → team) and
+            // clear the live game so the Live Activity stops showing a score.
+            if activeDraft == nil { activeDraft = SessionDraft() }
+            activeDraft?.activities.append(DraftActivity(liveMatch: score))
+            activeDraft?.liveMatch = nil
+
+        case .command(.finishSession):
+            Task { await postLiveSession() }
+        }
+    }
+
+    /// Adopts an incoming score only when it's strictly newer than what we hold
+    /// (last-writer-wins by `seq`, ties broken by start time), or when it belongs
+    /// to a different game. A stale delivery can't clobber a fresher local state.
+    private func adoptWatchScore(_ score: LiveMatchScore) {
+        if activeDraft == nil { activeDraft = SessionDraft() }
+        if let current = activeDraft?.liveMatch, current.id == score.id {
+            let newer = score.seq > current.seq
+                || (score.seq == current.seq && score.startedAt > current.startedAt)
+            guard newer else { return }
+        }
+        activeDraft?.liveMatch = score
     }
 
     // MARK: - Push notifications
