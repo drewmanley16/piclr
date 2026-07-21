@@ -101,7 +101,17 @@ struct ActiveSessionView: View {
             if isLive { store.activeDraft = newValue }
         }
         .alert(isEditing ? "Couldn't save session" : "Couldn't post session", isPresented: postErrorBinding) {
-            Button("OK", role: .cancel) { store.errorMessage = nil }
+            if isLive, store.activeDraft?.expectsWatchMetrics == true {
+                Button("Retry Watch Sync") {
+                    store.errorMessage = nil
+                    Task { await save() }
+                }
+                Button("Post Without Metrics", role: .destructive) {
+                    store.errorMessage = nil
+                    Task { await postWithoutMetrics() }
+                }
+            }
+            Button("Cancel", role: .cancel) { store.errorMessage = nil }
         } message: {
             Text(store.errorMessage ?? "Please try again.")
         }
@@ -148,37 +158,45 @@ struct ActiveSessionView: View {
                 .frame(minHeight: 48)
             }
             Divider().overlay(Theme.hairline)
-            if isLive, store.activeDraft?.watchWorkoutStartedAt != nil {
-                HStack(spacing: 12) {
-                    Image(systemName: "applewatch.radiowaves.left.and.right")
-                        .foregroundStyle(Theme.accent)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Apple Watch tracking")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Theme.textPrimary)
-                        if store.liveWorkoutMetrics?.heartRateBPM == nil {
-                            Text("Waiting for heart rate…")
+            if isLive, store.activeDraft?.expectsWatchMetrics == true {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "applewatch.radiowaves.left.and.right")
+                            .foregroundStyle(Theme.accent)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Apple Watch tracking")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Theme.textPrimary)
+                            Text(store.watchWorkoutStatus.message)
                                 .font(.caption)
-                                .foregroundStyle(Theme.textSecondary)
+                                .foregroundStyle(statusColor)
                         }
+                        Spacer()
                     }
-                    Spacer()
-                    if let metrics = store.liveWorkoutMetrics {
-                        VStack(alignment: .trailing, spacing: 2) {
-                            if let heartRate = metrics.heartRateBPM {
-                                Label("\(heartRate) BPM", systemImage: "heart.fill")
-                                    .font(.subheadline.weight(.bold).monospacedDigit())
-                                    .foregroundStyle(.red)
-                            }
-                            if let calories = metrics.activeCaloriesKcal {
-                                Text("\(calories) active cal")
-                                    .font(.caption.monospacedDigit())
-                                    .foregroundStyle(Theme.textSecondary)
-                            }
-                        }
+                    HStack(spacing: 0) {
+                        liveMetric(
+                            value: store.liveWorkoutMetrics?.heartRateBPM,
+                            label: "CURRENT",
+                            suffix: "bpm",
+                            color: .red
+                        )
+                        liveMetric(
+                            value: store.liveWorkoutMetrics?.averageHeartRateBPM,
+                            label: "AVG",
+                            suffix: "bpm",
+                            color: Theme.textPrimary
+                        )
+                        liveMetric(
+                            value: store.liveWorkoutMetrics?.activeCaloriesKcal,
+                            label: "ACTIVE",
+                            suffix: "cal",
+                            color: .orange
+                        )
                     }
+                    .padding(.vertical, 8)
+                    .background(Theme.surfaceElevated, in: RoundedRectangle(cornerRadius: Theme.radiusControl))
                 }
-                .frame(minHeight: 44)
+                .padding(.vertical, 10)
                 Divider().overlay(Theme.hairline)
             }
             TextField(AppStore.timeOfDayTitle(for: draft.startedAt), text: $draft.title)
@@ -216,6 +234,26 @@ struct ActiveSessionView: View {
                 if draft.photoData != nil { draft.removePhoto = false }
             }
         }
+    }
+
+    private var statusColor: Color {
+        switch store.watchWorkoutStatus {
+        case .failed: return .red
+        case .disconnected: return .orange
+        default: return Theme.textSecondary
+        }
+    }
+
+    private func liveMetric(value: Int?, label: String, suffix: String, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(value.map { "\($0) \(suffix)" } ?? "—")
+                .font(.subheadline.weight(.bold).monospacedDigit())
+                .foregroundStyle(color)
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Theme.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
@@ -329,19 +367,29 @@ struct ActiveSessionView: View {
                 ? await store.finishAndPostLiveSession()
                 : await store.postSession(draft)
             guard posted else { return }
-            Haptics.success()
-            if isLive { store.discardLiveSession() }
-            // postSession reloaded mySessions — a milestone celebration only when
-            // this post pushed the weekly streak onto a milestone.
-            let streakAfter = SessionStats(sessions: store.mySessions).weeklyStreak
-            let milestones: Set<Int> = [4, 12, 26, 52]
-            celebrationTitle = (streakAfter > streakBefore && milestones.contains(streakAfter))
-                ? "\(streakAfter)-week streak!"
-                : "Session posted"
-            withAnimation { showCelebration = true }
-            try? await Task.sleep(nanoseconds: 1_050_000_000)
-            dismiss()
+            await finishSuccessfulPost(streakBefore: streakBefore)
         }
+    }
+
+    private func postWithoutMetrics() async {
+        let streakBefore = SessionStats(sessions: store.mySessions).weeklyStreak
+        guard await store.postLiveSessionWithoutMetrics() else { return }
+        await finishSuccessfulPost(streakBefore: streakBefore)
+    }
+
+    private func finishSuccessfulPost(streakBefore: Int) async {
+        Haptics.success()
+        if isLive { store.discardLiveSession() }
+        // postSession reloaded mySessions — a milestone celebration only when
+        // this post pushed the weekly streak onto a milestone.
+        let streakAfter = SessionStats(sessions: store.mySessions).weeklyStreak
+        let milestones: Set<Int> = [4, 12, 26, 52]
+        celebrationTitle = (streakAfter > streakBefore && milestones.contains(streakAfter))
+            ? "\(streakAfter)-week streak!"
+            : "Session posted"
+        withAnimation { showCelebration = true }
+        try? await Task.sleep(nanoseconds: 1_050_000_000)
+        dismiss()
     }
 }
 

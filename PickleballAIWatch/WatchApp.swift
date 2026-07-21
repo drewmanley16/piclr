@@ -51,9 +51,13 @@ struct WatchWorkoutMetricsView: View {
 
     var body: some View {
         if store.workoutIsActive || store.currentHeartRateBPM != nil || store.activeCaloriesKcal != nil {
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 Label(store.currentHeartRateBPM.map(String.init) ?? "--", systemImage: "heart.fill")
                     .foregroundStyle(.red)
+                if let average = store.averageHeartRateBPM {
+                    Text("avg \(average)")
+                        .foregroundStyle(.white.opacity(0.72))
+                }
                 Label(store.activeCaloriesKcal.map(String.init) ?? "0", systemImage: "flame.fill")
                     .foregroundStyle(.orange)
             }
