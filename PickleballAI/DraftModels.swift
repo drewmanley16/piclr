@@ -76,6 +76,14 @@ struct DraftActivity: Identifiable, Codable, Hashable {
         self.kind = kind
     }
 
+    /// Build a finished match activity from a watch live-game score. US → team,
+    /// THEM → opponents. Players are attached on the phone before posting.
+    init(liveMatch: LiveMatchScore) {
+        self.init(kind: .match)
+        teamScore = liveMatch.us
+        opponentScore = liveMatch.them
+    }
+
     init(activity: SessionActivity) {
         id = activity.id
         kind = activity.isMatch ? .match : .practice
@@ -96,6 +104,10 @@ struct SessionDraft: Codable, Equatable {
     var startedAt: Date = Date()
     var endedAt: Date?
     var activities: [DraftActivity] = []
+    /// The in-progress game streaming from the paired Apple Watch, if any. Set
+    /// as score snapshots arrive; converted into an `activities` entry when the
+    /// game ends. nil when no watch game is live.
+    var liveMatch: LiveMatchScore?
     var postToFeed: Bool = true
     var photoData: Data? = nil
     var existingPhotoPath: String?

@@ -275,11 +275,44 @@ extension AppStore {
         WatchConnectivityManager.shared.activate()
     }
 
-    /// Placeholder inbound handler. W2 writes `.score` snapshots into
-    /// `activeDraft.liveMatch`; W3 converts `.endGame` into a match activity and
-    /// `.finishSession` into a post.
+    /// Routes messages from the watch into the live session. Score snapshots
+    /// stream into `activeDraft.liveMatch` (driving the Live Activity); lifecycle
+    /// commands open the session, convert a finished game into a match activity,
+    /// or post the whole session.
     private func handleWatchMessage(_ message: WatchSyncMessage) {
-        // Intentionally a no-op beyond the manager's debug logging for W1.
+        switch message {
+        case .score(let score):
+            adoptWatchScore(score)
+
+        case .command(.startGame(let score)), .command(.newGame(let score)):
+            // A snapshot may have already opened the session; either way, adopt
+            // the game the watch just declared authoritative.
+            if activeDraft == nil { activeDraft = SessionDraft() }
+            activeDraft?.liveMatch = score
+
+        case .command(.endGame(let score)):
+            // Convert the finished game into a match activity (US → team) and
+            // clear the live game so the Live Activity stops showing a score.
+            if activeDraft == nil { activeDraft = SessionDraft() }
+            activeDraft?.activities.append(DraftActivity(liveMatch: score))
+            activeDraft?.liveMatch = nil
+
+        case .command(.finishSession):
+            Task { await postLiveSession() }
+        }
+    }
+
+    /// Adopts an incoming score only when it's strictly newer than what we hold
+    /// (last-writer-wins by `seq`, ties broken by start time), or when it belongs
+    /// to a different game. A stale delivery can't clobber a fresher local state.
+    private func adoptWatchScore(_ score: LiveMatchScore) {
+        if activeDraft == nil { activeDraft = SessionDraft() }
+        if let current = activeDraft?.liveMatch, current.id == score.id {
+            let newer = score.seq > current.seq
+                || (score.seq == current.seq && score.startedAt > current.startedAt)
+            guard newer else { return }
+        }
+        activeDraft?.liveMatch = score
     }
 
     // MARK: - Push notifications
