@@ -78,7 +78,7 @@ extension AppStore {
         }
     }
 
-    /// Discover feed: recent public posts from everyone (excluding your own).
+    /// Discover feed: recent public posts from people you do not already follow.
     func loadDiscover(reset: Bool = true) async {
         guard let uid = currentProfile?.id else { return }
         if reset { discoverReachedEnd = false } else if discoverReachedEnd { return }
@@ -97,12 +97,14 @@ extension AppStore {
         }
 
         do {
+            let followingIds = try await acceptedFollowingIds(for: uid)
+            let excludedAuthorFilter = Self.inFilter(for: [uid] + followingIds)
             let from = reset ? 0 : discoverFeed.count
             let page: [FeedSession] = try await supabase
                 .from("sessions")
                 .select(selectFeedPreview)
                 .eq("posted", value: true)
-                .neq("user_id", value: uid.uuidString)
+                .filter("user_id", operator: "not.in", value: excludedAuthorFilter)
                 .order("created_at", ascending: false)
                 .order("created_at", ascending: true, referencedTable: "preview_comments")
                 .range(from: from, to: from + feedPageSize - 1)
