@@ -276,7 +276,6 @@ extension AppStore {
                 "remove_self_from_session",
                 params: ["target_session_id": session.id.uuidString]
             ).execute()
-            requestedRepostSessionIds.remove(session.id)
             await loadFeed()
             await loadNotifications(userId: uid)
             return true

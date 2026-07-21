@@ -16,10 +16,10 @@ struct PostingRow: View {
                 .background(Theme.accentSoft, in: Circle())
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(session.displayTitle)
+                Text(session.postDisplayTitle)
                     .font(.headline)
                     .foregroundStyle(Theme.textPrimary)
-                Text("\(session.durationMinutes) min · \(session.location ?? "—")")
+                Text("\(session.postDurationMinutes) min · \(session.postLocation ?? "—")")
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)
                     .lineLimit(1)
@@ -33,10 +33,12 @@ struct PostingRow: View {
 
             Menu {
                 if isOwner {
-                    Button {
-                        showEditor = true
-                    } label: {
-                        Label("Edit Session", systemImage: "pencil")
+                    if !session.isRepost {
+                        Button {
+                            showEditor = true
+                        } label: {
+                            Label("Edit Session", systemImage: "pencil")
+                        }
                     }
                     Button(role: .destructive) {
                         confirmDelete = true
@@ -96,33 +98,5 @@ struct FollowRequestRow: View {
             }
         }
         .cardStyle()
-    }
-}
-
-struct RepostRequestRow: View {
-    @EnvironmentObject private var store: AppStore
-    var request: RepostRequest
-
-    var body: some View {
-        IdentityRow(
-            avatarURL: request.requester?.avatarURL,
-            initials: request.requester?.initials ?? "?",
-            avatarSize: 40,
-            name: request.requester?.displayName ?? "Player",
-            detail: "wants to repost \(sessionLabel)",
-            userId: request.requester?.id
-        ) {
-            AcceptDeclineButtons {
-                Task { await store.declineRepost(request) }
-            } onAccept: {
-                Task { await store.approveRepost(request) }
-            }
-        }
-        .cardStyle()
-    }
-
-    private var sessionLabel: String {
-        if let title = request.session?.title, !title.isEmpty { return "\"\(title)\"" }
-        return "your session"
     }
 }

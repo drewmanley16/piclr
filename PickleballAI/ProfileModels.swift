@@ -106,6 +106,15 @@ struct ParticipantProfile: Decodable, Hashable {
         let letters = displayName.split(separator: " ").prefix(2).compactMap { $0.first }
         return letters.isEmpty ? "?" : String(letters).uppercased()
     }
+
+    init(profile: Profile) {
+        id = profile.id
+        username = profile.username
+        displayName = profile.displayName
+        avatarInitials = profile.avatarInitials
+        avatarURL = profile.avatarURL
+        avatarPath = profile.avatarPath
+    }
 }
 
 /// The minimum identity needed to render a person anywhere in the UI.

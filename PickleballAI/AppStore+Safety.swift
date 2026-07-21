@@ -59,7 +59,6 @@ extension AppStore {
             await loadFeed()
             await loadDiscover()
             await loadMySessions(userId: uid)
-            await loadRepostRequests(userId: uid)
             await loadNotifications(userId: uid)
             return true
         } catch {

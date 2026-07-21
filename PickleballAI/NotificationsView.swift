@@ -8,7 +8,6 @@ struct NotificationsView: View {
 
     private var isEmpty: Bool {
         store.incomingFollowRequests.isEmpty
-            && store.incomingRepostRequests.isEmpty
             && store.notifications.isEmpty
     }
 
@@ -24,11 +23,6 @@ struct NotificationsView: View {
                         if !store.incomingFollowRequests.isEmpty {
                             section(title: "Follow Requests") {
                                 ForEach(store.incomingFollowRequests) { FollowRequestRow(request: $0) }
-                            }
-                        }
-                        if !store.incomingRepostRequests.isEmpty {
-                            section(title: "Repost Requests") {
-                                ForEach(store.incomingRepostRequests) { RepostRequestRow(request: $0) }
                             }
                         }
                         if !store.notifications.isEmpty {
@@ -98,7 +92,7 @@ struct NotificationsView: View {
             Text("You're all caught up")
                 .font(.headline)
                 .foregroundStyle(Theme.textPrimary)
-            Text("Follow and repost requests will show up here.")
+            Text("Follow requests and activity will show up here.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -110,7 +104,6 @@ struct NotificationsView: View {
     private func reload() async {
         guard let uid = store.currentProfile?.id else { return }
         await store.loadFollowState(userId: uid)
-        await store.loadRepostRequests(userId: uid)
         await store.loadNotifications(userId: uid)
     }
 }

@@ -124,9 +124,9 @@ extension AppStore {
 
         let sessionID = record["id"]?.stringValue.flatMap(UUID.init(uuidString:))
         if isDelete, let sessionID {
-            feed.removeAll { $0.id == sessionID }
-            discoverFeed.removeAll { $0.id == sessionID }
-            mySessions.removeAll { $0.id == sessionID }
+            feed.removeAll { $0.id == sessionID || $0.repostedFrom == sessionID }
+            discoverFeed.removeAll { $0.id == sessionID || $0.repostedFrom == sessionID }
+            mySessions.removeAll { $0.id == sessionID || $0.repostedFrom == sessionID }
             return
         }
 
@@ -140,11 +140,17 @@ extension AppStore {
         let posted = record["posted"]?.boolValue ?? true
         let alreadyInFeed = sessionID.map { id in feed.contains { $0.id == id } } ?? false
         let alreadyInDiscover = sessionID.map { id in discoverFeed.contains { $0.id == id } } ?? false
-        let alreadyInMySessions = sessionID.map { id in mySessions.contains { $0.id == id } } ?? false
+        let sourceIsInFeed = sessionID.map { id in feed.contains { $0.repostedFrom == id } } ?? false
+        let sourceIsInDiscover = sessionID.map { id in discoverFeed.contains { $0.repostedFrom == id } } ?? false
+        let sourceIsInMySessions = sessionID.map { id in mySessions.contains { $0.repostedFrom == id } } ?? false
         let feedAuthorIsVisible = authorID == userId || acceptedFollowingUserIDs.contains(authorID)
-        let refreshFeed = feedAuthorIsVisible && (posted || alreadyInFeed)
-        let refreshMine = authorID == userId && (posted || alreadyInMySessions)
-        let refreshDiscover = !discoverFeed.isEmpty && authorID != userId && (posted || alreadyInDiscover)
+        let refreshFeed = sourceIsInFeed || (feedAuthorIsVisible && (posted || alreadyInFeed))
+        // Private workout credits are unposted wrappers owned by the tagged
+        // friend. Refresh every own-session change so an automatic credit
+        // appears without requiring a pull-to-refresh.
+        let refreshMine = sourceIsInMySessions || authorID == userId
+        let refreshDiscover = !discoverFeed.isEmpty
+            && (sourceIsInDiscover || (authorID != userId && (posted || alreadyInDiscover)))
         scheduleRealtimeRefresh(
             feed: refreshFeed,
             mySessions: refreshMine,

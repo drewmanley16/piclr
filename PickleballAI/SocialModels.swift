@@ -1,45 +1,5 @@
 import Foundation
 
-// MARK: - Reposts
-
-struct RepostRequest: Identifiable, Decodable, Hashable {
-    let id: UUID
-    let sessionId: UUID
-    let requesterId: UUID
-    let status: String
-    var requester: ParticipantProfile?
-    let session: RepostSessionInfo?
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case sessionId = "session_id"
-        case requesterId = "requester_id"
-        case status, requester, session
-    }
-}
-
-struct RepostSessionInfo: Decodable, Hashable {
-    let id: UUID
-    let userId: UUID
-    let title: String?
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case userId = "user_id"
-        case title
-    }
-}
-
-struct NewRepostRequest: Encodable {
-    let sessionId: UUID
-    let requesterId: UUID
-
-    enum CodingKeys: String, CodingKey {
-        case sessionId = "session_id"
-        case requesterId = "requester_id"
-    }
-}
-
 // MARK: - Crew leaderboard
 
 /// One row of the crew leaderboard (you + everyone you follow), from

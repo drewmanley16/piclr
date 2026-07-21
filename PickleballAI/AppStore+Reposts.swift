@@ -4,75 +4,89 @@ import Supabase
 // MARK: - Reposts
 
 extension AppStore {
-    /// Ask the session's author for permission to repost (copy) it. Only allowed
-    /// if you're tagged in the session (enforced by RLS).
-    func requestRepost(_ session: FeedSession) async {
-        guard let uid = currentProfile?.id else { return }
+    /// Publishes an existing private workout credit as a repost. Tagged mutual
+    /// friends are credited automatically; this action only changes feed
+    /// visibility and never duplicates the canonical match data.
+    @discardableResult
+    func repostSession(_ session: FeedSession) async -> Bool {
+        guard currentProfile?.id != nil,
+              !session.isRepost,
+              isTaggedInSession(session)
+        else { return false }
+        busyCount += 1
+        errorMessage = nil
+        defer { busyCount -= 1 }
         do {
-            try await supabase.from("repost_requests")
-                .insert(NewRepostRequest(sessionId: session.id, requesterId: uid))
+            try await supabase.rpc(
+                "repost_session",
+                params: ["source_session_id": session.id.uuidString]
+            )
                 .execute()
             Analytics.capture(.repostRequested)
-            requestedRepostSessionIds.insert(session.id)
-        } catch {
-            reportError(error)
-        }
-    }
-
-    /// Incoming repost requests for sessions the signed-in user authored.
-    func loadRepostRequests(userId: UUID) async {
-        do {
-            let rows: [RepostRequest] = try await supabase
-                .from("repost_requests")
-                .select("*, requester:profiles!requester_id(\(Self.selectProfileLite)), session:sessions!session_id(id,user_id,title)")
-                .eq("status", value: "pending")
-                .execute()
-                .value
-            var hydrated: [RepostRequest] = []
-            for var request in rows where request.session?.userId == userId {
-                if let requester = request.requester {
-                    request.requester = await media.hydrateParticipantProfile(requester)
-                }
-                hydrated.append(request)
-            }
-            incomingRepostRequests = hydrated
-
-            // Track your own outstanding requests so the button reads "Requested".
-            let mine: [RepostRequest] = try await supabase
-                .from("repost_requests")
-                .select("id,session_id,requester_id,status")
-                .eq("requester_id", value: userId.uuidString)
-                .eq("status", value: "pending")
-                .execute()
-                .value
-            requestedRepostSessionIds = Set(mine.map(\.sessionId))
-        } catch {
-            reportError(error)
-        }
-    }
-
-    func approveRepost(_ request: RepostRequest) async {
-        guard let uid = currentProfile?.id else { return }
-        do {
-            try await supabase.rpc("approve_repost", params: ["request_id": request.id.uuidString]).execute()
-            Analytics.capture(.repostApproved)
-            await loadRepostRequests(userId: uid)
+            guard let uid = currentProfile?.id else { return true }
+            await loadMySessions(userId: uid)
             await loadFeed()
+            return true
         } catch {
             reportError(error)
+            return false
         }
     }
 
-    func declineRepost(_ request: RepostRequest) async {
-        guard let uid = currentProfile?.id else { return }
+    /// Removes only the public repost while preserving the automatic private
+    /// workout credit and its contribution to the player's record.
+    @discardableResult
+    func unrepostSession(_ session: FeedSession) async -> Bool {
+        guard let uid = currentProfile?.id,
+              session.userId == uid,
+              session.isRepost,
+              session.posted
+        else { return false }
+        busyCount += 1
+        errorMessage = nil
+        defer { busyCount -= 1 }
         do {
-            try await supabase.from("repost_requests")
-                .update(["status": "declined"])
-                .eq("id", value: request.id.uuidString)
-                .execute()
-            await loadRepostRequests(userId: uid)
+            try await supabase.rpc(
+                "unrepost_session",
+                params: ["wrapper_session_id": session.id.uuidString]
+            ).execute()
+            await loadMySessions(userId: uid)
+            await loadFeed()
+            return true
         } catch {
             reportError(error)
+            return false
         }
+    }
+
+    /// Opting out of an automatic workout credit also removes the player's tag
+    /// from the source session so an author edit cannot recreate the credit.
+    @discardableResult
+    func removeWorkoutCredit(_ session: FeedSession) async -> Bool {
+        guard let uid = currentProfile?.id,
+              session.userId == uid,
+              let sourceSessionId = session.repostedFrom
+        else { return false }
+        busyCount += 1
+        errorMessage = nil
+        defer { busyCount -= 1 }
+        do {
+            try await supabase.rpc(
+                "remove_self_from_session",
+                params: ["target_session_id": sourceSessionId.uuidString]
+            ).execute()
+            await loadMySessions(userId: uid)
+            await loadFeed()
+            await loadNotifications(userId: uid)
+            return true
+        } catch {
+            reportError(error)
+            return false
+        }
+    }
+
+    private func isTaggedInSession(_ session: FeedSession) -> Bool {
+        guard let uid = currentProfile?.id else { return false }
+        return session.isParticipant(uid)
     }
 }

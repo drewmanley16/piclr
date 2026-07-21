@@ -39,6 +39,44 @@ struct LikeRow: Decodable, Hashable {
     }
 }
 
+/// Canonical post content embedded for a repost wrapper. Engagement and repost
+/// ownership stay on `FeedSession`; everything visible in the post body comes
+/// from this original session.
+struct RepostSource: Decodable, Hashable {
+    let id: UUID
+    let userId: UUID
+    let title: String?
+    let location: String?
+    let durationMinutes: Int
+    let focus: String?
+    let takeaway: String?
+    let createdAt: String
+    let startedAt: String?
+    let endedAt: String?
+    var author: Profile
+    var photoUrl: String?
+    let photoPath: String?
+    var activities: [SessionActivity]?
+
+    var sortedActivities: [SessionActivity] {
+        (activities ?? []).sorted { $0.position < $1.position }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case title, location
+        case durationMinutes = "duration_minutes"
+        case focus, takeaway
+        case createdAt = "created_at"
+        case startedAt = "started_at"
+        case endedAt = "ended_at"
+        case photoUrl = "photo_url"
+        case photoPath = "photo_path"
+        case author, activities
+    }
+}
+
 struct FeedSession: Identifiable, Decodable, Hashable {
     let id: UUID
     let userId: UUID
@@ -59,12 +97,36 @@ struct FeedSession: Identifiable, Decodable, Hashable {
     private let comments: [CountRow]?
     var previewComments: [Comment]?
     var activities: [SessionActivity]?
+    var source: RepostSource?
 
     var isRepost: Bool { repostedFrom != nil }
 
+    var postAuthor: Profile { source?.author ?? author }
+    var postTitle: String? { source?.title ?? title }
+    var postLocation: String? { source?.location ?? location }
+    var postDurationMinutes: Int { source?.durationMinutes ?? durationMinutes }
+    var postFocus: String? { source?.focus ?? focus }
+    var postTakeaway: String? { source?.takeaway ?? takeaway }
+    var postPhotoURL: String? { source?.photoUrl ?? photoUrl }
+    var postPhotoPath: String? { source?.photoPath ?? photoPath }
+    var postActivities: [SessionActivity] { source?.sortedActivities ?? sortedActivities }
+    var postDate: Date { source.map { Self.parse($0.createdAt) } ?? date }
+
+    var postDisplayTitle: String {
+        if let postTitle, !postTitle.isEmpty { return postTitle }
+        if let postFocus, !postFocus.isEmpty { return "\(postFocus) session" }
+        return "Session"
+    }
+
+    var postCompactDuration: String {
+        postDurationMinutes < 60
+            ? "\(postDurationMinutes)m"
+            : "\(postDurationMinutes / 60)h \(postDurationMinutes % 60)m"
+    }
+
     /// Is the given user tagged as a participant in any of this session's matches?
     func isParticipant(_ userId: UUID) -> Bool {
-        sortedActivities.contains { activity in
+        postActivities.contains { activity in
             (activity.participants ?? []).contains { $0.profile?.id == userId }
         }
     }
@@ -73,14 +135,14 @@ struct FeedSession: Identifiable, Decodable, Hashable {
     var commentCount: Int { comments?.first?.count ?? 0 }
     var inlineComments: [Comment] { (previewComments ?? []).prefix(3).map { $0 } }
     var sortedActivities: [SessionActivity] { (activities ?? []).sorted { $0.position < $1.position } }
-    var matchCount: Int { sortedActivities.filter(\.isMatch).count }
-    var practiceCount: Int { sortedActivities.filter { !$0.isMatch }.count }
+    var matchCount: Int { postActivities.filter(\.isMatch).count }
+    var practiceCount: Int { postActivities.filter { !$0.isMatch }.count }
 
     /// Distinct people (members + guests) tagged across the session's matches.
     var taggedNames: [String] {
         var seen = Set<String>()
         var names: [String] = []
-        for activity in sortedActivities {
+        for activity in postActivities {
             for p in activity.participants ?? [] {
                 let key = p.profile?.id.uuidString ?? p.guestName ?? p.id.uuidString
                 if seen.insert(key).inserted { names.append(p.displayName) }
@@ -113,11 +175,25 @@ struct FeedSession: Identifiable, Decodable, Hashable {
     }
 
     var shareSummary: String {
-        var parts = ["\(author.displayName) — \(displayTitle)"]
-        if matchCount > 0 { parts.append("\(matchCount) match\(matchCount == 1 ? "" : "es")") }
-        parts.append("\(durationMinutes) min")
+        let matches = postActivities.filter(\.isMatch).count
+        var parts = ["\(postAuthor.displayName) — \(postDisplayTitle)"]
+        if matches > 0 { parts.append("\(matches) match\(matches == 1 ? "" : "es")") }
+        parts.append("\(postDurationMinutes) min")
         return parts.joined(separator: " · ") + " · on pickleball.ai"
     }
+
+    /// Activities that affect the owner's workout record. Reposts project only
+    /// tagged source activities into the repost owner's score/role perspective.
+    func workoutActivities(for playerID: UUID) -> [SessionActivity] {
+        guard let source else { return sortedActivities }
+        return source.sortedActivities.compactMap {
+            $0.projected(for: playerID, sourceAuthor: source.author)
+        }
+    }
+
+    var workoutDate: Date { source.map { Self.parse($0.createdAt) } ?? date }
+    var workoutDurationMinutes: Int { source?.durationMinutes ?? durationMinutes }
+    var workoutDisplayTitle: String { postDisplayTitle }
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -131,7 +207,7 @@ struct FeedSession: Identifiable, Decodable, Hashable {
         case repostedFrom = "reposted_from"
         case photoUrl = "photo_url"
         case photoPath = "photo_path"
-        case author, likes, comments, activities
+        case author, likes, comments, activities, source
         case previewComments = "preview_comments"
     }
 
@@ -198,6 +274,57 @@ struct SessionActivity: Identifiable, Decodable, Hashable {
         if let focus, !focus.isEmpty { return "\(focus) practice" }
         return "Practice"
     }
+
+    /// Reframe one canonical activity for a tagged player's workout record.
+    /// The feed continues to render this activity unchanged from the author.
+    func projected(for playerID: UUID, sourceAuthor: Profile) -> SessionActivity? {
+        let tags = (participants ?? []).filter { $0.profile?.id == playerID }
+        guard tags.count == 1 else { return nil }
+        let playerRole = tags[0].role
+        let flipSides = playerRole == "opponent"
+
+        var projectedParticipants = (participants ?? []).compactMap { participant -> ActivityParticipant? in
+            guard participant.profile?.id != playerID,
+                  participant.profile?.id != sourceAuthor.id else { return nil }
+            let role: String
+            if flipSides {
+                role = participant.role == "partner" ? "opponent" : "partner"
+            } else {
+                role = participant.role
+            }
+            return participant.withRole(role)
+        }
+        projectedParticipants.append(
+            ActivityParticipant(
+                id: sourceAuthor.id,
+                role: playerRole,
+                guestName: nil,
+                profile: ParticipantProfile(profile: sourceAuthor)
+            )
+        )
+
+        let projectedTeamScore = flipSides ? opponentScore : teamScore
+        let projectedOpponentScore = flipSides ? teamScore : opponentScore
+        let projectedWon: Bool?
+        if isMatch, let team = projectedTeamScore, let opponent = projectedOpponentScore, team != opponent {
+            projectedWon = team > opponent
+        } else {
+            projectedWon = nil
+        }
+
+        return SessionActivity(
+            id: id,
+            kind: kind,
+            position: position,
+            focus: focus,
+            reps: reps,
+            notes: notes,
+            teamScore: projectedTeamScore,
+            opponentScore: projectedOpponentScore,
+            won: projectedWon,
+            participants: projectedParticipants
+        )
+    }
 }
 
 struct ActivityParticipant: Identifiable, Decodable, Hashable {
@@ -215,6 +342,10 @@ struct ActivityParticipant: Identifiable, Decodable, Hashable {
     var displayName: String { profile?.displayName ?? guestName ?? "Player" }
     var handle: String? { profile.map { "@\($0.username)" } }
     var isGuest: Bool { profile == nil }
+
+    func withRole(_ role: String) -> ActivityParticipant {
+        ActivityParticipant(id: id, role: role, guestName: guestName, profile: profile)
+    }
 }
 
 // MARK: - Session activities (write models)

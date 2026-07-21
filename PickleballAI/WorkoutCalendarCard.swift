@@ -18,7 +18,7 @@ struct WorkoutCalendarCard: View {
     private static let weekdaySymbolsFormatter = DateFormatter()
 
     private var workoutDays: Set<Date> {
-        Set(sessions.map { cal.startOfDay(for: $0.date) })
+        Set(sessions.map { cal.startOfDay(for: $0.workoutDate) })
     }
 
     private var monthTitle: String {

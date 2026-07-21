@@ -6,10 +6,10 @@ struct StatsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: AppStore
 
-    private var totalMinutes: Int { store.mySessions.reduce(0) { $0 + $1.durationMinutes } }
+    private var totalMinutes: Int { store.mySessions.reduce(0) { $0 + $1.workoutDurationMinutes } }
     private var avgMinutes: Int { store.mySessions.isEmpty ? 0 : totalMinutes / store.mySessions.count }
-    private var longest: Int { store.mySessions.map(\.durationMinutes).max() ?? 0 }
-    private var stats: SessionStats { SessionStats(sessions: store.mySessions) }
+    private var longest: Int { store.mySessions.map(\.workoutDurationMinutes).max() ?? 0 }
+    private var stats: SessionStats { SessionStats(sessions: store.mySessions, playerID: store.currentProfile?.id) }
 
     var body: some View {
         ProfileNavigationStack {
