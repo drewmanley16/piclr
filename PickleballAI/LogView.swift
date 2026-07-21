@@ -10,7 +10,7 @@ struct WorkoutView: View {
 
     private var thisWeek: [FeedSession] {
         let weekStart = Calendar.current.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
-        return store.mySessions.filter { $0.date >= weekStart }
+        return store.mySessions.filter { $0.workoutDate >= weekStart }
     }
 
     var body: some View {
@@ -136,8 +136,11 @@ struct WorkoutView: View {
     // MARK: This week
 
     private var weekStrip: some View {
-        let hours = Double(thisWeek.reduce(0) { $0 + $1.durationMinutes }) / 60
-        let streak = SessionStats(sessions: store.mySessions).weeklyStreakLabel
+        let hours = Double(thisWeek.reduce(0) { $0 + $1.workoutDurationMinutes }) / 60
+        let streak = SessionStats(
+            sessions: store.mySessions,
+            playerID: store.currentProfile?.id
+        ).weeklyStreakLabel
         return HStack(spacing: 0) {
             weekStat("\(thisWeek.count)", "sessions")
             Divider().frame(height: 30).overlay(Theme.hairline)
@@ -307,7 +310,7 @@ struct SessionSummaryRow: View {
                 .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(session.displayTitle)
+                Text(session.workoutDisplayTitle)
                     .font(.headline)
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
@@ -320,7 +323,7 @@ struct SessionSummaryRow: View {
             Spacer(minLength: 8)
 
             VStack(alignment: .trailing, spacing: 6) {
-                if session.matchCount > 0 {
+                if workoutMatchCount > 0 {
                     let r = matchResults
                     Text("\(r.wins)–\(r.losses)")
                         .font(.caption.weight(.bold))
@@ -332,21 +335,23 @@ struct SessionSummaryRow: View {
                             in: Capsule()
                         )
                 }
-                Text(session.date.relativeLabel)
+                Text(session.workoutDate.relativeLabel)
                     .font(.caption)
                     .foregroundStyle(Theme.textTertiary)
             }
 
             Menu {
-                Button {
-                    showEditor = true
-                } label: {
-                    Label("Edit Session", systemImage: "pencil")
+                if !session.isRepost {
+                    Button {
+                        showEditor = true
+                    } label: {
+                        Label("Edit Session", systemImage: "pencil")
+                    }
                 }
                 Button(role: .destructive) {
                     confirmDelete = true
                 } label: {
-                    Label("Delete Session", systemImage: "trash")
+                    Label(session.isRepost ? "Remove from Workout" : "Delete Session", systemImage: "trash")
                 }
             } label: {
                 Image(systemName: "ellipsis")
@@ -359,25 +364,41 @@ struct SessionSummaryRow: View {
         .fullScreenCover(isPresented: $showEditor) {
             ActiveSessionView(existingSession: session)
         }
-        .confirmationDialog("Delete this session?", isPresented: $confirmDelete, titleVisibility: .visible) {
-            Button("Delete Session", role: .destructive) {
-                Task { _ = await store.deleteSession(session) }
+        .confirmationDialog(session.isRepost ? "Remove from Workout?" : "Delete this session?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button(session.isRepost ? "Remove from Workout" : "Delete Session", role: .destructive) {
+                Task {
+                    if session.isRepost {
+                        _ = await store.removeWorkoutCredit(session)
+                    } else {
+                        _ = await store.deleteSession(session)
+                    }
+                }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Matches, practices, comments, and likes on this post will be removed.")
+            Text(session.isRepost
+                 ? "This removes the credited games from your Workout history and record, and removes your tag from the original post."
+                 : "Matches, practices, comments, and likes on this post will be removed.")
         }
     }
 
     private var icon: String {
-        if session.matchCount > 0 && session.practiceCount == 0 { return "flag.checkered" }
-        if session.practiceCount > 0 && session.matchCount == 0 { return "figure.cooldown" }
+        if workoutMatchCount > 0 && workoutPracticeCount == 0 { return "flag.checkered" }
+        if workoutPracticeCount > 0 && workoutMatchCount == 0 { return "figure.cooldown" }
         return "figure.pickleball"
     }
 
+    private var workoutActivities: [SessionActivity] {
+        guard let playerID = store.currentProfile?.id else { return [] }
+        return session.workoutActivities(for: playerID)
+    }
+
+    private var workoutMatchCount: Int { workoutActivities.filter(\.isMatch).count }
+    private var workoutPracticeCount: Int { workoutActivities.count - workoutMatchCount }
+
     private var matchResults: (wins: Int, losses: Int) {
         var wins = 0, losses = 0
-        for activity in session.sortedActivities {
+        for activity in workoutActivities {
             switch activity.matchResult {
             case .win:  wins += 1
             case .loss: losses += 1
@@ -389,9 +410,9 @@ struct SessionSummaryRow: View {
 
     private var subtitle: String {
         var parts: [String] = []
-        if session.matchCount > 0 { parts.append("\(session.matchCount) match\(session.matchCount == 1 ? "" : "es")") }
-        if session.practiceCount > 0 { parts.append("\(session.practiceCount) practice") }
-        if session.durationMinutes > 1 { parts.append("\(session.durationMinutes) min") }
+        if workoutMatchCount > 0 { parts.append("\(workoutMatchCount) match\(workoutMatchCount == 1 ? "" : "es")") }
+        if workoutPracticeCount > 0 { parts.append("\(workoutPracticeCount) practice") }
+        if session.workoutDurationMinutes > 1 { parts.append("\(session.workoutDurationMinutes) min") }
         if parts.isEmpty { parts.append("Session") }
         return parts.joined(separator: " · ")
     }

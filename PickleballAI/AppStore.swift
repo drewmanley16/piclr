@@ -37,8 +37,6 @@ final class AppStore: ObservableObject {
     @Published var searchResults: [Profile] = []
     @Published var requestedFollowIds: Set<UUID> = []
     @Published var gear: [GearItem] = []
-    @Published var incomingRepostRequests: [RepostRequest] = []
-    @Published var requestedRepostSessionIds: Set<UUID> = []
     @Published var likedSessionIds: Set<UUID> = []
     @Published var optimisticLikeCounts: [UUID: Int] = [:]
     @Published var notifications: [AppNotification] = []
@@ -62,8 +60,11 @@ final class AppStore: ObservableObject {
     /// select strings; kept as one constant so they can't drift apart.
     static let selectProfileLite = "id,username,display_name,avatar_initials,avatar_url,avatar_path"
 
-    let selectWithCounts = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(\(AppStore.selectProfileLite))))"
-    let selectFeedPreview = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), preview_comments:comments(*, author:profiles!comments_user_id_fkey(\(AppStore.selectProfileLite))), activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(\(AppStore.selectProfileLite))))"
+    static let selectActivityGraph = "activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(\(selectProfileLite))))"
+    static let selectRepostSource = "source:repost_source(id,user_id,title,location,duration_minutes,focus,takeaway,created_at,started_at,ended_at,photo_path,author:profiles!sessions_user_id_fkey(*),\(selectActivityGraph))"
+
+    let selectWithCounts = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), \(AppStore.selectActivityGraph), \(AppStore.selectRepostSource)"
+    let selectFeedPreview = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), preview_comments:comments(*, author:profiles!comments_user_id_fkey(\(AppStore.selectProfileLite))), \(AppStore.selectActivityGraph), \(AppStore.selectRepostSource)"
 
     // Realtime channel + listener-task lifecycles (see AppStore+Realtime.swift).
     let sessionsRealtime = RealtimeSubscription()

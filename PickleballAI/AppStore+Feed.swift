@@ -149,6 +149,7 @@ extension AppStore {
                 .execute()
                 .value
             mySessions = await media.hydrateSessions(sessions)
+            mySessions.sort { $0.workoutDate > $1.workoutDate }
         } catch {
             reportError(error)
         }

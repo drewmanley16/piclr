@@ -4,10 +4,8 @@ import Supabase
 // MARK: - Notifications
 
 extension AppStore {
-    /// Requests that need an action (follow + repost approvals).
-    var pendingNotificationCount: Int {
-        incomingFollowRequests.count + incomingRepostRequests.count
-    }
+    /// Follow requests that still need an action.
+    var pendingNotificationCount: Int { incomingFollowRequests.count }
 
     var unreadNotificationCount: Int { notifications.filter { !$0.read }.count }
 

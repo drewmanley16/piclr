@@ -10,11 +10,12 @@ struct FeedCard: View {
     @State private var confirmRemoveTag = false
     @State private var reportTarget: ReportTarget?
     @State private var shareItem: ShareImage?
+    @State private var repostInFlight = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if session.isRepost {
-                Label("Reposted", systemImage: "arrow.2.squarepath")
+                Label("\(session.author.displayName) reposted", systemImage: "arrow.2.squarepath")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(Theme.textTertiary)
             }
@@ -27,7 +28,7 @@ struct FeedCard: View {
 
             photoSection
 
-            if let takeaway = session.takeaway, !takeaway.isEmpty {
+            if let takeaway = session.postTakeaway, !takeaway.isEmpty {
                 Text(takeaway)
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)
@@ -52,11 +53,21 @@ struct FeedCard: View {
         .fullScreenCover(isPresented: $showEditor) {
             ActiveSessionView(existingSession: session)
         }
-        .confirmationDialog("Delete this session?", isPresented: $confirmDelete, titleVisibility: .visible) {
-            Button("Delete Session", role: .destructive) {
-                Task { _ = await store.deleteSession(session) }
+        .confirmationDialog(session.isRepost ? "Remove this repost?" : "Delete this session?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button(session.isRepost ? "Remove Repost" : "Delete Session", role: .destructive) {
+                Task {
+                    if session.isRepost {
+                        _ = await store.unrepostSession(session)
+                    } else {
+                        _ = await store.deleteSession(session)
+                    }
+                }
             }
             Button("Cancel", role: .cancel) {}
+        } message: {
+            if session.isRepost {
+                Text("The games stay in your private Workout history and record.")
+            }
         }
         .confirmationDialog("Block this player?", isPresented: $confirmBlock, titleVisibility: .visible) {
             Button("Block", role: .destructive) {
@@ -84,14 +95,14 @@ struct FeedCard: View {
 
     private var headerRow: some View {
         HStack(spacing: 12) {
-            ProfileLink(userId: session.author.id, placeholder: session.author) {
+            ProfileLink(userId: session.postAuthor.id, placeholder: session.postAuthor) {
                 HStack(spacing: 12) {
-                    ProfileAvatar(profile: session.author, size: 44, unlinked: true)
+                    ProfileAvatar(profile: session.postAuthor, size: 44, unlinked: true)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(session.author.displayName)
+                        Text(session.postAuthor.displayName)
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Theme.textPrimary)
-                        Text("@\(session.author.username) · \(session.date.relativeLabel)")
+                        Text("@\(session.postAuthor.username) · \(session.postDate.relativeLabel)")
                             .font(.caption)
                             .foregroundStyle(Theme.textSecondary)
                     }
@@ -100,15 +111,17 @@ struct FeedCard: View {
             Spacer()
             Menu {
                 if isOwner {
-                    Button {
-                        showEditor = true
-                    } label: {
-                        Label("Edit Session", systemImage: "pencil")
+                    if !session.isRepost {
+                        Button {
+                            showEditor = true
+                        } label: {
+                            Label("Edit Session", systemImage: "pencil")
+                        }
                     }
                     Button(role: .destructive) {
                         confirmDelete = true
                     } label: {
-                        Label("Delete Session", systemImage: "trash")
+                        Label(session.isRepost ? "Remove Repost" : "Delete Session", systemImage: "trash")
                     }
                 } else {
                     Button {
@@ -116,7 +129,7 @@ struct FeedCard: View {
                     } label: {
                         Label("Report Session", systemImage: "exclamationmark.bubble")
                     }
-                    if isTagged {
+                    if isTagged && !session.isRepost {
                         Button(role: .destructive) {
                             confirmRemoveTag = true
                         } label: {
@@ -126,7 +139,10 @@ struct FeedCard: View {
                     Button(role: .destructive) {
                         confirmBlock = true
                     } label: {
-                        Label("Block Player", systemImage: "person.crop.circle.badge.xmark")
+                        Label(
+                            session.isRepost ? "Block Reposter" : "Block Player",
+                            systemImage: "person.crop.circle.badge.xmark"
+                        )
                     }
                 }
             } label: {
@@ -144,7 +160,7 @@ struct FeedCard: View {
     // lives in the stat strip, so it can't be mistaken for a timestamp).
     private var titleBlock: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(session.displayTitle)
+            Text(session.postDisplayTitle)
                 .font(.headline)
                 .foregroundStyle(Theme.textPrimary)
             if let subtitle = metaSubtitle {
@@ -163,13 +179,13 @@ struct FeedCard: View {
     private var activityList: some View {
         if isMultiActivity {
             SessionMatchList(
-                activities: session.sortedActivities,
-                durationText: session.compactDuration,
-                author: session.author
+                activities: session.postActivities,
+                durationText: session.postCompactDuration,
+                author: session.postAuthor
             )
-        } else if let solo = session.sortedActivities.first {
+        } else if let solo = session.postActivities.first {
             if solo.isMatch {
-                MatchHeadToHead(activity: solo, author: session.author)
+                MatchHeadToHead(activity: solo, author: session.postAuthor)
             } else {
                 DrillRow(activity: solo)
                     .padding(.vertical, 4)
@@ -181,13 +197,13 @@ struct FeedCard: View {
 
     @ViewBuilder
     private var photoSection: some View {
-        if let photo = session.photoUrl, let url = URL(string: photo) {
+        if let photo = session.postPhotoURL, let url = URL(string: photo) {
             RemoteImage(url: url)
                 .frame(maxWidth: .infinity)
                 .frame(height: 200)
                 .clipped()
                 .clipShape(RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
-        } else if session.photoPath != nil {
+        } else if session.postPhotoPath != nil {
             Rectangle()
                 .fill(Theme.surfaceElevated)
                 .overlay { ProgressView().tint(Theme.textTertiary) }
@@ -238,23 +254,27 @@ struct FeedCard: View {
 
             Spacer()
 
-            if canRepost {
+            if showRepostAction {
                 Button {
                     Haptics.impact()
-                    Task { await store.requestRepost(session) }
+                    repostInFlight = true
+                    Task {
+                        _ = await store.repostSession(session)
+                        repostInFlight = false
+                    }
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.2.squarepath").font(.footnote.weight(.bold))
-                        Text(requested ? "Requested" : "Repost").font(.caption.weight(.bold))
+                        Text(alreadyReposted ? "Reposted" : "Repost").font(.caption.weight(.bold))
                     }
-                    .foregroundStyle(requested ? Theme.textTertiary : Theme.textSecondary)
+                    .foregroundStyle(alreadyReposted ? Theme.textTertiary : Theme.textSecondary)
                     .padding(.horizontal, 12)
                     .frame(height: 34)
                     .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
-                .disabled(requested)
-                .accessibilityLabel(requested ? "Repost requested" : "Repost")
+                .disabled(alreadyReposted || repostInFlight)
+                .accessibilityLabel(alreadyReposted ? "Reposted" : "Repost")
             }
         }
     }
@@ -288,14 +308,14 @@ struct FeedCard: View {
     /// Focus · location · duration — duration folds into the quiet context when
     /// there is no aggregate multi-activity summary.
     private var metaSubtitle: String? {
-        var parts = [session.focus, session.location]
+        var parts = [session.postFocus, session.postLocation]
             .compactMap { $0 }
             .filter { !$0.isEmpty }
-        if !isMultiActivity { parts.append(session.compactDuration) }
+        if !isMultiActivity { parts.append(session.postCompactDuration) }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
-    private var isMultiActivity: Bool { session.sortedActivities.count >= 2 }
+    private var isMultiActivity: Bool { session.postActivities.count >= 2 }
 
     private var isOwner: Bool { store.currentProfile?.id == session.userId }
     private var isTagged: Bool {
@@ -303,12 +323,18 @@ struct FeedCard: View {
         return session.isParticipant(uid)
     }
 
-    private var canRepost: Bool {
+    private var showRepostAction: Bool {
         guard let me = store.currentProfile?.id else { return false }
-        return session.userId != me && session.isParticipant(me)
+        let isMutualFriend = store.mutualFriends.contains { $0.userId == session.userId }
+        return !session.isRepost
+            && session.userId != me
+            && session.isParticipant(me)
+            && isMutualFriend
     }
 
-    private var requested: Bool { store.requestedRepostSessionIds.contains(session.id) }
+    private var alreadyReposted: Bool {
+        store.mySessions.contains { $0.repostedFrom == session.id && $0.posted }
+    }
 }
 
 struct InlineCommentRow: View {

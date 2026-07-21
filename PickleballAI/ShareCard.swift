@@ -8,7 +8,7 @@ import UIKit
 struct SessionShareCard: View {
     let session: FeedSession
 
-    private var matches: [SessionActivity] { session.sortedActivities.filter { $0.isMatch } }
+    private var matches: [SessionActivity] { session.postActivities.filter { $0.isMatch } }
     private var wins: Int { matches.filter { $0.matchResult == .win }.count }
     private var losses: Int { matches.filter { $0.matchResult == .loss }.count }
 
@@ -25,23 +25,23 @@ struct SessionShareCard: View {
                     .font(.headline.weight(.bold))
                     .foregroundStyle(Theme.textPrimary)
                 Spacer()
-                Text(session.date.relativeLabel)
+                Text(session.postDate.relativeLabel)
                     .font(.caption)
                     .foregroundStyle(Theme.textTertiary)
             }
 
             // Who + title
             HStack(spacing: 12) {
-                Text(session.author.initials)
+                Text(session.postAuthor.initials)
                     .font(.headline.weight(.bold))
                     .foregroundStyle(Theme.accent)
                     .frame(width: 44, height: 44)
                     .background(Theme.surfaceElevated, in: Circle())
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(session.author.displayName)
+                    Text(session.postAuthor.displayName)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Theme.textPrimary)
-                    Text(session.displayTitle)
+                    Text(session.postDisplayTitle)
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
                         .lineLimit(1)
@@ -91,7 +91,7 @@ struct SessionShareCard: View {
                 }
             }
 
-            if let location = session.location, !location.isEmpty {
+            if let location = session.postLocation, !location.isEmpty {
                 Label(location, systemImage: "mappin.and.ellipse")
                     .font(.caption)
                     .foregroundStyle(Theme.textTertiary)

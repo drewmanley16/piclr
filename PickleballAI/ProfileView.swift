@@ -259,7 +259,7 @@ struct ProfileView: View {
 
     // MARK: Record
 
-    private var stats: SessionStats { SessionStats(sessions: store.mySessions) }
+    private var stats: SessionStats { SessionStats(sessions: store.mySessions, playerID: store.currentProfile?.id) }
 
     @ViewBuilder
     private var recordCard: some View {

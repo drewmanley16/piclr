@@ -78,6 +78,15 @@ final class MediaHydrator {
         for session in sessions {
             if let path = session.author.avatarPath { avatarPaths.insert(path) }
             if let path = session.photoPath { photoPaths.insert(path) }
+            if let source = session.source {
+                if let path = source.author.avatarPath { avatarPaths.insert(path) }
+                if let path = source.photoPath { photoPaths.insert(path) }
+                for activity in source.activities ?? [] {
+                    for participant in activity.participants ?? [] {
+                        if let path = participant.profile?.avatarPath { avatarPaths.insert(path) }
+                    }
+                }
+            }
             for comment in session.previewComments ?? [] {
                 if let path = comment.author?.avatarPath { avatarPaths.insert(path) }
             }
@@ -120,6 +129,27 @@ final class MediaHydrator {
             }
             if let path = copy.photoPath {
                 copy.photoUrl = photos[path]
+            }
+            if var source = copy.source {
+                if let path = source.author.avatarPath {
+                    source.author.avatarURL = avatars[path]
+                }
+                source.activities = source.activities?.map { activity in
+                    var hydratedActivity = activity
+                    hydratedActivity.participants = hydratedActivity.participants?.map { participant in
+                        var hydratedParticipant = participant
+                        if var profile = hydratedParticipant.profile, let path = profile.avatarPath {
+                            profile.avatarURL = avatars[path]
+                            hydratedParticipant.profile = profile
+                        }
+                        return hydratedParticipant
+                    }
+                    return hydratedActivity
+                }
+                if let path = source.photoPath {
+                    source.photoUrl = photos[path]
+                }
+                copy.source = source
             }
             return copy
         }

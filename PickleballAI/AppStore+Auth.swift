@@ -181,8 +181,6 @@ extension AppStore {
         searchResults = []
         requestedFollowIds = []
         gear = []
-        incomingRepostRequests = []
-        requestedRepostSessionIds = []
         likedSessionIds = []
         notifications = []
         blockedAccounts = []
@@ -248,11 +246,10 @@ extension AppStore {
             async let followLists: Void = self.loadFollowLists(userId: userId)
             async let mySessions: Void = self.loadMySessions(userId: userId)
             async let gear: Void = self.loadGear(userId: userId)
-            async let reposts: Void = self.loadRepostRequests(userId: userId)
             async let notifications: Void = self.loadNotifications(userId: userId)
             async let blocks: Void = self.loadBlockedAccounts()
             async let invites: Void = self.loadActiveInvites(userId: userId)
-            _ = await (followState, followLists, mySessions, gear, reposts, notifications, blocks, invites)
+            _ = await (followState, followLists, mySessions, gear, notifications, blocks, invites)
             guard !Task.isCancelled, self.currentProfile?.id == userId else { return }
             await self.setUpPush()
         }

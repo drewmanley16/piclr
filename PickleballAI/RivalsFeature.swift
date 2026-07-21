@@ -55,7 +55,7 @@ struct RivalsSheet: View {
     @EnvironmentObject private var store: AppStore
 
     private var rivalries: [Rivalry] {
-        SessionStats(sessions: store.mySessions).rivalries.filter { $0.games >= 2 }
+        SessionStats(sessions: store.mySessions, playerID: store.currentProfile?.id).rivalries.filter { $0.games >= 2 }
     }
 
     var body: some View {

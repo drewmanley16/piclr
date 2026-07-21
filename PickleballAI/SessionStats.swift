@@ -62,11 +62,10 @@ struct SessionStats {
     /// Longest weekly streak ever achieved.
     let longestWeeklyStreak: Int
 
-    init(sessions: [FeedSession]) {
-        let weekly = Self.weeklyStreaks(from: sessions.map(\.date))
+    init(sessions: [FeedSession], playerID: UUID? = nil) {
+        let weekly = Self.weeklyStreaks(from: sessions.map(\.workoutDate))
         weeklyStreak = weekly.current
         longestWeeklyStreak = weekly.longest
-
         var results: [(won: Bool, date: Date, position: Int)] = []
         var opp: [String: PlayerRecord] = [:]
         var part: [String: PlayerRecord] = [:]
@@ -74,16 +73,17 @@ struct SessionStats {
         var oppLog: [String: (identity: PlayerRecord, games: [(won: Bool, date: Date, position: Int)])] = [:]
 
         for session in sessions {
-            for activity in session.sortedActivities where activity.isMatch {
+            let workoutActivities = playerID.map { session.workoutActivities(for: $0) } ?? session.sortedActivities
+            for activity in workoutActivities where activity.isMatch {
                 // Derive from the score so ties are excluded, not counted as losses.
                 guard let result = activity.matchResult, result != .tie else { continue }
                 let won = result == .win
-                results.append((won, session.date, activity.position))
+                results.append((won, session.workoutDate, activity.position))
                 for p in activity.opponents {
                     Self.bump(&opp, p, won: won)
                     let key = Self.key(for: p)
                     let identity = opp[key]!
-                    oppLog[key, default: (identity, [])].games.append((won, session.date, activity.position))
+                    oppLog[key, default: (identity, [])].games.append((won, session.workoutDate, activity.position))
                     oppLog[key]!.identity = identity
                 }
                 for p in activity.partners { Self.bump(&part, p, won: won) }
