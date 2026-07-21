@@ -17,13 +17,20 @@ final class WatchConnectivityClient: NSObject {
 
     /// Called on the main queue with every inbound message (score or command).
     var onMessage: ((WatchSyncMessage) -> Void)?
+    var onReachabilityChange: ((Bool) -> Void)?
 
     private var session: WCSession { .default }
+    private var pendingCommands: [WatchCommand] = []
 
     func activate() {
         guard WCSession.isSupported() else { return }
         session.delegate = self
-        session.activate()
+        if session.activationState == .activated {
+            flushPendingCommands()
+            onReachabilityChange?(session.isReachable)
+        } else {
+            session.activate()
+        }
     }
 
     // MARK: Outbound
@@ -31,6 +38,10 @@ final class WatchConnectivityClient: NSObject {
     /// Send the latest full snapshot. Coalesced background delivery via
     /// application context, plus an instant mirror when the phone is reachable.
     func sendScore(_ score: LiveMatchScore) {
+        guard session.activationState == .activated else {
+            activate()
+            return
+        }
         let payload = WatchSyncMessage.score(score).payload
         try? session.updateApplicationContext(payload)
         if session.isReachable {
@@ -43,6 +54,15 @@ final class WatchConnectivityClient: NSObject {
     /// Send a lifecycle command over the guaranteed-delivery queue so it lands
     /// even if the phone is briefly unreachable (in a bag courtside).
     func sendCommand(_ command: WatchCommand, immediately: Bool = false) {
+        guard session.activationState == .activated else {
+            pendingCommands.append(command)
+            activate()
+            return
+        }
+        transmit(command, immediately: immediately)
+    }
+
+    private func transmit(_ command: WatchCommand, immediately: Bool) {
         let payload = WatchSyncMessage.command(command).payload
         session.transferUserInfo(payload)
         if immediately, session.isReachable {
@@ -52,10 +72,17 @@ final class WatchConnectivityClient: NSObject {
         }
     }
 
+    private func flushPendingCommands() {
+        guard session.activationState == .activated, !pendingCommands.isEmpty else { return }
+        let commands = pendingCommands
+        pendingCommands.removeAll()
+        commands.forEach { transmit($0, immediately: true) }
+    }
+
     /// Streams a live sensor snapshot only while the iPhone app is reachable.
     /// Unlike lifecycle commands, samples are not queued for later delivery.
     func sendLiveWorkoutMetrics(_ metrics: LiveWorkoutMetrics) {
-        guard session.isReachable else { return }
+        guard session.activationState == .activated, session.isReachable else { return }
         let payload = WatchSyncMessage.command(.liveWorkoutMetrics(metrics)).payload
         session.sendMessage(payload, replyHandler: nil) { error in
             Self.logger.debug("sendMessage(live metrics) failed: \(error.localizedDescription, privacy: .public)")
@@ -74,6 +101,16 @@ extension WatchConnectivityClient: WCSessionDelegate {
     func session(_ session: WCSession, activationDidCompleteWith state: WCSessionActivationState, error: Error?) {
         if let error {
             Self.logger.error("activation failed: \(error.localizedDescription, privacy: .public)")
+        }
+        DispatchQueue.main.async { [weak self] in
+            self?.flushPendingCommands()
+            self?.onReachabilityChange?(state == .activated && session.isReachable)
+        }
+    }
+
+    func sessionReachabilityDidChange(_ session: WCSession) {
+        DispatchQueue.main.async { [weak self] in
+            self?.onReachabilityChange?(session.isReachable)
         }
     }
 
