@@ -1,12 +1,15 @@
 import SwiftUI
 
 enum SuggestedAthleteCardLayout {
-    static let width: CGFloat = 108
+    static let width: CGFloat = 148
     static let padding: CGFloat = 10
+    static let avatarSize: CGFloat = 112
 }
 
-/// A single card in the Home feed's "Suggested Athletes" row: avatar, name,
-/// mutual-connection reason, a Follow button, and a dismiss (X).
+/// A single card in the Home feed's "Suggested Athletes" row: a large avatar
+/// with the dismiss (X) overlaid on its corner, name, mutual-connection
+/// reason, and a Follow button — mirrors the reference "Suggested Athletes"
+/// card (big photo, minimal chrome) rather than a small centered avatar.
 struct SuggestedAthleteCard: View {
     @EnvironmentObject private var store: AppStore
     var athlete: SuggestedAthlete
@@ -14,30 +17,31 @@ struct SuggestedAthleteCard: View {
     private var isRequested: Bool { store.requestedFollowIds.contains(athlete.profile.id) }
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            VStack(spacing: 10) {
-                ProfileLink(userId: athlete.profile.id, placeholder: athlete.profile) {
-                    VStack(spacing: 2) {
-                        ProfileAvatar(profile: athlete.profile, size: 84, unlinked: true)
-                        Text(athlete.profile.username)
-                            .font(.headline)
-                            .foregroundStyle(Theme.textPrimary)
-                            .lineLimit(1)
-                        Text(athlete.reasonLabel)
-                            .font(.subheadline)
-                            .foregroundStyle(Theme.textSecondary)
-                            .lineLimit(1)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
+        VStack(spacing: 8) {
+            ProfileLink(userId: athlete.profile.id, placeholder: athlete.profile) {
+                ZStack(alignment: .topTrailing) {
+                    ProfileAvatar(profile: athlete.profile, size: SuggestedAthleteCardLayout.avatarSize, unlinked: true)
+                        .frame(maxWidth: .infinity)
+                    dismissButton
                 }
-                followButton
+                .contentShape(Rectangle())
             }
 
-            dismissButton
+            VStack(spacing: 2) {
+                Text(athlete.profile.username)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Text(athlete.reasonLabel)
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+            }
+
+            followButton
         }
         .padding(SuggestedAthleteCardLayout.padding)
-        .padding(.top, 6)
         .frame(width: SuggestedAthleteCardLayout.width)
         .cardStyle(padding: 0)
     }
@@ -50,7 +54,7 @@ struct SuggestedAthleteCard: View {
             Text(isRequested ? "Requested" : "Follow")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(isRequested ? Theme.textTertiary : Theme.background)
-                .frame(maxWidth: .infinity, minHeight: 40)
+                .frame(maxWidth: .infinity, minHeight: 36)
                 .background(isRequested ? Theme.surfaceElevated : Theme.accent, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -65,10 +69,9 @@ struct SuggestedAthleteCard: View {
             Image(systemName: "xmark")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(Theme.textTertiary)
-                .frame(width: 28, height: 28)
-                .background(Theme.surfaceElevated, in: Circle())
+                .frame(width: 24, height: 24)
+                .background(Theme.background.opacity(0.6), in: Circle())
         }
         .buttonStyle(.plain)
-        .padding(6)
     }
 }
