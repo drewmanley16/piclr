@@ -139,15 +139,25 @@ struct SessionDetailView: View {
     @EnvironmentObject private var store: AppStore
     let sessionId: UUID
     var openComments: Bool = false
+    /// Optional pre-known session so the card can render instantly while the
+    /// full snapshot (fresh like/comment counts) loads.
+    var placeholder: FeedSession? = nil
 
     @State private var session: FeedSession?
     @State private var isLoading = true
     @State private var showComments = false
 
+    init(sessionId: UUID, openComments: Bool = false, placeholder: FeedSession? = nil) {
+        self.sessionId = sessionId
+        self.openComments = openComments
+        self.placeholder = placeholder
+        _session = State(initialValue: placeholder)
+    }
+
     var body: some View {
         ScrollView {
             if let session {
-                FeedCard(session: session)
+                FeedCard(session: session, openable: false)
                     .padding(16)
                 guestInvites(for: session)
             } else if isLoading {

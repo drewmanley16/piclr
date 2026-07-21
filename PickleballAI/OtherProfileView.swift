@@ -12,11 +12,23 @@ struct ProfileRoute: Hashable {
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
 
-/// A `NavigationStack` pre-wired to open user profiles: it registers the profile
-/// destination exactly once and binds the `openProfile` environment action to its
-/// own path. Use this in place of a bare `NavigationStack` on any screen where
-/// avatars/names should be tappable. The mapping route → screen lives here and
-/// nowhere else, so changing the profile destination is a one-line edit.
+/// Data-only description of a session-detail navigation target, mirroring
+/// `ProfileRoute`. Identity is the session id; the optional `placeholder` rides
+/// along for an instant header/activity render but doesn't affect equality.
+struct SessionRoute: Hashable {
+    let id: UUID
+    var placeholder: FeedSession?
+
+    static func == (lhs: SessionRoute, rhs: SessionRoute) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
+/// A `NavigationStack` pre-wired to open user profiles and session detail
+/// screens: it registers both destinations exactly once and binds the
+/// `openProfile`/`openSession` environment actions to its own path. Use this in
+/// place of a bare `NavigationStack` on any screen where avatars/names or
+/// sessions should be tappable. The mapping route → screen lives here and
+/// nowhere else, so changing a destination is a one-line edit.
 struct ProfileNavigationStack<Root: View>: View {
     @ViewBuilder var root: Root
     /// Type-erased so this stack can also carry other value-based routes pushed
@@ -29,9 +41,15 @@ struct ProfileNavigationStack<Root: View>: View {
                 .navigationDestination(for: ProfileRoute.self) { route in
                     OtherProfileView(userId: route.id, placeholder: route.placeholder)
                 }
+                .navigationDestination(for: SessionRoute.self) { route in
+                    SessionDetailView(sessionId: route.id, placeholder: route.placeholder)
+                }
         }
         .environment(\.openProfile, OpenProfileAction { id, placeholder in
             path.append(ProfileRoute(id: id, placeholder: placeholder))
+        })
+        .environment(\.openSession, OpenSessionAction { id, placeholder in
+            path.append(SessionRoute(id: id, placeholder: placeholder))
         })
     }
 }

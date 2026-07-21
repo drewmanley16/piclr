@@ -399,6 +399,29 @@ extension EnvironmentValues {
     }
 }
 
+/// Action for "open this session's detail screen," injected via the
+/// environment for the same reason as `OpenProfileAction`. The app wires the
+/// concrete destination once (see `ProfileNavigationStack`).
+struct OpenSessionAction {
+    let handler: (UUID, FeedSession?) -> Void
+    func callAsFunction(_ sessionId: UUID, placeholder: FeedSession? = nil) {
+        handler(sessionId, placeholder)
+    }
+}
+
+private struct OpenSessionKey: EnvironmentKey {
+    /// No-op default: a tap in a context that hasn't wired navigation simply does
+    /// nothing rather than crashing.
+    static let defaultValue = OpenSessionAction { _, _ in }
+}
+
+extension EnvironmentValues {
+    var openSession: OpenSessionAction {
+        get { self[OpenSessionKey.self] }
+        set { self[OpenSessionKey.self] = newValue }
+    }
+}
+
 /// Wraps its content in a tap target that opens the tapped user's profile via the
 /// `openProfile` environment action, so avatars and names navigate consistently
 /// everywhere (Instagram-style). Pass a `nil` `userId` to render the content

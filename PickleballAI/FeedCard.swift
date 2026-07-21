@@ -2,7 +2,11 @@ import SwiftUI
 
 struct FeedCard: View {
     @EnvironmentObject private var store: AppStore
+    @Environment(\.openSession) private var openSession
     var session: FeedSession
+    /// False when this card is already the content of a session detail screen,
+    /// so tapping it doesn't push another copy of itself onto the stack.
+    var openable: Bool = true
     @State private var showComments = false
     @State private var showEditor = false
     @State private var confirmDelete = false
@@ -22,16 +26,23 @@ struct FeedCard: View {
 
             headerRow
 
-            titleBlock
+            VStack(alignment: .leading, spacing: 12) {
+                titleBlock
 
-            activityList
+                activityList
 
-            photoSection
+                photoSection
 
-            if let takeaway = session.postTakeaway, !takeaway.isEmpty {
-                Text(takeaway)
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textSecondary)
+                if let takeaway = session.postTakeaway, !takeaway.isEmpty {
+                    Text(takeaway)
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                guard openable else { return }
+                openSession(session.id, placeholder: session)
             }
 
             Divider().overlay(Theme.hairline)
