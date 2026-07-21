@@ -59,6 +59,7 @@ struct RepostSource: Decodable, Hashable {
     var author: Profile
     var photoUrl: String?
     let photoPath: String?
+    let streakWeek: Int?
     var activities: [SessionActivity]?
 
     var sortedActivities: [SessionActivity] {
@@ -79,6 +80,7 @@ struct RepostSource: Decodable, Hashable {
         case activeCaloriesKcal = "active_calories_kcal"
         case photoUrl = "photo_url"
         case photoPath = "photo_path"
+        case streakWeek = "streak_week"
         case author, activities
     }
 }
@@ -102,6 +104,9 @@ struct FeedSession: Identifiable, Decodable, Hashable {
     let repostedFrom: UUID?
     var photoUrl: String?
     let photoPath: String?
+    /// Frozen weekly-streak length this post earned (>= 2), or nil. Set server-side
+    /// when the post is the first session of a new week that extends the streak.
+    let streakWeek: Int?
     private let likes: [CountRow]?
     private let comments: [CountRow]?
     var previewComments: [Comment]?
@@ -121,6 +126,8 @@ struct FeedSession: Identifiable, Decodable, Hashable {
     var postAverageHeartRateBPM: Int? { source?.averageHeartRateBPM ?? averageHeartRateBPM }
     var postMaximumHeartRateBPM: Int? { source?.maximumHeartRateBPM ?? maximumHeartRateBPM }
     var postActiveCaloriesKcal: Int? { source?.activeCaloriesKcal ?? activeCaloriesKcal }
+    /// The streak length to badge on this post (a repost shows the original's).
+    var postStreakWeek: Int? { source?.streakWeek ?? streakWeek }
     var hasPostWorkoutMetrics: Bool {
         postAverageHeartRateBPM != nil || postMaximumHeartRateBPM != nil || postActiveCaloriesKcal != nil
     }
@@ -235,6 +242,7 @@ struct FeedSession: Identifiable, Decodable, Hashable {
         case repostedFrom = "reposted_from"
         case photoUrl = "photo_url"
         case photoPath = "photo_path"
+        case streakWeek = "streak_week"
         case author, likes, comments, activities, source
         case previewComments = "preview_comments"
     }
