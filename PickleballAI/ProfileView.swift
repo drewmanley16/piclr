@@ -1,5 +1,6 @@
 import SwiftUI
 import Charts
+import PhotosUI
 
 struct ProfileView: View {
     @EnvironmentObject private var store: AppStore
@@ -13,6 +14,9 @@ struct ProfileView: View {
     @State private var showCustomRange = false
     @State private var customStart = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
     @State private var customEnd = Date()
+    @State private var selectedProfilePhoto: PhotosPickerItem?
+    @State private var isUpdatingProfilePhoto = false
+    @State private var profilePhotoError: String?
     @AppStorage("dismissedProfileCompletion") private var dismissedCompletion = false
 
     private var profile: Profile? { store.currentProfile }
@@ -76,19 +80,44 @@ struct ProfileView: View {
                 case .leaderboard: LeaderboardSheet()
                 }
             }
+            .alert("Couldn't update photo", isPresented: profilePhotoErrorBinding) {
+                Button("OK", role: .cancel) { profilePhotoError = nil }
+            } message: {
+                Text(profilePhotoError ?? "Please try again.")
+            }
+            .onChange(of: selectedProfilePhoto) { _, item in
+                guard let item else { return }
+                Haptics.tap()
+                Task { await updateProfilePhoto(from: item) }
+            }
         }
     }
 
     // MARK: Profile row
 
     private var profileRow: some View {
-        HStack(spacing: 20) {
-            ProfileAvatar(profile: profile, size: 76, unlinked: true)
+        let showsProStatus = subscriptions.showsProStatus
+        return HStack(spacing: 20) {
+            PhotosPicker(selection: $selectedProfilePhoto, matching: .images) {
+                ZStack {
+                    ProfileAvatar(profile: profile, size: 76, unlinked: true)
+                        .opacity(isUpdatingProfilePhoto ? 0.48 : 1)
+
+                    if isUpdatingProfilePhoto {
+                        ProgressView()
+                            .tint(Theme.accent)
+                    }
+                }
                 .overlay(alignment: .bottom) {
-                    if subscriptions.showsProStatus {
+                    if showsProStatus {
                         ProStatusBadge().offset(y: 5)
                     }
                 }
+            }
+            .buttonStyle(.plain)
+            .disabled(isUpdatingProfilePhoto)
+            .accessibilityLabel(isUpdatingProfilePhoto ? "Updating profile photo" : "Change profile photo")
+            .accessibilityHint("Opens your photo library")
 
             ProfileStat(label: "Sessions", value: "\(store.mySessions.count)")
 
@@ -105,6 +134,45 @@ struct ProfileView: View {
                 ProfileStat(label: "Following", value: "\(store.followingCount)")
             }
             .buttonStyle(.plain)
+        }
+    }
+
+    private var profilePhotoErrorBinding: Binding<Bool> {
+        Binding(
+            get: { profilePhotoError != nil },
+            set: { isPresented in
+                if !isPresented { profilePhotoError = nil }
+            }
+        )
+    }
+
+    private func updateProfilePhoto(from item: PhotosPickerItem) async {
+        isUpdatingProfilePhoto = true
+        defer {
+            isUpdatingProfilePhoto = false
+            selectedProfilePhoto = nil
+        }
+
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self) else {
+                profilePhotoError = "That photo couldn't be read. Choose another image and try again."
+                Haptics.warning()
+                return
+            }
+
+            guard await store.uploadProfilePhoto(data) else {
+                profilePhotoError = store.errorMessage ?? "The photo couldn't be uploaded. Please try again."
+                store.errorMessage = nil
+                Haptics.warning()
+                return
+            }
+
+            Haptics.success()
+        } catch is CancellationError {
+            return
+        } catch {
+            profilePhotoError = "That photo couldn't be read. Choose another image and try again."
+            Haptics.warning()
         }
     }
 
