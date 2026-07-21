@@ -20,6 +20,14 @@ final class WatchGameStore: ObservableObject {
 
     private static let logger = Logger(subsystem: "com.pickleball.ai.watchapp", category: "Store")
     private let client = WatchConnectivityClient.shared
+    private let workout = WatchWorkoutManager.shared
+    private var workoutObservation: AnyCancellable?
+
+    var workoutIsActive: Bool { workout.isActive }
+    var workoutIsFinishing: Bool { workout.isFinishing }
+    var currentHeartRateBPM: Int? { workout.currentHeartRateBPM }
+    var activeCaloriesKcal: Int? { workout.activeCaloriesKcal }
+    var workoutErrorMessage: String? { workout.errorMessage }
 
     private static let persistenceURL: URL = {
         let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -28,6 +36,9 @@ final class WatchGameStore: ObservableObject {
 
     init() {
         restore()
+        workoutObservation = workout.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }
         client.onMessage = { [weak self] message in
             self?.handleInbound(message)
         }
@@ -49,6 +60,7 @@ final class WatchGameStore: ObservableObject {
     /// Begin scoring. Sends `startGame` so the phone opens/reuses a session.
     func startGame() {
         game.startedAt = Date()
+        workout.start(at: game.startedAt)
         phase = .playing
         persist()
         client.sendCommand(.startGame(game))
@@ -95,11 +107,7 @@ final class WatchGameStore: ObservableObject {
 
     /// Finish the whole session; the phone posts it.
     func finishSession() {
-        client.sendCommand(.finishSession)
-        game = LiveMatchScore(target: game.target, winByTwo: game.winByTwo)
-        phase = .setup
-        clearPersistence()
-        Haptics.play(.stop)
+        finishTrackedWorkout(postSession: true)
     }
 
     // MARK: Inbound (phone edits reflect back onto the watch)
@@ -122,6 +130,17 @@ final class WatchGameStore: ObservableObject {
                 game = LiveMatchScore(target: game.target, winByTwo: game.winByTwo)
                 phase = .setup
                 clearPersistence()
+            case .requestFinishWorkout:
+                finishTrackedWorkout(postSession: false)
+            case .requestLiveWorkoutMetrics:
+                workout.sendCurrentMetrics()
+            case .discardWorkout:
+                workout.discard()
+                game = LiveMatchScore(target: game.target, winByTwo: game.winByTwo)
+                phase = .setup
+                clearPersistence()
+            case .workoutStarted, .liveWorkoutMetrics, .workoutFinished:
+                break
             case .startGame(let s), .newGame(let s):
                 game = s
                 phase = .playing
@@ -131,6 +150,32 @@ final class WatchGameStore: ObservableObject {
                 phase = .gameOver
                 persist()
             }
+        }
+    }
+
+    private func finishTrackedWorkout(postSession: Bool) {
+        guard !workout.isFinishing else { return }
+        workout.finish { [weak self] metrics in
+            guard let self else { return }
+            if let metrics {
+                self.client.sendCommand(.workoutFinished(metrics, postSession: postSession), immediately: true)
+            } else if postSession {
+                self.client.sendCommand(.finishSession)
+            } else {
+                let now = Date()
+                let emptyMetrics = WorkoutMetrics(
+                    averageHeartRateBPM: nil,
+                    maximumHeartRateBPM: nil,
+                    activeCaloriesKcal: nil,
+                    startedAt: self.game.startedAt,
+                    endedAt: now
+                )
+                self.client.sendCommand(.workoutFinished(emptyMetrics, postSession: false), immediately: true)
+            }
+            self.game = LiveMatchScore(target: self.game.target, winByTwo: self.game.winByTwo)
+            self.phase = .setup
+            self.clearPersistence()
+            Haptics.play(.stop)
         }
     }
 

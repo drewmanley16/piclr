@@ -14,6 +14,9 @@ struct GameSetupView: View {
                     .font(.headline)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
+                WatchWorkoutMetricsView()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
                 // Target score
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Play to")
@@ -69,6 +72,12 @@ struct GameSetupView: View {
                 .background(WatchTheme.lime)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .padding(.top, 4)
+
+                if let message = store.workoutErrorMessage {
+                    Text(message)
+                        .font(.caption2)
+                        .foregroundStyle(WatchTheme.dimText)
+                }
             }
             .padding(.horizontal, 4)
         }

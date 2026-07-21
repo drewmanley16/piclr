@@ -31,6 +31,10 @@ struct FeedCard: View {
 
                 activityList
 
+                if session.hasPostWorkoutMetrics {
+                    HealthMetricStrip(session: session)
+                }
+
                 photoSection
 
                 if let takeaway = session.postTakeaway, !takeaway.isEmpty {
@@ -345,6 +349,33 @@ struct FeedCard: View {
 
     private var alreadyReposted: Bool {
         store.mySessions.contains { $0.repostedFrom == session.id && $0.posted }
+    }
+}
+
+struct HealthMetricStrip: View {
+    let session: FeedSession
+
+    var body: some View {
+        HStack(spacing: 0) {
+            metric(value: session.postAverageHeartRateBPM, label: "AVG HR", suffix: "bpm")
+            metric(value: session.postMaximumHeartRateBPM, label: "MAX HR", suffix: "bpm")
+            metric(value: session.postActiveCaloriesKcal, label: "ACTIVE", suffix: "cal")
+        }
+        .padding(.vertical, 10)
+        .background(Theme.surfaceElevated, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+
+    private func metric(value: Int?, label: String, suffix: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value.map { "\($0) \(suffix)" } ?? "—")
+                .font(.subheadline.weight(.bold).monospacedDigit())
+                .foregroundStyle(Theme.textPrimary)
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Theme.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 

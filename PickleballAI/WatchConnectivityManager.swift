@@ -14,7 +14,7 @@ import os
 final class WatchConnectivityManager: NSObject, ObservableObject {
     static let shared = WatchConnectivityManager()
 
-    private static let logger = Logger(subsystem: "com.pickleball.ai", category: "WC")
+    nonisolated private static let logger = Logger(subsystem: "com.pickleball.ai", category: "WC")
 
     /// Invoked on the main actor for every inbound message from the watch.
     var onMessage: ((WatchSyncMessage) -> Void)?
@@ -45,7 +45,13 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
 
     func sendCommand(_ command: WatchCommand) {
         guard WCSession.isSupported() else { return }
-        session.transferUserInfo(WatchSyncMessage.command(command).payload)
+        let payload = WatchSyncMessage.command(command).payload
+        session.transferUserInfo(payload)
+        if session.isReachable {
+            session.sendMessage(payload, replyHandler: nil) { error in
+                Self.logger.debug("sendMessage(command) failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
     }
 
     // MARK: Inbound

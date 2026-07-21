@@ -53,6 +53,9 @@ struct RepostSource: Decodable, Hashable {
     let createdAt: String
     let startedAt: String?
     let endedAt: String?
+    let averageHeartRateBPM: Int?
+    let maximumHeartRateBPM: Int?
+    let activeCaloriesKcal: Int?
     var author: Profile
     var photoUrl: String?
     let photoPath: String?
@@ -71,6 +74,9 @@ struct RepostSource: Decodable, Hashable {
         case createdAt = "created_at"
         case startedAt = "started_at"
         case endedAt = "ended_at"
+        case averageHeartRateBPM = "average_heart_rate_bpm"
+        case maximumHeartRateBPM = "maximum_heart_rate_bpm"
+        case activeCaloriesKcal = "active_calories_kcal"
         case photoUrl = "photo_url"
         case photoPath = "photo_path"
         case author, activities
@@ -89,6 +95,9 @@ struct FeedSession: Identifiable, Decodable, Hashable {
     let createdAt: String
     let startedAt: String?
     let endedAt: String?
+    let averageHeartRateBPM: Int?
+    let maximumHeartRateBPM: Int?
+    let activeCaloriesKcal: Int?
     var author: Profile
     let repostedFrom: UUID?
     var photoUrl: String?
@@ -109,6 +118,22 @@ struct FeedSession: Identifiable, Decodable, Hashable {
     var postTakeaway: String? { source?.takeaway ?? takeaway }
     var postPhotoURL: String? { source?.photoUrl ?? photoUrl }
     var postPhotoPath: String? { source?.photoPath ?? photoPath }
+    var postAverageHeartRateBPM: Int? { source?.averageHeartRateBPM ?? averageHeartRateBPM }
+    var postMaximumHeartRateBPM: Int? { source?.maximumHeartRateBPM ?? maximumHeartRateBPM }
+    var postActiveCaloriesKcal: Int? { source?.activeCaloriesKcal ?? activeCaloriesKcal }
+    var hasPostWorkoutMetrics: Bool {
+        postAverageHeartRateBPM != nil || postMaximumHeartRateBPM != nil || postActiveCaloriesKcal != nil
+    }
+    var workoutMetrics: WorkoutMetrics? {
+        guard averageHeartRateBPM != nil || maximumHeartRateBPM != nil || activeCaloriesKcal != nil else { return nil }
+        return WorkoutMetrics(
+            averageHeartRateBPM: averageHeartRateBPM,
+            maximumHeartRateBPM: maximumHeartRateBPM,
+            activeCaloriesKcal: activeCaloriesKcal,
+            startedAt: startedDate,
+            endedAt: endedDate
+        )
+    }
     var postActivities: [SessionActivity] { source?.sortedActivities ?? sortedActivities }
     var postDate: Date { source.map { Self.parse($0.createdAt) } ?? date }
 
@@ -204,6 +229,9 @@ struct FeedSession: Identifiable, Decodable, Hashable {
         case createdAt = "created_at"
         case startedAt = "started_at"
         case endedAt = "ended_at"
+        case averageHeartRateBPM = "average_heart_rate_bpm"
+        case maximumHeartRateBPM = "maximum_heart_rate_bpm"
+        case activeCaloriesKcal = "active_calories_kcal"
         case repostedFrom = "reposted_from"
         case photoUrl = "photo_url"
         case photoPath = "photo_path"
@@ -468,6 +496,9 @@ struct NewSession: Encodable {
     let posted: Bool
     var startedAt: String? = nil
     var endedAt: String? = nil
+    let averageHeartRateBPM: Int?
+    let maximumHeartRateBPM: Int?
+    let activeCaloriesKcal: Int?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -477,6 +508,9 @@ struct NewSession: Encodable {
         case focus, takeaway, posted
         case startedAt = "started_at"
         case endedAt = "ended_at"
+        case averageHeartRateBPM = "average_heart_rate_bpm"
+        case maximumHeartRateBPM = "maximum_heart_rate_bpm"
+        case activeCaloriesKcal = "active_calories_kcal"
     }
 }
 

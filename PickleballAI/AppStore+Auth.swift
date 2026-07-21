@@ -299,6 +299,35 @@ extension AppStore {
 
         case .command(.finishSession):
             Task { await postLiveSession() }
+
+        case .command(.workoutStarted(let startedAt)):
+            guard activeDraft != nil else { return }
+            activeDraft?.watchWorkoutStartedAt = startedAt
+
+        case .command(.liveWorkoutMetrics(let metrics)):
+            guard activeDraft?.watchWorkoutStartedAt != nil, HealthMetricsSharing.isEnabled else { return }
+            liveWorkoutMetrics = metrics
+
+        case .command(.requestLiveWorkoutMetrics):
+            break
+
+        case .command(.workoutFinished(let metrics, let postSession)):
+            guard activeDraft != nil, activeDraft?.workoutMetrics == nil else { return }
+            activeDraft?.workoutMetrics = HealthMetricsSharing.isEnabled
+                ? metrics
+                : WorkoutMetrics(
+                    averageHeartRateBPM: nil,
+                    maximumHeartRateBPM: nil,
+                    activeCaloriesKcal: nil,
+                    startedAt: metrics.startedAt,
+                    endedAt: metrics.endedAt
+                )
+            activeDraft?.watchWorkoutStartedAt = nil
+            liveWorkoutMetrics = nil
+            if postSession { Task { await postLiveSession() } }
+
+        case .command(.requestFinishWorkout), .command(.discardWorkout):
+            break
         }
     }
 

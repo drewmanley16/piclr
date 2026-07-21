@@ -108,6 +108,10 @@ struct SessionDraft: Codable, Equatable {
     /// as score snapshots arrive; converted into an `activities` entry when the
     /// game ends. nil when no watch game is live.
     var liveMatch: LiveMatchScore?
+    /// Set only after Apple Watch confirms its HealthKit session is collecting.
+    var watchWorkoutStartedAt: Date?
+    /// Aggregate metrics received when the Watch finalizes its HealthKit workout.
+    var workoutMetrics: WorkoutMetrics?
     var postToFeed: Bool = true
     var photoData: Data? = nil
     var existingPhotoPath: String?
@@ -121,6 +125,7 @@ struct SessionDraft: Codable, Equatable {
         takeaway = session.takeaway ?? ""
         startedAt = session.startedDate
         endedAt = session.endedDate
+        workoutMetrics = session.workoutMetrics
         activities = session.sortedActivities.map(DraftActivity.init(activity:))
         postToFeed = session.posted
         existingPhotoPath = session.photoPath

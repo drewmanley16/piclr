@@ -15,7 +15,7 @@ struct SettingsSheet: View {
                     SettingsMenuRow(icon: "person.crop.circle", title: "Profile", subtitle: "Name, photo, rating, side") {
                         SettingsProfileView(onSaved: { showSavedToast = true })
                     }
-                    SettingsMenuRow(icon: "slider.horizontal.3", title: "Preferences", subtitle: "Notifications, blocked accounts") {
+                    SettingsMenuRow(icon: "slider.horizontal.3", title: "Preferences", subtitle: "Notifications, Watch metrics, blocked accounts") {
                         SettingsPreferencesView()
                     }
                     if subscriptions.monetizationEnabled {

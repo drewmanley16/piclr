@@ -82,16 +82,39 @@ public enum WatchCommand: Hashable, Sendable {
     case newGame(LiveMatchScore)
     /// Finish the whole session and post it (phone owns posting).
     case finishSession
+    /// Confirms that HealthKit sensor collection is running on the watch.
+    case workoutStarted(Date)
+    /// Phone asks the watch to resend its most recent live sensor values.
+    case requestLiveWorkoutMetrics
+    /// Ephemeral sensor values for the active iPhone session screen. This case
+    /// is sent only with `sendMessage`, never queued or persisted.
+    case liveWorkoutMetrics(LiveWorkoutMetrics)
+    /// Phone-originated request: finalize HealthKit before the phone posts.
+    case requestFinishWorkout
+    /// Final aggregate values. `postSession` is true when Finish was tapped on
+    /// the watch and false when this is a response to the phone.
+    case workoutFinished(WorkoutMetrics, postSession: Bool)
+    /// End and discard the HealthKit workout with the app's live draft.
+    case discardWorkout
 
     private enum Key {
         static let action = "action"
         static let score = "score"
+        static let date = "date"
+        static let metrics = "metrics"
+        static let postSession = "postSession"
     }
     private enum Action {
         static let startGame = "startGame"
         static let endGame = "endGame"
         static let newGame = "newGame"
         static let finishSession = "finishSession"
+        static let workoutStarted = "workoutStarted"
+        static let requestLiveWorkoutMetrics = "requestLiveWorkoutMetrics"
+        static let liveWorkoutMetrics = "liveWorkoutMetrics"
+        static let requestFinishWorkout = "requestFinishWorkout"
+        static let workoutFinished = "workoutFinished"
+        static let discardWorkout = "discardWorkout"
     }
 
     public var payload: [String: Any] {
@@ -104,6 +127,22 @@ public enum WatchCommand: Hashable, Sendable {
             return [Key.action: Action.newGame, Key.score: WatchSyncCoding.encode(score)]
         case .finishSession:
             return [Key.action: Action.finishSession]
+        case .workoutStarted(let date):
+            return [Key.action: Action.workoutStarted, Key.date: WatchSyncCoding.encode(date)]
+        case .requestLiveWorkoutMetrics:
+            return [Key.action: Action.requestLiveWorkoutMetrics]
+        case .liveWorkoutMetrics(let metrics):
+            return [Key.action: Action.liveWorkoutMetrics, Key.metrics: WatchSyncCoding.encode(metrics)]
+        case .requestFinishWorkout:
+            return [Key.action: Action.requestFinishWorkout]
+        case .workoutFinished(let metrics, let postSession):
+            return [
+                Key.action: Action.workoutFinished,
+                Key.metrics: WatchSyncCoding.encode(metrics),
+                Key.postSession: postSession,
+            ]
+        case .discardWorkout:
+            return [Key.action: Action.discardWorkout]
         }
     }
 
@@ -112,6 +151,10 @@ public enum WatchCommand: Hashable, Sendable {
         func score() -> LiveMatchScore? {
             guard let data = payload[Key.score] as? Data else { return nil }
             return WatchSyncCoding.decode(LiveMatchScore.self, from: data)
+        }
+        func decode<T: Decodable>(_ type: T.Type, key: String) -> T? {
+            guard let data = payload[key] as? Data else { return nil }
+            return WatchSyncCoding.decode(type, from: data)
         }
         switch action {
         case Action.startGame:
@@ -125,6 +168,21 @@ public enum WatchCommand: Hashable, Sendable {
             self = .newGame(s)
         case Action.finishSession:
             self = .finishSession
+        case Action.workoutStarted:
+            guard let date = decode(Date.self, key: Key.date) else { return nil }
+            self = .workoutStarted(date)
+        case Action.requestLiveWorkoutMetrics:
+            self = .requestLiveWorkoutMetrics
+        case Action.liveWorkoutMetrics:
+            guard let metrics = decode(LiveWorkoutMetrics.self, key: Key.metrics) else { return nil }
+            self = .liveWorkoutMetrics(metrics)
+        case Action.requestFinishWorkout:
+            self = .requestFinishWorkout
+        case Action.workoutFinished:
+            guard let metrics = decode(WorkoutMetrics.self, key: Key.metrics) else { return nil }
+            self = .workoutFinished(metrics, postSession: payload[Key.postSession] as? Bool ?? false)
+        case Action.discardWorkout:
+            self = .discardWorkout
         default:
             return nil
         }

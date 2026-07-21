@@ -95,6 +95,7 @@ struct ActiveSessionView: View {
         .onAppear {
             store.errorMessage = nil
             if isLive, let live = store.activeDraft { draft = live }
+            if isLive { store.requestLiveWorkoutMetrics() }
         }
         .onChange(of: draft) { _, newValue in
             if isLive { store.activeDraft = newValue }
@@ -147,6 +148,39 @@ struct ActiveSessionView: View {
                 .frame(minHeight: 48)
             }
             Divider().overlay(Theme.hairline)
+            if isLive, store.activeDraft?.watchWorkoutStartedAt != nil {
+                HStack(spacing: 12) {
+                    Image(systemName: "applewatch.radiowaves.left.and.right")
+                        .foregroundStyle(Theme.accent)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Apple Watch tracking")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.textPrimary)
+                        if store.liveWorkoutMetrics?.heartRateBPM == nil {
+                            Text("Waiting for heart rate…")
+                                .font(.caption)
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                    Spacer()
+                    if let metrics = store.liveWorkoutMetrics {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            if let heartRate = metrics.heartRateBPM {
+                                Label("\(heartRate) BPM", systemImage: "heart.fill")
+                                    .font(.subheadline.weight(.bold).monospacedDigit())
+                                    .foregroundStyle(.red)
+                            }
+                            if let calories = metrics.activeCaloriesKcal {
+                                Text("\(calories) active cal")
+                                    .font(.caption.monospacedDigit())
+                                    .foregroundStyle(Theme.textSecondary)
+                            }
+                        }
+                    }
+                }
+                .frame(minHeight: 44)
+                Divider().overlay(Theme.hairline)
+            }
             TextField(AppStore.timeOfDayTitle(for: draft.startedAt), text: $draft.title)
                 .font(.headline)
                 .frame(minHeight: 44)
@@ -290,7 +324,11 @@ struct ActiveSessionView: View {
             }
         } else {
             let streakBefore = SessionStats(sessions: store.mySessions).weeklyStreak
-            guard await store.postSession(draft) else { return }
+            if isLive { store.activeDraft = draft }
+            let posted = isLive
+                ? await store.finishAndPostLiveSession()
+                : await store.postSession(draft)
+            guard posted else { return }
             Haptics.success()
             if isLive { store.discardLiveSession() }
             // postSession reloaded mySessions — a milestone celebration only when

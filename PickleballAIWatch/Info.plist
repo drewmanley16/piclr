@@ -20,8 +20,16 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>pickleball.ai reads heart rate and active calories during your pickleball workout.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>pickleball.ai saves your completed pickleball workout to Apple Health.</string>
 	<key>WKApplication</key>
 	<true/>
+	<key>WKBackgroundModes</key>
+	<array>
+		<string>workout-processing</string>
+	</array>
 	<key>WKCompanionAppBundleIdentifier</key>
 	<string>com.pickleball.ai</string>
 </dict>

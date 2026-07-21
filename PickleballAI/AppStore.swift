@@ -63,7 +63,7 @@ final class AppStore: ObservableObject {
     static let selectProfileLite = "id,username,display_name,avatar_initials,avatar_url,avatar_path"
 
     static let selectActivityGraph = "activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(\(selectProfileLite))))"
-    static let selectRepostSource = "source:repost_source(id,user_id,title,location,duration_minutes,focus,takeaway,created_at,started_at,ended_at,photo_path,author:profiles!sessions_user_id_fkey(*),\(selectActivityGraph))"
+    static let selectRepostSource = "source:repost_source(id,user_id,title,location,duration_minutes,focus,takeaway,created_at,started_at,ended_at,average_heart_rate_bpm,maximum_heart_rate_bpm,active_calories_kcal,photo_path,author:profiles!sessions_user_id_fkey(*),\(selectActivityGraph))"
 
     let selectWithCounts = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), \(AppStore.selectActivityGraph), \(AppStore.selectRepostSource)"
     let selectFeedPreview = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), preview_comments:comments(*, author:profiles!comments_user_id_fkey(\(AppStore.selectProfileLite))), \(AppStore.selectActivityGraph), \(AppStore.selectRepostSource)"
@@ -108,10 +108,15 @@ final class AppStore: ObservableObject {
 
     // MARK: - Live session
 
+    /// Latest transient sensor values from Apple Watch. Kept outside the draft
+    /// so raw live samples are never written to disk or uploaded.
+    @Published var liveWorkoutMetrics: LiveWorkoutMetrics?
+
     /// An in-progress ("live") session that survives leaving the Workout tab.
     /// nil means no session is currently open. Mutations drive the Live Activity.
     @Published var activeDraft: SessionDraft? {
         didSet {
+            if activeDraft == nil { liveWorkoutMetrics = nil }
             LiveActivityManager.shared.sync(draft: activeDraft)
             persistActiveDraft()
         }
