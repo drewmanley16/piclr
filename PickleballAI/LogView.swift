@@ -297,28 +297,33 @@ struct QuickLogButton: View {
 
 struct SessionSummaryRow: View {
     @EnvironmentObject private var store: AppStore
+    @Environment(\.openSession) private var openSession
     var session: FeedSession
     @State private var showEditor = false
     @State private var confirmDelete = false
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: icon)
-                .font(.headline)
-                .foregroundStyle(Theme.accent)
-                .frame(width: 46, height: 46)
-                .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(session.workoutDisplayTitle)
+            HStack(spacing: 14) {
+                Image(systemName: icon)
                     .font(.headline)
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(1)
-                Text(subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(1)
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: 46, height: 46)
+                    .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(session.workoutDisplayTitle)
+                        .font(.headline)
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                }
             }
+            .contentShape(Rectangle())
+            .onTapGesture { openSession(session.id, placeholder: session) }
 
             Spacer(minLength: 8)
 

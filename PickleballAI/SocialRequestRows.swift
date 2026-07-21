@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PostingRow: View {
     @EnvironmentObject private var store: AppStore
+    @Environment(\.openSession) private var openSession
     var session: FeedSession
     @State private var showEditor = false
     @State private var confirmDelete = false
@@ -9,21 +10,25 @@ struct PostingRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: "figure.pickleball")
-                .font(.title3)
-                .foregroundStyle(Theme.accent)
-                .frame(width: 44, height: 44)
-                .background(Theme.accentSoft, in: Circle())
+            HStack(spacing: 14) {
+                Image(systemName: "figure.pickleball")
+                    .font(.title3)
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: 44, height: 44)
+                    .background(Theme.accentSoft, in: Circle())
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(session.postDisplayTitle)
-                    .font(.headline)
-                    .foregroundStyle(Theme.textPrimary)
-                Text("\(session.postDurationMinutes) min · \(session.postLocation ?? "—")")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(1)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(session.postDisplayTitle)
+                        .font(.headline)
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("\(session.postDurationMinutes) min · \(session.postLocation ?? "—")")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                }
             }
+            .contentShape(Rectangle())
+            .onTapGesture { openSession(session.id, placeholder: session) }
 
             Spacer()
 

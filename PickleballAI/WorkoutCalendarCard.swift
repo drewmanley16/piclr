@@ -3,8 +3,10 @@ import SwiftUI
 // MARK: - Workout calendar
 
 struct WorkoutCalendarCard: View {
+    @Environment(\.openSession) private var openSession
     let sessions: [FeedSession]
     @State private var monthAnchor = Date()
+    @State private var daySessions: [FeedSession]?
 
     private let cal = Calendar.current
 
@@ -19,6 +21,10 @@ struct WorkoutCalendarCard: View {
 
     private var workoutDays: Set<Date> {
         Set(sessions.map { cal.startOfDay(for: $0.workoutDate) })
+    }
+
+    private var sessionsByDay: [Date: [FeedSession]] {
+        Dictionary(grouping: sessions) { cal.startOfDay(for: $0.workoutDate) }
     }
 
     private var monthTitle: String {
@@ -65,8 +71,15 @@ struct WorkoutCalendarCard: View {
                     Text(s).font(.caption2.weight(.semibold)).foregroundStyle(Theme.textTertiary)
                 }
                 ForEach(Array(cells.enumerated()), id: \.offset) { _, date in
-                    DayCell(date: date, worked: date.map { workoutDays.contains(cal.startOfDay(for: $0)) } ?? false,
-                            isToday: date.map { cal.isDateInToday($0) } ?? false)
+                    DayCell(
+                        date: date,
+                        worked: date.map { workoutDays.contains(cal.startOfDay(for: $0)) } ?? false,
+                        isToday: date.map { cal.isDateInToday($0) } ?? false
+                    ) {
+                        guard let date else { return }
+                        let day = sessionsByDay[cal.startOfDay(for: date)] ?? []
+                        openDay(day)
+                    }
                 }
             }
 
@@ -77,6 +90,32 @@ struct WorkoutCalendarCard: View {
             .padding(.top, 2)
         }
         .cardStyle()
+        .confirmationDialog("Sessions", isPresented: daySheetBinding, titleVisibility: .visible) {
+            if let daySessions {
+                ForEach(daySessions) { session in
+                    Button(session.workoutDisplayTitle) {
+                        openSession(session.id, placeholder: session)
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+    }
+
+    private var daySheetBinding: Binding<Bool> {
+        Binding(
+            get: { (daySessions?.count ?? 0) > 1 },
+            set: { if !$0 { daySessions = nil } }
+        )
+    }
+
+    private func openDay(_ day: [FeedSession]) {
+        guard let first = day.first else { return }
+        if day.count == 1 {
+            openSession(first.id, placeholder: first)
+        } else {
+            daySessions = day
+        }
     }
 
     private var isCurrentMonth: Bool {
@@ -99,16 +138,24 @@ struct DayCell: View {
     let date: Date?
     let worked: Bool
     let isToday: Bool
+    var onTap: (() -> Void)?
 
     var body: some View {
         Group {
             if let date {
-                Text("\(Calendar.current.component(.day, from: date))")
+                let label = Text("\(Calendar.current.component(.day, from: date))")
                     .font(.caption.weight(worked ? .bold : .regular))
                     .foregroundStyle(worked ? Theme.background : Theme.textSecondary)
                     .frame(width: 34, height: 34)
                     .background(worked ? Theme.accent : Theme.surfaceElevated, in: Circle())
                     .overlay(Circle().strokeBorder(isToday ? Theme.accent : .clear, lineWidth: 1.5))
+
+                if worked, let onTap {
+                    Button(action: onTap) { label }
+                        .buttonStyle(.plain)
+                } else {
+                    label
+                }
             } else {
                 Color.clear.frame(width: 34, height: 34)
             }
