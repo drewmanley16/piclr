@@ -30,6 +30,11 @@ struct SessionRoute: Hashable {
 /// sessions should be tappable. The mapping route → screen lives here and
 /// nowhere else, so changing a destination is a one-line edit.
 struct ProfileNavigationStack<Root: View>: View {
+    /// Re-tapping the active tab increments this; when it changes we pop the
+    /// stack to root, restoring the native tab-bar "tap active tab to go back"
+    /// behavior that the custom `AppTabBar` otherwise loses. Defaults to a
+    /// constant for the many call sites (sheets, etc.) that don't need it.
+    var reselectSignal: Int = 0
     @ViewBuilder var root: Root
     /// Type-erased so this stack can also carry other value-based routes pushed
     /// inside it (e.g. a notification's `NotifDestination`), not just profiles.
@@ -44,6 +49,9 @@ struct ProfileNavigationStack<Root: View>: View {
                 .navigationDestination(for: SessionRoute.self) { route in
                     SessionDetailView(sessionId: route.id, placeholder: route.placeholder)
                 }
+        }
+        .onChange(of: reselectSignal) { _, _ in
+            if !path.isEmpty { path = NavigationPath() }
         }
         .environment(\.openProfile, OpenProfileAction { id, placeholder in
             path.append(ProfileRoute(id: id, placeholder: placeholder))

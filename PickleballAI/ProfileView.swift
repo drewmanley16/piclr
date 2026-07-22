@@ -5,6 +5,8 @@ import PhotosUI
 struct ProfileView: View {
     @EnvironmentObject private var store: AppStore
     @EnvironmentObject private var subscriptions: SubscriptionStore
+    /// Bumped by RootView when the Profile tab is re-tapped; pops to root.
+    var reselectSignal: Int = 0
     @State private var showSettings = false
     @State private var showFindFriends = false
     @State private var showNotifications = false
@@ -27,7 +29,7 @@ struct ProfileView: View {
     }
 
     var body: some View {
-        ProfileNavigationStack {
+        ProfileNavigationStack(reselectSignal: reselectSignal) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     profileRow
@@ -154,13 +156,14 @@ struct ProfileView: View {
         }
 
         do {
-            guard let data = try await item.loadTransferable(type: Data.self) else {
+            guard let data = try await item.loadTransferable(type: Data.self),
+                  let image = UIImage(data: data) else {
                 profilePhotoError = "That photo couldn't be read. Choose another image and try again."
                 Haptics.warning()
                 return
             }
 
-            guard await store.uploadProfilePhoto(data) else {
+            guard await store.uploadProfilePhoto(image) else {
                 profilePhotoError = store.errorMessage ?? "The photo couldn't be uploaded. Please try again."
                 store.errorMessage = nil
                 Haptics.warning()

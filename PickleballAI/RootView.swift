@@ -3,14 +3,6 @@ import UIKit
 
 struct RootView: View {
     init() {
-        // True-black tab bar with a hairline top edge.
-        let tab = UITabBarAppearance()
-        tab.configureWithOpaqueBackground()
-        tab.backgroundColor = UIColor(Theme.background)
-        tab.shadowColor = UIColor(Theme.hairline)
-        UITabBar.appearance().standardAppearance = tab
-        UITabBar.appearance().scrollEdgeAppearance = tab
-
         // Match navigation bars to the black canvas.
         let nav = UINavigationBarAppearance()
         nav.configureWithOpaqueBackground()
@@ -26,6 +18,9 @@ struct RootView: View {
     @EnvironmentObject private var store: AppStore
     @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var selectedTab = 0
+    /// One counter per tab; re-tapping the active tab bumps its counter, which
+    /// the tab's `ProfileNavigationStack` observes to pop back to root.
+    @State private var reselectTokens = [0, 0, 0]
 
     var body: some View {
         Group {
@@ -64,24 +59,20 @@ struct RootView: View {
     }
 
     private var mainTabs: some View {
+        // Paging TabView drives the swipe; the native tab bar is hidden and
+        // replaced by AppTabBar so both tap and swipe move between pages.
         TabView(selection: $selectedTab) {
-            HomeView()
-                .tabItem {
-                    Label("Home", systemImage: "house.fill")
-                }
-                .tag(0)
-
-            WorkoutView()
-                .tabItem {
-                    Label("Play", systemImage: "figure.pickleball")
-                }
-                .tag(1)
-
-            ProfileView()
-                .tabItem {
-                    Label("Profile", systemImage: "person.fill")
-                }
-                .tag(2)
+            HomeView(reselectSignal: reselectTokens[0]).tag(0)
+            WorkoutView(reselectSignal: reselectTokens[1]).tag(1)
+            ProfileView(reselectSignal: reselectTokens[2]).tag(2)
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .background(Theme.background.ignoresSafeArea())
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            AppTabBar(selection: $selectedTab) { index in
+                reselectTokens[index] += 1
+                Haptics.tap()
+            }
         }
         .onChange(of: selectedTab) { _, _ in Haptics.tap() }
         .sheet(item: Binding(
@@ -108,5 +99,60 @@ struct RootView: View {
                 }
             }
         }
+    }
+}
+
+/// Custom bottom tab bar replacing the native `UITabBar`, so the app pages can
+/// live in a paging `TabView` (swipeable) while still tapping between Home /
+/// Play / Profile. Styled with `Theme` to match the all-black canvas.
+private struct AppTabBar: View {
+    @Binding var selection: Int
+    /// Called when the already-active tab is tapped again (native "tap active
+    /// tab" behavior). Switching to a different tab goes through `selection`.
+    var onReselect: (Int) -> Void = { _ in }
+
+    private let items: [(title: String, icon: String)] = [
+        ("Home", "house.fill"),
+        ("Play", "figure.pickleball"),
+        ("Profile", "person.fill")
+    ]
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(items.indices, id: \.self) { index in
+                let selected = selection == index
+                Button {
+                    if selected {
+                        onReselect(index)
+                    } else {
+                        withAnimation(.easeInOut(duration: 0.25)) { selection = index }
+                    }
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: items[index].icon)
+                            .font(.system(size: 22, weight: .regular))
+                        Text(items[index].title)
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundStyle(selected ? Theme.accent : Theme.textTertiary)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(items[index].title)
+                .accessibilityValue("Tab \(index + 1) of \(items.count)")
+                .accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
+            }
+        }
+        .padding(.top, 10)
+        // Home-button iPhones / iPad have no bottom safe-area inset, so give the
+        // labels breathing room from the screen edge rather than sitting flush.
+        .padding(.bottom, 6)
+        .accessibilityElement(children: .contain)
+        .background(
+            Theme.background
+                .overlay(Theme.hairline.frame(height: 0.5), alignment: .top)
+                .ignoresSafeArea(edges: .bottom)
+        )
     }
 }

@@ -100,17 +100,17 @@ extension AppStore {
         }
     }
 
-    func uploadProfilePhoto(_ data: Data) async -> Bool {
+    func uploadProfilePhoto(_ image: UIImage) async -> Bool {
         guard let uid = currentProfile?.id else { return false }
         busyCount += 1
         errorMessage = nil
         defer { busyCount -= 1 }
-        // Decode + downscale + encode off the main thread so the UI never hangs
-        // on a large camera photo. Avatars render in ≤96pt circles, so ~320px
-        // (3× retina) is plenty and keeps files tiny (~20–40 KB).
-        let jpeg = await Task.detached(priority: .userInitiated) { () -> Data? in
-            guard let image = UIImage(data: data) else { return nil }
-            return Self.downscaledJPEG(from: image, maxDimension: 320)
+        // Downscale + encode off the main thread so the UI never hangs on a
+        // large photo. Avatars render in ≤96pt circles, so ~320px (3× retina)
+        // is plenty and keeps files tiny (~20–40 KB). This is the ONE encode
+        // in the avatar pipeline — callers (crop editor) hand over UIImages.
+        let jpeg = await Task.detached(priority: .userInitiated) {
+            Self.downscaledJPEG(from: image, maxDimension: 320)
         }.value
         guard let jpeg else { return false }
         do {
@@ -129,8 +129,9 @@ extension AppStore {
             // from it. Keep the stored `avatar_url` column truthful too so older
             // installed builds (which read the column directly) don't 404 on the
             // just-deleted old object.
+            let publicURL = MediaHydrator.publicAvatarURL(for: path)
             var update = ["avatar_path": path]
-            if let publicURL = MediaHydrator.publicAvatarURL(for: path) {
+            if let publicURL {
                 update["avatar_url"] = publicURL
             }
             try await supabase.from("profiles")
@@ -140,19 +141,66 @@ extension AppStore {
             if let oldPath, oldPath != path {
                 try? await supabase.storage.from("avatars").remove(paths: [oldPath])
             }
-            await loadProfile(userId: uid)
-            // Refresh embedded author rows so the new avatar appears everywhere
-            // without making photo selection wait on every feed.
-            Task { [weak self] in
-                guard let self else { return }
-                await self.loadFeed()
-                if !self.discoverFeed.isEmpty { await self.loadDiscover() }
-                await self.loadMySessions(userId: uid)
-            }
-            return errorMessage == nil
+            // Apply locally instead of re-fetching — a re-fetch could race the
+            // concurrent profile-text save in `saveProfile` and clobber its
+            // locally-applied fields with the pre-update row.
+            currentProfile?.avatarPath = path
+            currentProfile?.avatarURL = publicURL
+            refreshAvatarSurfaces(userId: uid)
+            return true
         } catch {
             reportError(error)
             return false
+        }
+    }
+
+    /// Clears the profile photo: nulls both avatar columns (the avatar falls
+    /// back to initials everywhere), then deletes the storage object.
+    func removeProfilePhoto() async -> Bool {
+        guard let uid = currentProfile?.id else { return false }
+        busyCount += 1
+        errorMessage = nil
+        defer { busyCount -= 1 }
+        do {
+            let oldPath = currentProfile?.avatarPath
+            // Explicit AnyJSON.null — a plain [String: String?] would drop the
+            // keys instead of writing NULL.
+            try await supabase.from("profiles")
+                .update(["avatar_path": AnyJSON.null, "avatar_url": AnyJSON.null])
+                .eq("id", value: uid.uuidString)
+                .execute()
+            // Delete the object only after the row no longer references it, so
+            // a failure between the two steps never leaves a dangling URL.
+            if let oldPath {
+                try? await supabase.storage.from("avatars").remove(paths: [oldPath])
+            }
+            // Apply locally instead of re-fetching — a re-fetch could race the
+            // concurrent profile-text save in `saveProfile` and clobber its
+            // locally-applied fields with the pre-update row.
+            currentProfile?.avatarPath = nil
+            currentProfile?.avatarURL = nil
+            refreshAvatarSurfaces(userId: uid)
+            return true
+        } catch {
+            reportError(error)
+            return false
+        }
+    }
+
+    /// Refreshes every surface that embeds author avatars after the profile
+    /// photo changes (upload or removal), without making the caller wait. The
+    /// loads hit independent endpoints, so they run concurrently.
+    private func refreshAvatarSurfaces(userId: UUID) {
+        Task { [weak self] in
+            guard let self else { return }
+            async let feed: Void = self.loadFeed()
+            async let sessions: Void = self.loadMySessions(userId: userId)
+            if !self.discoverFeed.isEmpty {
+                async let discover: Void = self.loadDiscover()
+                _ = await (feed, sessions, discover)
+            } else {
+                _ = await (feed, sessions)
+            }
         }
     }
 
