@@ -7,6 +7,8 @@ enum FeedMode {
 
 struct HomeView: View {
     @EnvironmentObject private var store: AppStore
+    /// Bumped by RootView when the Home tab is re-tapped; pops the stack to root.
+    var reselectSignal: Int = 0
     @State private var showFindFriends = false
     @State private var showNotifications = false
     @State private var showLeaderboard = false
@@ -20,15 +22,12 @@ struct HomeView: View {
     }
 
     var body: some View {
-        ProfileNavigationStack {
-        TabView(selection: $feedMode) {
-            feedPage(for: .following)
-                .tag(FeedMode.following)
-            feedPage(for: .discover)
-                .tag(FeedMode.discover)
-        }
-        .tabViewStyle(.page(indexDisplayMode: .never))
-        .background(Theme.background.ignoresSafeArea())
+        ProfileNavigationStack(reselectSignal: reselectSignal) {
+        // Following/Discover switch via the segmented control only — no swipe,
+        // so the app-level tab swipe (Home/Play/Profile) owns horizontal drags here.
+        feedPage(for: feedMode)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Theme.background.ignoresSafeArea())
         .task(id: feedMode) {
             if feedMode == .discover && store.discoverFeed.isEmpty { await store.loadDiscover() }
         }

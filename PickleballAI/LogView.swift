@@ -4,6 +4,8 @@ import SwiftUI
 
 struct WorkoutView: View {
     @EnvironmentObject private var store: AppStore
+    /// Bumped by RootView when the Play tab is re-tapped; pops the stack to root.
+    var reselectSignal: Int = 0
     @State private var showLiveSession = false
     @State private var quickEditor: ActivityEditorRoute?
     @State private var showInviteComposer = false
@@ -16,7 +18,7 @@ struct WorkoutView: View {
     }
 
     var body: some View {
-        ProfileNavigationStack {
+        ProfileNavigationStack(reselectSignal: reselectSignal) {
             content
         }
     }
