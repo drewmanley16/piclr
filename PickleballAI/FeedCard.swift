@@ -479,17 +479,20 @@ struct MatchScorecard: View {
 
     var body: some View {
         VStack(spacing: 4) {
+            // The poster's own team is always the accented (green) row — their
+            // names + score in accent — with the opponents rendered muted, so a
+            // card always reads "us (green) vs them (grey)" regardless of result.
             teamRow(
                 avatars: teamAvatars,
                 names: teamNames,
                 score: activity.teamScore,
-                accent: activity.matchResult == .win ? Theme.win : nil
+                accent: Theme.accent
             )
             teamRow(
                 avatars: opponentAvatars,
                 names: opponentNames.isEmpty ? "Opponent" : opponentNames,
                 score: activity.opponentScore,
-                accent: activity.matchResult == .loss ? Theme.loss : nil
+                accent: nil
             )
         }
         .frame(maxWidth: .infinity)
