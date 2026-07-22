@@ -202,6 +202,9 @@ extension AppStore {
     func stopRealtime() {
         sessionRefreshDebounceTask?.cancel()
         sessionRefreshDebounceTask = nil
+        commentsRefreshDebounceTask?.cancel()
+        commentsRefreshDebounceTask = nil
+        commentsRefreshPending = false
         realtimeNeedsFeedRefresh = false
         realtimeNeedsMySessionsRefresh = false
         realtimeNeedsDiscoverRefresh = false
@@ -209,31 +212,85 @@ extension AppStore {
         notificationsRealtime.stop()
         followsRealtime.stop()
         invitesRealtime.stop()
+        commentsRealtime.stop()
     }
 
     // MARK: - Comments realtime
 
-    /// Subscribes to new comments on a session, invoking `onInsert` for each so
-    /// the view can reload. Keeps Supabase realtime plumbing (channels, filters,
-    /// subscribe lifecycle) out of the view layer. Pair with `stopCommentsRealtime()`.
-    func startCommentsRealtime(sessionId: UUID, onInsert: @escaping () async -> Void) {
+    /// Subscribes to thread and reaction changes for one session. Comment hard
+    /// deletes remain pull-to-refresh events because Supabase cannot safely apply
+    /// RLS filters to deleted rows; inserts, tombstone updates, and new likes are live.
+    func startCommentsRealtime(sessionId: UUID, onChange: @escaping () async -> Void) {
         commentsRealtime.start(channelName: "comments:\(sessionId.uuidString)") { channel in
-            let changes = channel.postgresChange(
+            let commentInserts = channel.postgresChange(
                 InsertAction.self,
                 schema: "public",
                 table: "comments",
                 filter: "session_id=eq.\(sessionId.uuidString)"
             )
-            return [{
-                await channel.subscribe()
-                for await _ in changes {
-                    await onInsert()
+            let commentUpdates = channel.postgresChange(
+                UpdateAction.self,
+                schema: "public",
+                table: "comments",
+                filter: "session_id=eq.\(sessionId.uuidString)"
+            )
+            let likeInserts = channel.postgresChange(
+                InsertAction.self,
+                schema: "public",
+                table: "comment_likes",
+                filter: "session_id=eq.\(sessionId.uuidString)"
+            )
+            return [
+                { [weak self] in
+                    await channel.subscribe()
+                    for await _ in commentInserts {
+                        self?.scheduleCommentsRefresh(onChange)
+                        if Task.isCancelled { break }
+                    }
+                },
+                { [weak self] in
+                    for await _ in commentUpdates {
+                        self?.scheduleCommentsRefresh(onChange)
+                        if Task.isCancelled { break }
+                    }
+                },
+                { [weak self] in
+                    for await _ in likeInserts {
+                        self?.scheduleCommentsRefresh(onChange)
+                        if Task.isCancelled { break }
+                    }
                 }
-            }]
+            ]
+        }
+    }
+
+    /// Coalesces the three comment/like streams into serial reloads. Events that
+    /// arrive during the delay join the pending reload; events during a reload
+    /// schedule one follow-up without cancelling the request already in flight.
+    private func scheduleCommentsRefresh(_ onChange: @escaping () async -> Void) {
+        commentsRefreshPending = true
+        guard commentsRefreshDebounceTask == nil else { return }
+
+        commentsRefreshDebounceTask = Task { [weak self] in
+            while let self, self.commentsRefreshPending {
+                do {
+                    try await Task.sleep(nanoseconds: 250_000_000)
+                } catch {
+                    break
+                }
+                guard !Task.isCancelled else { break }
+                self.commentsRefreshPending = false
+                await onChange()
+            }
+            self?.commentsRefreshPending = false
+            self?.commentsRefreshDebounceTask = nil
         }
     }
 
     func stopCommentsRealtime() {
+        commentsRefreshDebounceTask?.cancel()
+        commentsRefreshDebounceTask = nil
+        commentsRefreshPending = false
         commentsRealtime.stop()
     }
 }

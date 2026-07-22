@@ -184,6 +184,9 @@ extension AppStore {
         requestedFollowIds = []
         gear = []
         likedSessionIds = []
+        optimisticLikeCounts = [:]
+        likedCommentIds = []
+        optimisticCommentLikeCounts = [:]
         notifications = []
         blockedAccounts = []
         deletePersistedDraft() // the live draft belongs to the signed-in user
@@ -426,7 +429,7 @@ extension AppStore {
         switch type {
         case "follow":
             if let actorId { pendingDeepLink = .profile(actorId) }
-        case "comment":
+        case "comment", "comment_reply", "comment_like", "mention":
             if let sessionId { pendingDeepLink = .comments(sessionId) }
         case "invite_received", "invite_response", "invite_cancelled":
             if let inviteId { pendingDeepLink = .invite(inviteId) }

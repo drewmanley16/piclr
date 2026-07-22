@@ -36,6 +36,8 @@ struct AppNotification: Identifiable, Decodable, Hashable {
         switch type {
         case "like":            return "\(handle) liked your session"
         case "comment":         return "\(handle) commented: \(comment?.body ?? "")"
+        case "comment_reply":   return "\(handle) replied: \(comment?.body ?? "")"
+        case "comment_like":    return "\(handle) liked your comment"
         case "mention":         return "\(handle) mentioned you: \(comment?.body ?? "")"
         case "follow":          return "\(handle) started following you"
         case "tag":             return "\(handle) tagged you in a session"
@@ -52,6 +54,8 @@ struct AppNotification: Identifiable, Decodable, Hashable {
         switch type {
         case "like":    return "hand.thumbsup.fill"
         case "comment": return "bubble.right.fill"
+        case "comment_reply": return "arrowshape.turn.up.left.fill"
+        case "comment_like": return "hand.thumbsup.fill"
         case "mention": return "at"
         case "follow":  return "person.fill.badge.plus"
         case "tag":     return "flag.checkered"
