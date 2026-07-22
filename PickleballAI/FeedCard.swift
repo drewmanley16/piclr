@@ -514,10 +514,8 @@ struct SessionMatchList: View {
 }
 
 /// A single scored game rendered as a two-row box score. Each team gets its own
-/// row (facepile · names · score) and the winning team's row is accented — lime
-/// when the poster's team won the game, clay when they lost. This keeps "who
-/// won" (the row highlight) visually separate from the raw score (the numbers),
-/// which the old centered head-to-head layout crammed together.
+/// row (facepile · names · score) and the poster's row communicates their result:
+/// lime for a win, clay for a loss, and neutral for a tie.
 struct MatchScorecard: View {
     let activity: SessionActivity
     let author: Profile
@@ -531,17 +529,25 @@ struct MatchScorecard: View {
                 avatars: teamAvatars,
                 names: teamNames,
                 score: activity.teamScore,
-                accent: activity.matchResult == .win ? Theme.win : nil
+                accent: posterAccent
             )
             teamRow(
                 avatars: opponentAvatars,
                 names: opponentNames.isEmpty ? "Opponent" : opponentNames,
                 score: activity.opponentScore,
-                accent: activity.matchResult == .loss ? Theme.loss : nil
+                accent: nil
             )
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
+    }
+
+    private var posterAccent: Color? {
+        switch activity.matchResult {
+        case .win: Theme.win
+        case .loss: Theme.loss
+        case .tie, .none: nil
+        }
     }
 
     private func teamRow(avatars: [ProfileAvatar], names: String, score: Int?, accent: Color?) -> some View {
