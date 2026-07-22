@@ -20,7 +20,7 @@ The Xcode project is **generated** from `project.yml` by [XcodeGen](https://gith
 # Regenerate + build for simulator
 xcodegen generate
 xcodebuild -project PickleballAI.xcodeproj -scheme PickleballAI \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2' build
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.3.1' build
 
 # Install + launch on the booted simulator
 APP=$(find ~/Library/Developer/Xcode/DerivedData -path "*Debug-iphonesimulator/PickleballAI.app" -maxdepth 8 | head -1)
