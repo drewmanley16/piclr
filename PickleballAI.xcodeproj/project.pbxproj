@@ -99,6 +99,7 @@
 		D7F2EE361D4137FD7E546EB4 /* InviteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9848E60F27125A620DA0B90 /* InviteView.swift */; };
 		DE6F84AD2314939D4E8C317C /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65F9240942A799CF19EF40AC /* Haptics.swift */; };
 		E31424AEC6D64816D7DFF5ED /* AppStore+FollowGraph.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4660717F1902F691074520D /* AppStore+FollowGraph.swift */; };
+		E3FC19388F40E67148FDF37C /* AvatarCropEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 510CA9D8BA7B5FC01722045F /* AvatarCropEditor.swift */; };
 		E610A0298FD18084A62FDD82 /* EdgeFunctionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 594C30F607DCAA2E5D2E6245 /* EdgeFunctionModels.swift */; };
 		E95EB337AB3BC80E320E2F32 /* AppStore+Invites.swift in Sources */ = {isa = PBXBuildFile; fileRef = 501DC922351647C18A6F314D /* AppStore+Invites.swift */; };
 		EC9A44B03684D5CC69440BAF /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = C26069378D184E94FCA09925 /* PostHog */; };
@@ -194,6 +195,7 @@
 		4D28EC049E2380767AA0A2B6 /* OnboardingPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPreview.swift; sourceTree = "<group>"; };
 		4F6C03EC3ED4D2A8C098B84F /* CommentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentsView.swift; sourceTree = "<group>"; };
 		501DC922351647C18A6F314D /* AppStore+Invites.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Invites.swift"; sourceTree = "<group>"; };
+		510CA9D8BA7B5FC01722045F /* AvatarCropEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarCropEditor.swift; sourceTree = "<group>"; };
 		524C92C8AF8A9C6D3ADE7AC4 /* AuthComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthComponents.swift; sourceTree = "<group>"; };
 		528729889F780FEF8B81D160 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		52D13E9ABB0B1772747DBB02 /* SafetySheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetySheets.swift; sourceTree = "<group>"; };
@@ -340,6 +342,7 @@
 				C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */,
 				524C92C8AF8A9C6D3ADE7AC4 /* AuthComponents.swift */,
 				38D466C6F8E7D2FD8E302914 /* AuthView.swift */,
+				510CA9D8BA7B5FC01722045F /* AvatarCropEditor.swift */,
 				F30A6ECDA3C89862D17F1C81 /* Celebration.swift */,
 				2B4FA8570E3F58A7BED6E97F /* CommentModels.swift */,
 				4F6C03EC3ED4D2A8C098B84F /* CommentsView.swift */,
@@ -602,6 +605,7 @@
 				3B46F82532DA139D31A550D8 /* AppleWatchWorkoutLauncher.swift in Sources */,
 				B7840EC1684B9C2ECA85EAD7 /* AuthComponents.swift in Sources */,
 				95C8A46DA87219F98DD0A143 /* AuthView.swift in Sources */,
+				E3FC19388F40E67148FDF37C /* AvatarCropEditor.swift in Sources */,
 				F2618610586DB9C3345C94C8 /* Celebration.swift in Sources */,
 				1DE50B08C3685F46E9394C4E /* CommentModels.swift in Sources */,
 				33C8ACB4E3D0F1DAE5FC4EEF /* CommentsView.swift in Sources */,

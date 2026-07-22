@@ -23,7 +23,23 @@ struct SettingsProfileView: View {
     @State private var birthdaySet = false
     @State private var birthdayDate = Calendar.current.date(byAdding: .year, value: -25, to: Date()) ?? Date()
     @State private var selectedPhoto: PhotosPickerItem?
-    @State private var selectedPhotoData: Data?
+    /// Freshly picked photo awaiting crop; non-nil presents `AvatarCropEditor`.
+    @State private var photoToCrop: CropCandidate?
+    /// Staged photo change, applied on Save. One value instead of parallel
+    /// flags so "new photo picked" and "removal requested" can never both be
+    /// true at once.
+    private enum PendingPhotoEdit {
+        case unchanged
+        case replace(UIImage)
+        case remove
+    }
+    @State private var photoEdit: PendingPhotoEdit = .unchanged
+
+    /// `fullScreenCover(item:)` needs Identifiable; `UIImage` isn't.
+    private struct CropCandidate: Identifiable {
+        let id = UUID()
+        let image: UIImage
+    }
     private let sides = ["Left", "Right", "Both"]
 
     private static let birthdayFormatter: DateFormatter = {
@@ -60,8 +76,33 @@ struct SettingsProfileView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { loadProfile() }
         .onChange(of: selectedPhoto) { _, item in
+            guard let item else { return }
             Task {
-                selectedPhotoData = try? await item?.loadTransferable(type: Data.self)
+                guard let data = try? await item.loadTransferable(type: Data.self),
+                      let image = UIImage(data: data) else {
+                    // Failed load (e.g. iCloud photo offline): reset the item
+                    // so re-picking the same photo fires `onChange` again —
+                    // otherwise the picker goes dead for that photo.
+                    selectedPhoto = nil
+                    return
+                }
+                // Don't use the raw photo — route it through the crop editor
+                // first; `photoEdit` only ever holds the cropped result.
+                photoToCrop = CropCandidate(image: image)
+            }
+        }
+        // Full-screen (not a sheet) so the drag-to-pan gesture can't fight
+        // the sheet's drag-to-dismiss.
+        .fullScreenCover(item: $photoToCrop) { candidate in
+            AvatarCropEditor(image: candidate.image) {
+                photoToCrop = nil
+                selectedPhoto = nil
+            } onDone: { cropped in
+                photoEdit = .replace(cropped)
+                photoToCrop = nil
+                // Reset the picker item so re-picking the same photo fires
+                // `onChange` again.
+                selectedPhoto = nil
             }
         }
         .onChange(of: focusedNameField) { oldField, _ in
@@ -96,6 +137,23 @@ struct SettingsProfileView: View {
             Text(store.currentProfile.map { "@\($0.username)" } ?? "—")
                 .font(.subheadline)
                 .foregroundStyle(Theme.textSecondary)
+
+            if canRemovePhoto {
+                Button {
+                    Haptics.tap()
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        // One tap always means "end up with no photo": discard
+                        // any pending pick, and flag the stored photo (if
+                        // there is one) for removal on Save.
+                        selectedPhoto = nil
+                        photoEdit = hasStoredPhoto ? .remove : .unchanged
+                    }
+                } label: {
+                    Text("Remove Photo")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.red)
+                }
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 4)
@@ -210,15 +268,33 @@ struct SettingsProfileView: View {
 
     @ViewBuilder
     private var profilePhoto: some View {
-        if let selectedPhotoData, let image = UIImage(data: selectedPhotoData) {
+        switch photoEdit {
+        case .replace(let image):
             Image(uiImage: image)
                 .resizable()
                 .scaledToFill()
                 .frame(width: 96, height: 96)
                 .clipShape(Circle())
                 .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
-        } else {
+        case .remove:
+            // Preview the post-removal state: initials only.
+            ProfileAvatar(preview: store.currentProfile?.initials ?? "", size: 96)
+        case .unchanged:
             ProfileAvatar(profile: store.currentProfile, size: 96, unlinked: true)
+        }
+    }
+
+    private var hasStoredPhoto: Bool {
+        store.currentProfile?.avatarURL != nil
+    }
+
+    /// There's something to remove: an uncommitted pick, or a stored photo
+    /// not already flagged for removal.
+    private var canRemovePhoto: Bool {
+        switch photoEdit {
+        case .replace: return true
+        case .remove: return false
+        case .unchanged: return hasStoredPhoto
         }
     }
 
@@ -248,7 +324,7 @@ struct SettingsProfileView: View {
     private func saveProfile() async {
         firstName = ProfileIdentityValidator.normalizedName(firstName)
         lastName = ProfileIdentityValidator.normalizedName(lastName)
-        let photoData = selectedPhotoData
+        let pendingPhoto = photoEdit
         // The two writes touch different columns, so run them concurrently to
         // overlap their network round trips.
         async let profileSaved = store.updateProfile(
@@ -260,12 +336,15 @@ struct SettingsProfileView: View {
             birthday: birthdaySet ? Self.birthdayFormatter.string(from: birthdayDate) : nil
         )
         async let photoSaved: Bool = {
-            guard let photoData else { return true }
-            return await store.uploadProfilePhoto(photoData)
+            switch pendingPhoto {
+            case .unchanged: return true
+            case .replace(let image): return await store.uploadProfilePhoto(image)
+            case .remove: return await store.removeProfilePhoto()
+            }
         }()
 
         guard await profileSaved, await photoSaved else { return }
-        selectedPhotoData = nil
+        photoEdit = .unchanged
         selectedPhoto = nil
         onSaved()
         dismiss()

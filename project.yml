@@ -48,6 +48,13 @@ targets:
       - path: PickleballAI
         excludes:
           - PickleballAI.storekit
+          # Stray tool config (e.g. a .claude/ dir from running Claude Code
+          # inside this folder) must never ship in the app bundle.
+          - ".claude"
+          # Gitignored, optional-per-CLAUDE.md dev config: if xcodegen runs on
+          # a machine where it exists, the generated project would reference
+          # it and clean checkouts (CI, teammates) would fail to build.
+          - RevenueCat.plist
       - path: PickleballAI/PickleballAI.storekit
         buildPhase: none
       # Live-game score model + WC contract, shared with the watch target.
