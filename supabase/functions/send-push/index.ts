@@ -101,6 +101,7 @@ Deno.serve(async (req) => {
     type: notif.type,
     session_id: notif.session_id,
     actor_id: notif.actor_id,
+    comment_id: notif.comment_id,
     invite_id: notif.invite_id,
   });
 
@@ -141,6 +142,8 @@ function buildMessage(
   switch (type) {
     case "like":            return { title: "New like", message: `${handle} liked your session` };
     case "comment":         return { title: "New comment", message: `${handle} commented: ${comment}` };
+    case "comment_reply":   return { title: "New reply", message: `${handle} replied: ${comment}` };
+    case "comment_like":    return { title: "New like", message: `${handle} liked your comment` };
     case "mention":         return { title: "You were mentioned", message: `${handle} mentioned you: ${comment}` };
     case "follow":          return { title: "New follower", message: `${handle} started following you` };
     case "tag":             return { title: "You were tagged", message: `${handle} tagged you in a session` };

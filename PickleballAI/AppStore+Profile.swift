@@ -260,6 +260,7 @@ extension AppStore {
                 let rows: [FeedSession] = try await supabase
                     .from("sessions")
                     .select(selectWithCounts)
+                    .is("comments.deleted_at", value: nil)
                     .eq("user_id", value: userId.uuidString)
                     .eq("posted", value: true)
                     .order("created_at", ascending: false)
