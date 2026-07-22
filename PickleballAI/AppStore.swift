@@ -41,6 +41,8 @@ final class AppStore: ObservableObject {
     @Published var gear: [GearItem] = []
     @Published var likedSessionIds: Set<UUID> = []
     @Published var optimisticLikeCounts: [UUID: Int] = [:]
+    @Published var likedCommentIds: Set<UUID> = []
+    @Published var optimisticCommentLikeCounts: [UUID: Int] = [:]
     @Published var notifications: [AppNotification] = []
     @Published var blockedAccounts: [BlockedAccount] = []
     /// Upcoming invites you're hosting or were tagged in, newest first.
@@ -82,6 +84,11 @@ final class AppStore: ObservableObject {
     var initialFeedLoadStartedAt: Date?
     var acceptedFollowingUserIDs: Set<UUID> = []
     var sessionRefreshDebounceTask: Task<Void, Never>?
+    var commentsRefreshDebounceTask: Task<Void, Never>?
+    var commentsRefreshPending = false
+    /// Comments whose like write hasn't landed yet. A concurrent reload must not
+    /// reconcile these rows or it reverts the optimistic state mid-flight.
+    var commentLikeWritesInFlight: Set<UUID> = []
     var realtimeNeedsFeedRefresh = false
     var realtimeNeedsMySessionsRefresh = false
     var realtimeNeedsDiscoverRefresh = false

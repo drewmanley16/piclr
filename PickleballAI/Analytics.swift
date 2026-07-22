@@ -42,7 +42,9 @@ enum Analytics {
         // Retention / social
         case firstRivalSeen = "first_rival_seen"
         case sessionLiked = "session_liked"
+        case commentLiked = "comment_liked"
         case commentPosted = "comment_posted"
+        case replyPosted = "reply_posted"
         case followSent = "follow_sent"
         case followAccepted = "follow_accepted"
         case repostRequested = "repost_requested"

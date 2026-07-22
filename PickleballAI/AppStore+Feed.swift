@@ -32,6 +32,9 @@ extension AppStore {
             let page: [FeedSession] = try await supabase
                 .from("sessions")
                 .select(selectFeedPreview)
+                .is("comments.deleted_at", value: nil)
+                .is("preview_comments.deleted_at", value: nil)
+                .is("preview_comments.parent_id", value: nil)
                 .eq("posted", value: true)
                 .filter("user_id", operator: "in", value: idFilter)
                 .order("created_at", ascending: false)
@@ -103,6 +106,9 @@ extension AppStore {
             let page: [FeedSession] = try await supabase
                 .from("sessions")
                 .select(selectFeedPreview)
+                .is("comments.deleted_at", value: nil)
+                .is("preview_comments.deleted_at", value: nil)
+                .is("preview_comments.parent_id", value: nil)
                 .eq("posted", value: true)
                 .filter("user_id", operator: "not.in", value: excludedAuthorFilter)
                 .order("created_at", ascending: false)
@@ -146,6 +152,7 @@ extension AppStore {
             let sessions: [FeedSession] = try await supabase
                 .from("sessions")
                 .select(selectWithCounts)
+                .is("comments.deleted_at", value: nil)
                 .eq("user_id", value: userId.uuidString)
                 .order("created_at", ascending: false)
                 .execute()
@@ -163,6 +170,9 @@ extension AppStore {
             let rows: [FeedSession] = try await supabase
                 .from("sessions")
                 .select(selectFeedPreview)
+                .is("comments.deleted_at", value: nil)
+                .is("preview_comments.deleted_at", value: nil)
+                .is("preview_comments.parent_id", value: nil)
                 .eq("id", value: id.uuidString)
                 .limit(1)
                 .execute()

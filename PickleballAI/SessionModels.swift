@@ -165,7 +165,12 @@ struct FeedSession: Identifiable, Decodable, Hashable {
 
     var likeCount: Int { likes?.first?.count ?? 0 }
     var commentCount: Int { comments?.first?.count ?? 0 }
-    var inlineComments: [Comment] { (previewComments ?? []).prefix(3).map { $0 } }
+    var inlineComments: [Comment] {
+        (previewComments ?? [])
+            .filter { !$0.isDeleted && !$0.isReply }
+            .prefix(3)
+            .map { $0 }
+    }
     var sortedActivities: [SessionActivity] { (activities ?? []).sorted { $0.position < $1.position } }
     var matchCount: Int { postActivities.filter(\.isMatch).count }
     var practiceCount: Int { postActivities.filter { !$0.isMatch }.count }
