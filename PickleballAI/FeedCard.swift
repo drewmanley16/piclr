@@ -31,10 +31,6 @@ struct FeedCard: View {
 
                 activityList
 
-                if session.hasPostWorkoutMetrics {
-                    HealthMetricStrip(session: session)
-                }
-
                 photoSection
 
                 if let takeaway = session.postTakeaway, !takeaway.isEmpty {
@@ -171,16 +167,25 @@ struct FeedCard: View {
 
     // MARK: Title
 
-    // Title + a quiet context line (focus / location — never duration; that
-    // lives in the stat strip, so it can't be mistaken for a timestamp).
+    // Title + a quiet context line (focus / location · duration). Watch
+    // biometrics ride the trailing edge of the title as compact icon chips,
+    // so they read as a light stat rather than a space-hungry stat bar.
     private var titleBlock: some View {
         VStack(alignment: .leading, spacing: 3) {
             if let weeks = session.postStreakWeek, weeks >= 2 {
                 StreakBadge(weeks: weeks)
             }
-            Text(session.postDisplayTitle)
-                .font(.headline)
-                .foregroundStyle(Theme.textPrimary)
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(session.postDisplayTitle)
+                    .font(.headline)
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                if session.hasPostWorkoutMetrics {
+                    Spacer(minLength: 8)
+                    InlineHealthMetrics(session: session)
+                        .fixedSize()
+                }
+            }
             if let subtitle = metaSubtitle {
                 Text(subtitle)
                     .font(.caption)
@@ -353,6 +358,49 @@ struct FeedCard: View {
 
     private var alreadyReposted: Bool {
         store.mySessions.contains { $0.repostedFrom == session.id && $0.posted }
+    }
+}
+
+/// Compact watch biometrics that trail the session title: a heart-rate chip
+/// (avg, or avg–max range) and an active-calorie chip. Quiet + monochrome so
+/// the lime score stays the hero. The wide `HealthMetricStrip` below is kept
+/// for the standalone share card, where the extra room is welcome.
+struct InlineHealthMetrics: View {
+    let session: FeedSession
+
+    var body: some View {
+        HStack(spacing: 10) {
+            if let avg = session.postAverageHeartRateBPM {
+                chip("heart.fill", "\(avg)", unit: "avg", tint: .red)
+            }
+            if let cal = session.postActiveCaloriesKcal {
+                chip("flame.fill", "\(cal)", unit: "cal", tint: .orange)
+            }
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(Theme.textSecondary)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private func chip(_ symbol: String, _ value: String, unit: String, tint: Color) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: symbol)
+                .font(.caption2)
+                .foregroundStyle(tint)
+            Text(value)
+                .monospacedDigit()
+            Text(unit)
+                .font(.caption2)
+                .foregroundStyle(Theme.textTertiary)
+        }
+    }
+
+    private var accessibilityLabel: String {
+        var parts: [String] = []
+        if let avg = session.postAverageHeartRateBPM { parts.append("Average heart rate \(avg) bpm") }
+        if let cal = session.postActiveCaloriesKcal { parts.append("\(cal) active calories") }
+        return parts.joined(separator: ", ")
     }
 }
 
