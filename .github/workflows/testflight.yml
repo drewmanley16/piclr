@@ -1,0 +1,93 @@
+name: TestFlight
+
+# Auto-archive and upload to App Store Connect on every push to main that
+# touches app sources. Add "[skip ci]" to a commit message to skip, or run
+# manually from the Actions tab (workflow_dispatch).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "PickleballAI/**"
+      - "PickleballAIWidget/**"
+      - "PickleballAIWatch/**"
+      - "Shared/**"
+      - "project.yml"
+      - "ExportOptions.plist"
+      - ".github/workflows/testflight.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  # Never run two uploads at once; a newer push supersedes an in-flight build.
+  group: testflight
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-15
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need full history so the build number (commit count) is stable
+
+      - name: Show selected Xcode
+        # Uses the runner's default (latest stable) Xcode. If the app needs a
+        # newer SDK than the runner ships, pin one here with xcode-select.
+        run: xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Import signing certificate
+        env:
+          DIST_CERT_P12: ${{ secrets.DIST_CERT_P12 }}
+          DIST_CERT_PASSWORD: ${{ secrets.DIST_CERT_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/app.keychain-db"
+          KEYCHAIN_PW="ci-$(uuidgen)"
+          CERT="$RUNNER_TEMP/dist.p12"
+          echo "$DIST_CERT_P12" | base64 --decode > "$CERT"
+          security create-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+          security import "$CERT" -P "$DIST_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PW" "$KEYCHAIN" >/dev/null
+          # Make the temp keychain searchable alongside the login keychain.
+          security list-keychain -d user -s "$KEYCHAIN" login.keychain-db
+
+      - name: Install provisioning profiles
+        env:
+          PROFILE_APP: ${{ secrets.PROFILE_APP }}
+          PROFILE_WIDGET: ${{ secrets.PROFILE_WIDGET }}
+          PROFILE_WATCH: ${{ secrets.PROFILE_WATCH }}
+        run: |
+          DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$DIR"
+          echo "$PROFILE_APP"    | base64 --decode > "$DIR/app.mobileprovision"
+          echo "$PROFILE_WIDGET" | base64 --decode > "$DIR/widget.mobileprovision"
+          echo "$PROFILE_WATCH"  | base64 --decode > "$DIR/watch.mobileprovision"
+
+      - name: Write App Store Connect API key
+        env:
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          echo "$ASC_API_KEY_P8" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+
+      - name: Write gitignored config plists
+        env:
+          SUPABASE_PLIST: ${{ secrets.SUPABASE_PLIST }}
+        run: |
+          echo "$SUPABASE_PLIST" | base64 --decode > PickleballAI/Supabase.plist
+
+      - name: Set build number (commit count — monotonic, unique)
+        run: |
+          BUILD=$(git rev-list --count HEAD)
+          echo "Build number: $BUILD"
+          /usr/bin/sed -i '' "s/CURRENT_PROJECT_VERSION: \"[0-9]*\"/CURRENT_PROJECT_VERSION: \"$BUILD\"/" project.yml
+
+      - name: Archive, export, upload
+        run: xcodegen generate && scripts/testflight.sh
