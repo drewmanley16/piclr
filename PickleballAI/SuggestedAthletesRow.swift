@@ -33,7 +33,7 @@ struct SuggestedAthletesRow: View {
             Spacer()
             InviteShareLink(
                 message: store.inviteShareMessage,
-                subject: "Join me on pickleball.ai",
+                subject: "Join me on piclr",
                 source: "suggested_athletes"
             ) {
                 Label("Invite a friend", systemImage: "plus")

@@ -716,7 +716,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = PickleballAIWatch/PickleballAIWatch.entitlements;
 				INFOPLIST_FILE = PickleballAIWatch/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = pickleball.ai;
+				INFOPLIST_KEY_CFBundleDisplayName = piclr;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pickleball.ai.watchapp;
 				PRODUCT_NAME = PickleballAIWatch;
 				SDKROOT = watchos;
@@ -859,7 +859,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = PickleballAIWatch/PickleballAIWatch.entitlements;
 				INFOPLIST_FILE = PickleballAIWatch/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = pickleball.ai;
+				INFOPLIST_KEY_CFBundleDisplayName = piclr;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pickleball.ai.watchapp;
 				PRODUCT_NAME = PickleballAIWatch;
 				SDKROOT = watchos;
@@ -873,7 +873,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				INFOPLIST_FILE = PickleballAIWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = pickleball.ai;
+				INFOPLIST_KEY_CFBundleDisplayName = piclr;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -894,7 +894,7 @@
 				CODE_SIGN_ENTITLEMENTS = PickleballAI/PickleballAI.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = PickleballAI/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = pickleball.ai;
+				INFOPLIST_KEY_CFBundleDisplayName = piclr;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -913,7 +913,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				INFOPLIST_FILE = PickleballAIWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = pickleball.ai;
+				INFOPLIST_KEY_CFBundleDisplayName = piclr;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -934,7 +934,7 @@
 				CODE_SIGN_ENTITLEMENTS = PickleballAI/PickleballAI.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = PickleballAI/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = pickleball.ai;
+				INFOPLIST_KEY_CFBundleDisplayName = piclr;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (

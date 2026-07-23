@@ -31,16 +31,16 @@ extension AppStore {
         let link = myProfileLink.absoluteString
         if let username = currentProfile?.username,
            !username.isEmpty, !username.hasPrefix("player_") {
-            return "Add me on pickleball.ai — @\(username)\n\n\(link)"
+            return "Add me on piclr — @\(username)\n\n\(link)"
         }
-        return "Add me on pickleball.ai — log every match with your crew.\n\n\(link)"
+        return "Add me on piclr — log every match with your crew.\n\n\(link)"
     }
 
     /// Share copy naming a specific guest we just played, e.g.
-    /// "Dave — I logged our match on pickleball.ai, come see it: <link>".
+    /// "Dave — I logged our match on piclr, come see it: <link>".
     func guestInviteMessage(for name: String) -> String {
         let first = name.split(separator: " ").first.map(String.init) ?? name
-        return "\(first) — I logged our match on pickleball.ai, come see it: \(myProfileLink.absoluteString)"
+        return "\(first) — I logged our match on piclr, come see it: \(myProfileLink.absoluteString)"
     }
 
     /// Routes an incoming universal/custom link. Expects `/u/{userId}` and opens
@@ -89,7 +89,7 @@ struct GuestInviteButton: View {
     var body: some View {
         InviteShareLink(
             message: store.guestInviteMessage(for: guestName),
-            subject: "Come see our match on pickleball.ai",
+            subject: "Come see our match on piclr",
             source: source
         ) {
             Label("Invite", systemImage: "person.crop.circle.badge.plus")

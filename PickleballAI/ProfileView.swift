@@ -24,8 +24,8 @@ struct ProfileView: View {
     private var profile: Profile? { store.currentProfile }
 
     private var shareText: String {
-        guard let profile else { return "Find me on pickleball.ai" }
-        return "Add @\(profile.username) on pickleball.ai\n\n\(store.myProfileLink.absoluteString)"
+        guard let profile else { return "Find me on piclr" }
+        return "Add @\(profile.username) on piclr\n\n\(store.myProfileLink.absoluteString)"
     }
 
     var body: some View {
@@ -230,8 +230,9 @@ struct ProfileView: View {
                     .background(Theme.accent, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
-                        Text("pickleball.ai")
-                            .font(.subheadline.weight(.bold))
+                        Text("piclr")
+                            .font(.subheadline.weight(.heavy))
+                            .tracking(-0.4)
                             .foregroundStyle(Theme.textPrimary)
                         Text("PRO")
                             .font(.caption2.weight(.heavy))

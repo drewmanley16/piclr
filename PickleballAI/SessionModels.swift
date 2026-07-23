@@ -216,7 +216,7 @@ struct FeedSession: Identifiable, Decodable, Hashable {
         var parts = ["\(postAuthor.displayName) — \(postDisplayTitle)"]
         if matches > 0 { parts.append("\(matches) match\(matches == 1 ? "" : "es")") }
         parts.append("\(postDurationMinutes) min")
-        return parts.joined(separator: " · ") + " · on pickleball.ai"
+        return parts.joined(separator: " · ") + " · on piclr"
     }
 
     /// Activities that affect the owner's workout record. Reposts project only

@@ -221,7 +221,7 @@ struct FindFriendsSheet: View {
 
                     InviteShareLink(
                         message: store.inviteShareMessage,
-                        subject: "Join me on pickleball.ai",
+                        subject: "Join me on piclr",
                         source: "find_friends"
                     ) {
                         Label("Share invite link", systemImage: "square.and.arrow.up")
