@@ -20,7 +20,7 @@ packages:
 settings:
   base:
     MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "123"
+    CURRENT_PROJECT_VERSION: "124"
     DEVELOPMENT_TEAM: "X9H68STU8F"
     CODE_SIGN_STYLE: Automatic
 # Explicit scheme (replaces the auto-generated one) so the run action can attach
