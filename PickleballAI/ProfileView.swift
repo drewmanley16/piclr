@@ -38,6 +38,7 @@ struct ProfileView: View {
                     if completion < 1 && !dismissedCompletion { completionBanner }
                     recordCard
                     rivalsCard
+                    insightsCard
                     activityCard
                     WorkoutCalendarCard(sessions: store.mySessions)
                     dashboard
@@ -423,6 +424,23 @@ struct ProfileView: View {
             // its first appearance is the natural "user has a rival" milestone.
             // Guarded to fire exactly once per user per device.
             .onAppear { Analytics.captureOnce(.firstRivalSeen, flag: .firstRivalSeen) }
+        }
+    }
+
+    // MARK: Insights (Pro)
+
+    /// Locked-but-visible Pro insights. Hidden entirely when monetization is off
+    /// (Release) via `showsLockedFeatures`/`showsProStatus`, and only once there
+    /// are enough decided matches to say something (`isReady`).
+    @ViewBuilder
+    private var insightsCard: some View {
+        if subscriptions.showsLockedFeatures || subscriptions.showsProStatus {
+            let insights = PlayInsights(sessions: store.mySessions, playerID: profile?.id)
+            if insights.isReady {
+                InsightsCard(insights: insights, locked: subscriptions.showsLockedFeatures) {
+                    subscriptions.presentPaywall(.insights)
+                }
+            }
         }
     }
 

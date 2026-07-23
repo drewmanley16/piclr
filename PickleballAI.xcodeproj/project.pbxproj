@@ -20,6 +20,7 @@
 		182BCA3925FD2E77C836B44D /* NotificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0385A0D1A212395E5B9D2720 /* NotificationModels.swift */; };
 		1DE50B08C3685F46E9394C4E /* CommentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B4FA8570E3F58A7BED6E97F /* CommentModels.swift */; };
 		1E410D96F3A0FA1A4836A8D2 /* WatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF5A9FC1A230E468254608EC /* WatchApp.swift */; };
+		2BC5A464046492AC5C8379C4 /* PlayInsights.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E6F8C2B52FA6E47498094F /* PlayInsights.swift */; };
 		2C8385E386ACCE3A125AEADA /* LegalDocuments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32CF1AA306E5F578AA3022F7 /* LegalDocuments.swift */; };
 		2F9A36DC1B8974294F4993AA /* WorkoutMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B33C1504DA3DA204EE4A1046 /* WorkoutMetrics.swift */; };
 		337E8774FB64CFE5D6978913 /* OnboardingPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D28EC049E2380767AA0A2B6 /* OnboardingPreview.swift */; };
@@ -38,6 +39,7 @@
 		47BE162BED8AB1033B9D7F8A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 26A5AD74AFBAB08E7BB33698 /* Assets.xcassets */; };
 		47D67C0BEA142E3C53143B14 /* AppStore+Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 417ED5579B58CC67197FFB16 /* AppStore+Notifications.swift */; };
 		496643F409765F3DCE496F80 /* WorkoutCalendarCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 323771872266981FD4A95C19 /* WorkoutCalendarCard.swift */; };
+		49CE65D8F627CAD2C793DA9C /* InsightsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AC6FBEEB80B18537D16C67A /* InsightsCard.swift */; };
 		4A8C0B26C66CA2BCA86EFF37 /* SettingsSubscreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 612A1DDA53F21DD025421CC8 /* SettingsSubscreens.swift */; };
 		4BA0FAC781BDC3A8DB6C1A00 /* GearSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D169CF8E4C9FDD09C74432A3 /* GearSheets.swift */; };
 		4CD5BF0B95A969D397E3038D /* PickleballAIWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EE4100E53AC518E09293CA1 /* PickleballAIWidget.swift */; };
@@ -210,6 +212,7 @@
 		6358D9903D36AD9E9F526C34 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		65F9240942A799CF19EF40AC /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		68362579BCA6AA9DB6DC88EE /* GearModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearModels.swift; sourceTree = "<group>"; };
+		6AC6FBEEB80B18537D16C67A /* InsightsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsCard.swift; sourceTree = "<group>"; };
 		6B79D9A1A8FC0E949BBF88D6 /* AppStore+Comments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Comments.swift"; sourceTree = "<group>"; };
 		6BAF5E29E3E19941F0F544FB /* PickleballAI.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PickleballAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6BF6725B8FBFB5A75FCF41BB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -244,6 +247,7 @@
 		C60A7FE208AB50A6DC053231 /* LocationPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPicker.swift; sourceTree = "<group>"; };
 		C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		CF895DB874A0AA5FBE3CB948 /* StatsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsSheet.swift; sourceTree = "<group>"; };
+		D0E6F8C2B52FA6E47498094F /* PlayInsights.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayInsights.swift; sourceTree = "<group>"; };
 		D169CF8E4C9FDD09C74432A3 /* GearSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearSheets.swift; sourceTree = "<group>"; };
 		D1DA9EA8FD022D18FABEBD5A /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		D27DDC2F5BDF963F1B298D8A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -362,6 +366,7 @@
 				D169CF8E4C9FDD09C74432A3 /* GearSheets.swift */,
 				65F9240942A799CF19EF40AC /* Haptics.swift */,
 				6BF6725B8FBFB5A75FCF41BB /* Info.plist */,
+				6AC6FBEEB80B18537D16C67A /* InsightsCard.swift */,
 				214162C6EFF74362BE3772CD /* InviteModels.swift */,
 				29384586246A643B30C868F6 /* InviteSharing.swift */,
 				E9848E60F27125A620DA0B90 /* InviteView.swift */,
@@ -383,6 +388,7 @@
 				212C7D515516C3E07230F457 /* PickleballAI.entitlements */,
 				97B5C832B1229AFF94F3859C /* PickleballAI.storekit */,
 				81B8CE679ACD5A6F4E5DCB13 /* PickleballAIApp.swift */,
+				D0E6F8C2B52FA6E47498094F /* PlayInsights.swift */,
 				9A893407FB7651D422D87CC7 /* PrivacyInfo.xcprivacy */,
 				1C1946954DF585AB3AA78971 /* ProfileIdentityValidation.swift */,
 				475451E24481504893FFE7ED /* ProfileModels.swift */,
@@ -625,6 +631,7 @@
 				01FBF11CB8802B2E11882178 /* GearModels.swift in Sources */,
 				4BA0FAC781BDC3A8DB6C1A00 /* GearSheets.swift in Sources */,
 				DE6F84AD2314939D4E8C317C /* Haptics.swift in Sources */,
+				49CE65D8F627CAD2C793DA9C /* InsightsCard.swift in Sources */,
 				BE4F20EBC36E0717FC98E442 /* InviteModels.swift in Sources */,
 				EFDDBF4113FAE1DADF1C2FD2 /* InviteSharing.swift in Sources */,
 				D7F2EE361D4137FD7E546EB4 /* InviteView.swift in Sources */,
@@ -645,6 +652,7 @@
 				3C079EEC453B813B1EB1752C /* PaywallView.swift in Sources */,
 				42845FCF98B5DFD1F5D3BB16 /* PhoneNumberFormatting.swift in Sources */,
 				09769653678BBE3A0E31E1CB /* PickleballAIApp.swift in Sources */,
+				2BC5A464046492AC5C8379C4 /* PlayInsights.swift in Sources */,
 				FBC5CA0F99C49D8AC902D659 /* ProfileIdentityValidation.swift in Sources */,
 				449EC4A27D19CBFFFABCB4CC /* ProfileModels.swift in Sources */,
 				C5338F649A3DC6D11AE71F0B /* ProfileView.swift in Sources */,

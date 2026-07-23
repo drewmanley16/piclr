@@ -393,6 +393,7 @@ enum PaywallContext: Identifiable, Hashable {
     case general
     case recap
     case rivalryInsights
+    case insights
     case unlimitedHistory
 
     var id: String {
@@ -400,6 +401,7 @@ enum PaywallContext: Identifiable, Hashable {
         case .general:          return "general"
         case .recap:            return "recap"
         case .rivalryInsights:  return "rivalry"
+        case .insights:         return "insights"
         case .unlimitedHistory: return "history"
         }
     }
@@ -409,6 +411,7 @@ enum PaywallContext: Identifiable, Hashable {
         case .general:          return "Go further with Pro"
         case .recap:            return "Unlock AI match recaps"
         case .rivalryInsights:  return "See the full rivalry breakdown"
+        case .insights:         return "Unlock your play insights"
         case .unlimitedHistory: return "Unlock your full history"
         }
     }
