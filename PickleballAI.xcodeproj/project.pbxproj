@@ -20,6 +20,7 @@
 		182BCA3925FD2E77C836B44D /* NotificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0385A0D1A212395E5B9D2720 /* NotificationModels.swift */; };
 		1DE50B08C3685F46E9394C4E /* CommentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B4FA8570E3F58A7BED6E97F /* CommentModels.swift */; };
 		1E410D96F3A0FA1A4836A8D2 /* WatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF5A9FC1A230E468254608EC /* WatchApp.swift */; };
+		25DD14B5A7EB2FD974D866F7 /* InsightsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C05392786FD78DD414FD73AF /* InsightsSheet.swift */; };
 		2BC5A464046492AC5C8379C4 /* PlayInsights.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E6F8C2B52FA6E47498094F /* PlayInsights.swift */; };
 		2C8385E386ACCE3A125AEADA /* LegalDocuments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32CF1AA306E5F578AA3022F7 /* LegalDocuments.swift */; };
 		2F9A36DC1B8974294F4993AA /* WorkoutMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B33C1504DA3DA204EE4A1046 /* WorkoutMetrics.swift */; };
@@ -240,6 +241,7 @@
 		B84E3919C44FA9AD88BF7BBB /* WatchGameStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchGameStore.swift; sourceTree = "<group>"; };
 		BC017A194C54A644C612773C /* WatchSyncMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSyncMessage.swift; sourceTree = "<group>"; };
 		BF5A9FC1A230E468254608EC /* WatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchApp.swift; sourceTree = "<group>"; };
+		C05392786FD78DD414FD73AF /* InsightsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsSheet.swift; sourceTree = "<group>"; };
 		C105A93AC708CD4765D2974D /* RevenueCat.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = RevenueCat.example.plist; sourceTree = "<group>"; };
 		C3ABA2151D296CFDE399EDFD /* Subscription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Subscription.swift; sourceTree = "<group>"; };
 		C42C76AB4A636C3E1CF856C1 /* AppStore+Realtime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Realtime.swift"; sourceTree = "<group>"; };
@@ -367,6 +369,7 @@
 				65F9240942A799CF19EF40AC /* Haptics.swift */,
 				6BF6725B8FBFB5A75FCF41BB /* Info.plist */,
 				6AC6FBEEB80B18537D16C67A /* InsightsCard.swift */,
+				C05392786FD78DD414FD73AF /* InsightsSheet.swift */,
 				214162C6EFF74362BE3772CD /* InviteModels.swift */,
 				29384586246A643B30C868F6 /* InviteSharing.swift */,
 				E9848E60F27125A620DA0B90 /* InviteView.swift */,
@@ -632,6 +635,7 @@
 				4BA0FAC781BDC3A8DB6C1A00 /* GearSheets.swift in Sources */,
 				DE6F84AD2314939D4E8C317C /* Haptics.swift in Sources */,
 				49CE65D8F627CAD2C793DA9C /* InsightsCard.swift in Sources */,
+				25DD14B5A7EB2FD974D866F7 /* InsightsSheet.swift in Sources */,
 				BE4F20EBC36E0717FC98E442 /* InviteModels.swift in Sources */,
 				EFDDBF4113FAE1DADF1C2FD2 /* InviteSharing.swift in Sources */,
 				D7F2EE361D4137FD7E546EB4 /* InviteView.swift in Sources */,

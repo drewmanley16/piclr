@@ -1,11 +1,21 @@
 import Foundation
 
-/// One win/loss split along some dimension (a court, a time of day, …).
+/// One win/loss split along some dimension (a court, a time of day, a partner…).
 struct SplitRecord: Identifiable {
     let id: String
     let label: String
+    /// Set for person-based splits (partners) so rows can show an avatar.
+    var person: PersonRef?
     var wins: Int
     var losses: Int
+
+    init(id: String, label: String, person: PersonRef? = nil, wins: Int, losses: Int) {
+        self.id = id
+        self.label = label
+        self.person = person
+        self.wins = wins
+        self.losses = losses
+    }
 
     var games: Int { wins + losses }
     var winRate: Int { games == 0 ? 0 : Int((Double(wins) / Double(games) * 100).rounded()) }
@@ -48,19 +58,28 @@ struct InsightRow: Identifiable {
 }
 
 /// Pro "Insights": deeper cuts on a player's match history — clutch record,
-/// point margin, best court, best time of day. Computed client-side from logged
-/// sessions, the same way `SessionStats` derives records. See [[SessionStats]].
+/// point margin, best court/time, per-partner records, and first-game form.
+/// Computed client-side from logged sessions, the same way `SessionStats`
+/// derives records. See [[SessionStats]].
 struct PlayInsights {
     let clutch: ClutchStats
     /// Per-court records, most-played first.
     let courts: [SplitRecord]
     /// Per-time-of-day records, ordered morning → late night.
     let timeOfDay: [SplitRecord]
+    /// Per-partner records, most-played first.
+    let partners: [SplitRecord]
+    /// Record in the first decided match of each session (slow-starter signal).
+    let firstGames: SplitRecord
+    /// Record in every decided match after the first.
+    let laterGames: SplitRecord
 
     init(sessions: [FeedSession], playerID: UUID?) {
         var closeWins = 0, closeLosses = 0, marginSum = 0, decided = 0
         var courtAgg: [String: SplitRecord] = [:]
         var timeAgg: [String: (order: Int, record: SplitRecord)] = [:]
+        var partnerAgg: [String: SplitRecord] = [:]
+        var firstWins = 0, firstLosses = 0, laterWins = 0, laterLosses = 0
         let cal = Calendar.current
 
         for session in sessions {
@@ -68,30 +87,44 @@ struct PlayInsights {
             let court = session.postLocation?.trimmingCharacters(in: .whitespacesAndNewlines)
             let bucket = Self.timeBucket(for: session.startedDate, calendar: cal)
 
-            for activity in activities where activity.isMatch {
-                // Derive from the score so ties are excluded, and margin is
-                // player-relative (positive = the player outscored the opponent).
-                guard let result = activity.matchResult, result != .tie,
-                      let team = activity.teamScore, let opponent = activity.opponentScore else { continue }
-                let won = result == .win
-                let margin = team - opponent
+            // Decided (non-tie, scored) matches in play order, so "first game" and
+            // margins are well defined and ties don't skew win/loss.
+            let matches = activities.filter {
+                $0.isMatch && $0.teamScore != nil && $0.opponentScore != nil
+                    && $0.matchResult != nil && $0.matchResult != .tie
+            }.sorted { $0.position < $1.position }
+
+            for (index, activity) in matches.enumerated() {
+                let won = activity.matchResult == .win
+                let margin = (activity.teamScore ?? 0) - (activity.opponentScore ?? 0)
                 marginSum += margin
                 decided += 1
 
                 if abs(margin) <= 2 {
                     if won { closeWins += 1 } else { closeLosses += 1 }
                 }
-
+                if index == 0 {
+                    if won { firstWins += 1 } else { firstLosses += 1 }
+                } else {
+                    if won { laterWins += 1 } else { laterLosses += 1 }
+                }
                 if let court, !court.isEmpty {
                     var record = courtAgg[court] ?? SplitRecord(id: court, label: court, wins: 0, losses: 0)
                     if won { record.wins += 1 } else { record.losses += 1 }
                     courtAgg[court] = record
                 }
-
-                var entry = timeAgg[bucket.label]
+                var timeEntry = timeAgg[bucket.label]
                     ?? (bucket.order, SplitRecord(id: bucket.label, label: bucket.label, wins: 0, losses: 0))
-                if won { entry.record.wins += 1 } else { entry.record.losses += 1 }
-                timeAgg[bucket.label] = entry
+                if won { timeEntry.record.wins += 1 } else { timeEntry.record.losses += 1 }
+                timeAgg[bucket.label] = timeEntry
+
+                for partner in activity.partners {
+                    let key = Self.key(for: partner)
+                    var record = partnerAgg[key]
+                        ?? SplitRecord(id: key, label: partner.displayName, person: Self.person(for: partner), wins: 0, losses: 0)
+                    if won { record.wins += 1 } else { record.losses += 1 }
+                    partnerAgg[key] = record
+                }
             }
         }
 
@@ -101,16 +134,21 @@ struct PlayInsights {
             avgMargin: decided == 0 ? 0 : Double(marginSum) / Double(decided),
             decidedMatches: decided
         )
-        courts = courtAgg.values.sorted { $0.games != $1.games ? $0.games > $1.games : $0.winRate > $1.winRate }
+        courts = courtAgg.values.sorted(by: Self.byGamesThenRate)
         timeOfDay = timeAgg.values.sorted { $0.order < $1.order }.map(\.record)
+        partners = partnerAgg.values.sorted(by: Self.byGamesThenRate)
+        firstGames = SplitRecord(id: "first", label: "First game of a session", wins: firstWins, losses: firstLosses)
+        laterGames = SplitRecord(id: "later", label: "After warming up", wins: laterWins, losses: laterLosses)
     }
 
     /// Best court by win rate among courts with at least two games.
     var bestCourt: SplitRecord? { Self.best(among: courts) }
     /// Best time of day by win rate among buckets with at least two games.
     var bestTime: SplitRecord? { Self.best(among: timeOfDay) }
+    /// Highest-win-rate partner with at least two games together.
+    var bestPartner: SplitRecord? { Self.best(among: partners) }
 
-    /// The insight rows worth surfacing, each included only when it has data.
+    /// The teaser rows for the profile card, each included only when it has data.
     var rows: [InsightRow] {
         var out: [InsightRow] = []
         if clutch.closeGames > 0 {
@@ -133,11 +171,11 @@ struct PlayInsights {
                 subtitle: court.label, lockedSubtitle: "Where you win most",
                 value: "\(court.recordLine) · \(court.winRate)%", positive: court.leading))
         }
-        if let time = bestTime {
+        if let partner = bestPartner {
             out.append(InsightRow(
-                id: "time", icon: "clock", title: "Best time",
-                subtitle: time.label, lockedSubtitle: "When you win most",
-                value: "\(time.recordLine) · \(time.winRate)%", positive: time.leading))
+                id: "partner", icon: "person.2.fill", title: "Best partner",
+                subtitle: partner.label, lockedSubtitle: "Who you win most with",
+                value: "\(partner.recordLine) · \(partner.winRate)%", positive: partner.leading))
         }
         return out
     }
@@ -149,6 +187,19 @@ struct PlayInsights {
         records.filter { $0.games >= 2 }.max {
             $0.winRate != $1.winRate ? $0.winRate < $1.winRate : $0.games < $1.games
         }
+    }
+
+    private static func byGamesThenRate(_ lhs: SplitRecord, _ rhs: SplitRecord) -> Bool {
+        lhs.games != rhs.games ? lhs.games > rhs.games : lhs.winRate > rhs.winRate
+    }
+
+    private static func key(for participant: ActivityParticipant) -> String {
+        participant.profile?.id.uuidString ?? "guest:\(participant.guestName ?? participant.id.uuidString)"
+    }
+
+    private static func person(for participant: ActivityParticipant) -> PersonRef {
+        if let profile = participant.profile { return PersonRef(participant: profile) }
+        return PersonRef(guestName: participant.displayName)
     }
 
     private static func timeBucket(for date: Date, calendar: Calendar) -> (label: String, order: Int) {

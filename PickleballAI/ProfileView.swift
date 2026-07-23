@@ -80,6 +80,7 @@ struct ProfileView: View {
                 case .gear: GearSheet()
                 case .measures: MeasuresSheet()
                 case .rivals: RivalsSheet()
+                case .insights: InsightsSheet()
                 case .leaderboard: LeaderboardSheet()
                 }
             }
@@ -437,9 +438,12 @@ struct ProfileView: View {
         if subscriptions.showsLockedFeatures || subscriptions.showsProStatus {
             let insights = PlayInsights(sessions: store.mySessions, playerID: profile?.id)
             if insights.isReady {
-                InsightsCard(insights: insights, locked: subscriptions.showsLockedFeatures) {
-                    subscriptions.presentPaywall(.insights)
-                }
+                InsightsCard(
+                    insights: insights,
+                    locked: subscriptions.showsLockedFeatures,
+                    onUnlock: { subscriptions.presentPaywall(.insights) },
+                    onOpen: { activeSheet = .insights }
+                )
             }
         }
     }
@@ -837,6 +841,6 @@ struct CustomRangeSheet: View {
 }
 
 enum ProfileSheet: String, Identifiable {
-    case stats, gear, measures, rivals, leaderboard
+    case stats, gear, measures, rivals, leaderboard, insights
     var id: String { rawValue }
 }

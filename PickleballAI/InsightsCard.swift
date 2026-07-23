@@ -1,59 +1,71 @@
 import SwiftUI
 
-/// Pro "Insights" surface on the profile: clutch record, point margin, best
-/// court, best time. Locked-but-visible — free users see the real rows with the
-/// values redacted and tap through to the paywall; Pro users see the numbers.
-/// Fed by [[PlayInsights]]; only rendered when `insights.isReady`.
+/// Pro "Insights" surface on the profile — LinkedIn-style tease. Free users see
+/// the first insight for real, the rest **blurred**, and an "Unlock all
+/// insights" button that opens the paywall. Pro users see every value and tap
+/// through to the full breakdown sheet. Fed by [[PlayInsights]]; only rendered
+/// when `insights.isReady`.
 struct InsightsCard: View {
     let insights: PlayInsights
     let locked: Bool
     var onUnlock: () -> Void = {}
+    var onOpen: () -> Void = {}
 
     var body: some View {
-        if locked {
-            Button {
-                Haptics.tap()
-                onUnlock()
-            } label: { card }
-            .buttonStyle(.plain)
-            .accessibilityHint("Unlock the full breakdown with Pro")
-        } else {
-            card
-        }
+        Button {
+            Haptics.tap()
+            if locked { onUnlock() } else { onOpen() }
+        } label: { card }
+        .buttonStyle(.plain)
+        .accessibilityHint(locked ? "Unlock the full breakdown with Pro" : "See all insights")
     }
 
     private var card: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Label("Insights", systemImage: "chart.bar.xaxis")
-                    .font(.headline)
-                    .foregroundStyle(Theme.textPrimary)
-                Spacer()
-                if locked { ProLockBadge() }
-            }
-
+            header
             VStack(spacing: 0) {
                 ForEach(Array(insights.rows.enumerated()), id: \.element.id) { index, item in
                     if index > 0 { Divider().overlay(Theme.hairline) }
-                    rowView(item)
+                    // Reveal the first row as the hook; blur the rest for free users.
+                    rowView(item, blurred: locked && index > 0)
                 }
             }
-
-            if locked {
-                HStack(spacing: 6) {
-                    Text("Unlock every split")
-                        .font(.subheadline.weight(.semibold))
-                    Image(systemName: "arrow.right")
-                        .font(.caption.weight(.bold))
-                }
-                .foregroundStyle(Theme.accent)
-                .padding(.top, 2)
-            }
+            if locked { unlockButton }
         }
         .cardStyle()
     }
 
-    private func rowView(_ row: InsightRow) -> some View {
+    private var header: some View {
+        HStack {
+            Label("Insights", systemImage: "chart.bar.xaxis")
+                .font(.headline)
+                .foregroundStyle(Theme.textPrimary)
+            Spacer()
+            if locked {
+                ProLockBadge()
+            } else {
+                Text("Details")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.accent)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.accent)
+            }
+        }
+    }
+
+    private var unlockButton: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "lock.fill").font(.footnote.weight(.bold))
+            Text("Unlock all insights").font(.subheadline.weight(.bold))
+        }
+        .foregroundStyle(Theme.background)
+        .frame(maxWidth: .infinity, minHeight: 46)
+        .background(Theme.accent, in: Capsule())
+        .padding(.top, 2)
+    }
+
+    private func rowView(_ row: InsightRow, blurred: Bool) -> some View {
         HStack(spacing: 12) {
             Image(systemName: row.icon)
                 .font(.subheadline.weight(.semibold))
@@ -73,22 +85,13 @@ struct InsightsCard: View {
 
             Spacer(minLength: 8)
 
-            if locked {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(Theme.accentSoft)
-                    .frame(width: 52, height: 18)
-                    .overlay(
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(Theme.accent)
-                    )
-                    .accessibilityLabel("Locked")
-            } else {
-                Text(row.value)
-                    .font(.subheadline.weight(.bold))
-                    .monospacedDigit()
-                    .foregroundStyle(row.positive ? Theme.accent : Theme.textPrimary)
-            }
+            Text(row.value)
+                .font(.subheadline.weight(.bold))
+                .monospacedDigit()
+                .foregroundStyle(row.positive ? Theme.accent : Theme.textPrimary)
+                .blur(radius: blurred ? 5 : 0)
+                .opacity(blurred ? 0.85 : 1)
+                .accessibilityLabel(blurred ? "Locked" : row.value)
         }
         .padding(.vertical, 10)
     }
