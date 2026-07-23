@@ -120,8 +120,9 @@ struct AuthView: View {
                     .foregroundStyle(Theme.background)
                     .frame(width: 44, height: 44)
                     .background(Theme.accent, in: Circle())
-                Text("pickleball.ai")
-                    .font(.title2.weight(.bold))
+                Text("piclr")
+                    .font(.title2.weight(.heavy))
+                    .tracking(-0.5)
                     .foregroundStyle(Theme.textPrimary)
                 Spacer()
             }
@@ -381,7 +382,7 @@ struct AuthView: View {
                             .frame(width: 44, height: 44)
                             .background(Theme.accent, in: Circle())
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("Find friends already using pickleball.ai")
+                            Text("Find friends already using piclr")
                                 .font(.headline)
                                 .foregroundStyle(Theme.textPrimary)
                             Text("Contacts are matched once and not stored.")
@@ -434,7 +435,7 @@ struct AuthView: View {
 
             InviteShareLink(
                 message: onboardingInviteMessage,
-                subject: "Join me on pickleball.ai",
+                subject: "Join me on piclr",
                 source: "onboarding"
             ) {
                 Label("Share invite link", systemImage: "square.and.arrow.up")
@@ -494,7 +495,7 @@ struct AuthView: View {
     }
 
     private var consentText: AttributedString {
-        let markdown = "I agree to the [Terms of Use](\(Legal.termsURL)) and [Privacy Policy](\(Legal.privacyURL)), and understand that pickleball.ai has **zero tolerance** for objectionable content or abusive behavior."
+        let markdown = "I agree to the [Terms of Use](\(Legal.termsURL)) and [Privacy Policy](\(Legal.privacyURL)), and understand that piclr has **zero tolerance** for objectionable content or abusive behavior."
         return (try? AttributedString(markdown: markdown)) ?? AttributedString(markdown)
     }
 
@@ -638,7 +639,7 @@ struct AuthView: View {
     private var onboardingInviteMessage: String {
         let link = store.myProfileLink.absoluteString
         let handle = username.trimmed
-        let intro = handle.isEmpty ? "Add me on pickleball.ai" : "Add me on pickleball.ai — @\(handle)"
+        let intro = handle.isEmpty ? "Add me on piclr" : "Add me on piclr — @\(handle)"
         return "\(intro)\n\n\(link)"
     }
 

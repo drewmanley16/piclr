@@ -20,7 +20,7 @@ packages:
 settings:
   base:
     MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "123"
+    CURRENT_PROJECT_VERSION: "124"
     DEVELOPMENT_TEAM: "X9H68STU8F"
     CODE_SIGN_STYLE: Automatic
 # Explicit scheme (replaces the auto-generated one) so the run action can attach
@@ -76,7 +76,7 @@ targets:
         PRODUCT_NAME: PickleballAI
         CODE_SIGN_ENTITLEMENTS: PickleballAI/PickleballAI.entitlements
         TARGETED_DEVICE_FAMILY: "1"
-        INFOPLIST_KEY_CFBundleDisplayName: "pickleball.ai"
+        INFOPLIST_KEY_CFBundleDisplayName: "piclr"
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
@@ -110,13 +110,13 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.pickleball.ai.widget
         PRODUCT_NAME: PickleballAIWidget
         TARGETED_DEVICE_FAMILY: "1"
-        INFOPLIST_KEY_CFBundleDisplayName: "pickleball.ai"
+        INFOPLIST_KEY_CFBundleDisplayName: "piclr"
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
     info:
       path: PickleballAIWidget/Info.plist
       properties:
         # App extensions must carry an explicit display name for App Store upload.
-        CFBundleDisplayName: "pickleball.ai"
+        CFBundleDisplayName: "piclr"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
 
@@ -136,13 +136,13 @@ targets:
         PRODUCT_NAME: PickleballAIWatch
         CODE_SIGN_ENTITLEMENTS: PickleballAIWatch/PickleballAIWatch.entitlements
         TARGETED_DEVICE_FAMILY: "4"
-        INFOPLIST_KEY_CFBundleDisplayName: "pickleball.ai"
+        INFOPLIST_KEY_CFBundleDisplayName: "piclr"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
     info:
       path: PickleballAIWatch/Info.plist
       properties:
-        CFBundleDisplayName: "pickleball.ai"
+        CFBundleDisplayName: "piclr"
         CFBundleIconName: AppIcon
         WKApplication: true
         WKCompanionAppBundleIdentifier: com.pickleball.ai

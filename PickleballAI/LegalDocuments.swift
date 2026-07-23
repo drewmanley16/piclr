@@ -112,7 +112,7 @@ enum LegalText {
     static let terms = """
     **Effective date: July 15, 2026**
 
-    Welcome to pickleball.ai ("the App"). These Terms of Use ("Terms") are a legal agreement between you and pickleball.ai ("we", "us"). By creating an account or using the App, you agree to these Terms. If you do not agree, do not use the App.
+    Welcome to piclr ("the App"). These Terms of Use ("Terms") are a legal agreement between you and piclr ("we", "us"). By creating an account or using the App, you agree to these Terms. If you do not agree, do not use the App.
 
     **1. Eligibility**
     You must be at least 13 years old to use the App. If you are under the age of majority where you live, you may only use the App with the involvement of a parent or guardian.
@@ -150,7 +150,7 @@ enum LegalText {
     static let privacy = """
     **Effective date: July 15, 2026**
 
-    This Privacy Policy explains what pickleball.ai ("we", "us") collects and how we use it. By using the App you agree to this policy.
+    This Privacy Policy explains what piclr ("we", "us") collects and how we use it. By using the App you agree to this policy.
 
     **1. Information we collect**
     • Phone number — used to create and sign in to your account (via SMS one-time code).

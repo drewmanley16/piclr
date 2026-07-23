@@ -24,8 +24,8 @@ struct ProfileView: View {
     private var profile: Profile? { store.currentProfile }
 
     private var shareText: String {
-        guard let profile else { return "Find me on pickleball.ai" }
-        return "Add @\(profile.username) on pickleball.ai\n\n\(store.myProfileLink.absoluteString)"
+        guard let profile else { return "Find me on piclr" }
+        return "Add @\(profile.username) on piclr\n\n\(store.myProfileLink.absoluteString)"
     }
 
     var body: some View {
@@ -38,6 +38,7 @@ struct ProfileView: View {
                     if completion < 1 && !dismissedCompletion { completionBanner }
                     recordCard
                     rivalsCard
+                    insightsCard
                     activityCard
                     WorkoutCalendarCard(sessions: store.mySessions)
                     dashboard
@@ -79,6 +80,7 @@ struct ProfileView: View {
                 case .gear: GearSheet()
                 case .measures: MeasuresSheet()
                 case .rivals: RivalsSheet()
+                case .insights: InsightsSheet()
                 case .leaderboard: LeaderboardSheet()
                 }
             }
@@ -230,8 +232,9 @@ struct ProfileView: View {
                     .background(Theme.accent, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
-                        Text("pickleball.ai")
-                            .font(.subheadline.weight(.bold))
+                        Text("piclr")
+                            .font(.subheadline.weight(.heavy))
+                            .tracking(-0.4)
                             .foregroundStyle(Theme.textPrimary)
                         Text("PRO")
                             .font(.caption2.weight(.heavy))
@@ -422,6 +425,26 @@ struct ProfileView: View {
             // its first appearance is the natural "user has a rival" milestone.
             // Guarded to fire exactly once per user per device.
             .onAppear { Analytics.captureOnce(.firstRivalSeen, flag: .firstRivalSeen) }
+        }
+    }
+
+    // MARK: Insights (Pro)
+
+    /// Locked-but-visible Pro insights. Hidden entirely when monetization is off
+    /// (Release) via `showsLockedFeatures`/`showsProStatus`, and only once there
+    /// are enough decided matches to say something (`isReady`).
+    @ViewBuilder
+    private var insightsCard: some View {
+        if subscriptions.showsLockedFeatures || subscriptions.showsProStatus {
+            let insights = PlayInsights(sessions: store.mySessions, playerID: profile?.id)
+            if insights.isReady {
+                InsightsCard(
+                    insights: insights,
+                    locked: subscriptions.showsLockedFeatures,
+                    onUnlock: { subscriptions.presentPaywall(.insights) },
+                    onOpen: { activeSheet = .insights }
+                )
+            }
         }
     }
 
@@ -818,6 +841,6 @@ struct CustomRangeSheet: View {
 }
 
 enum ProfileSheet: String, Identifiable {
-    case stats, gear, measures, rivals, leaderboard
+    case stats, gear, measures, rivals, leaderboard, insights
     var id: String { rawValue }
 }

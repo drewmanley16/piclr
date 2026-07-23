@@ -45,8 +45,9 @@ struct PaywallView: View {
                 .background(Theme.accent, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
 
             HStack(spacing: 6) {
-                Text("pickleball.ai")
-                    .font(.title2.weight(.bold))
+                Text("piclr")
+                    .font(.title2.weight(.heavy))
+                    .tracking(-0.5)
                     .foregroundStyle(Theme.textPrimary)
                 Text("PRO")
                     .font(.caption.weight(.heavy))
