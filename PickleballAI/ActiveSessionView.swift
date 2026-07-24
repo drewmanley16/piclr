@@ -65,7 +65,12 @@ struct ActiveSessionView: View {
                 case .newPractice:
                     ActivityEditorView(activity: DraftActivity(kind: .practice)) { add($0) }
                 case .newMatch:
-                    ActivityEditorView(activity: DraftActivity(kind: .match)) { add($0) }
+                    ActivityEditorView(
+                        activity: DraftActivity(
+                            kind: .match,
+                            carryingPlayersFrom: draft.activities.last(where: { $0.kind == .match })
+                        )
+                    ) { add($0) }
                 case .edit(let activity):
                     ActivityEditorView(activity: activity) { update($0) }
                 }
