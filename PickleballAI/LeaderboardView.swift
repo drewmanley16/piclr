@@ -98,10 +98,13 @@ struct LeaderboardRow: View {
                 HStack(spacing: 12) {
                     ProfileAvatar(url: entry.avatarURL, initials: entry.initials, size: 40, userId: entry.userId, unlinked: true)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(isYou ? "You" : entry.displayName)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(isYou ? Theme.accent : Theme.textPrimary)
-                            .lineLimit(1)
+                        HStack(spacing: 5) {
+                            Text(isYou ? "You" : entry.displayName)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(isYou ? Theme.accent : Theme.textPrimary)
+                                .lineLimit(1)
+                            ProBadge(isPro: entry.isPro)
+                        }
                         Text("@\(entry.username)")
                             .font(.caption)
                             .foregroundStyle(Theme.textSecondary)

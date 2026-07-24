@@ -62,7 +62,7 @@ final class AppStore: ObservableObject {
     /// The subset of profile columns embedded wherever a lightweight identity
     /// (avatar + name) is all a view needs. Hand-typed in several PostgREST
     /// select strings; kept as one constant so they can't drift apart.
-    static let selectProfileLite = "id,username,display_name,avatar_initials,avatar_url,avatar_path"
+    static let selectProfileLite = "id,username,display_name,avatar_initials,avatar_url,avatar_path,is_pro"
 
     static let selectActivityGraph = "activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(\(selectProfileLite))))"
     static let selectRepostSource = "source:repost_source(id,user_id,title,location,duration_minutes,focus,takeaway,created_at,started_at,ended_at,average_heart_rate_bpm,maximum_heart_rate_bpm,active_calories_kcal,streak_week,photo_path,author:profiles!sessions_user_id_fkey(*),\(selectActivityGraph))"

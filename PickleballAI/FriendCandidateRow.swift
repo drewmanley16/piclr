@@ -14,7 +14,8 @@ struct FriendCandidateRow: View {
             name: profile.displayName,
             detail: "@\(profile.username)",
             userId: navigable ? profile.id : nil,
-            placeholder: profile
+            placeholder: profile,
+            isPro: profile.isPro
         ) {
             followButton
         }

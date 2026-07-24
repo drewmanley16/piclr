@@ -11,6 +11,7 @@ struct LeaderboardEntry: Identifiable, Decodable, Hashable {
     let displayName: String
     let avatarURL: String?
     let avatarInitials: String?
+    let isPro: Bool
     let wins: Int
     let losses: Int
     let matches: Int
@@ -30,6 +31,7 @@ struct LeaderboardEntry: Identifiable, Decodable, Hashable {
         case displayName = "display_name"
         case avatarURL = "avatar_url"
         case avatarInitials = "avatar_initials"
+        case isPro = "is_pro"
         case wins, losses, matches
     }
 }

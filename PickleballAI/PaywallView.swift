@@ -239,13 +239,34 @@ private struct PlanCard: View {
 /// Filled "PRO" pill marking a subscribed user (profile header). Distinct from
 /// `ProLockBadge`, which marks locked features for non-subscribers.
 struct ProStatusBadge: View {
+    /// Shrinks the pill for inline use next to a name in dense rows (feed,
+    /// comments, people lists). The default size suits a profile header.
+    var compact = false
+
     var body: some View {
         Text("PRO")
-            .font(.caption2.weight(.heavy))
+            .font((compact ? Font.system(size: 9) : Font.caption2).weight(.heavy))
+            .fixedSize()
             .foregroundStyle(Theme.background)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
+            .padding(.horizontal, compact ? 5 : 8)
+            .padding(.vertical, compact ? 1.5 : 3)
             .background(Theme.accent, in: Capsule())
+            .accessibilityLabel("Pro member")
+    }
+}
+
+/// Drop-in Pro badge for *any* user, driven by their public `is_pro` flag.
+/// Renders nothing unless monetization is live and the person is Pro, so call
+/// sites can place it unconditionally next to a name. Use `ProStatusBadge`
+/// directly only for the signed-in user's own header (driven by RevenueCat).
+struct ProBadge: View {
+    var isPro: Bool
+    var compact = true
+
+    var body: some View {
+        if FeatureFlags.monetizationEnabled, isPro {
+            ProStatusBadge(compact: compact)
+        }
     }
 }
 
