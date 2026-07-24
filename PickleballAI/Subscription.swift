@@ -396,6 +396,9 @@ enum PaywallContext: Identifiable, Hashable {
     case weeklyWrap
     case goals
     case unlimitedHistory
+    case milestones
+    case leaderboard
+    case seasonAwards
 
     var id: String {
         switch self {
@@ -405,6 +408,9 @@ enum PaywallContext: Identifiable, Hashable {
         case .weeklyWrap:       return "weekly_wrap"
         case .goals:            return "goals"
         case .unlimitedHistory: return "history"
+        case .milestones:       return "milestones"
+        case .leaderboard:      return "leaderboard"
+        case .seasonAwards:     return "season_awards"
         }
     }
 
@@ -416,6 +422,9 @@ enum PaywallContext: Identifiable, Hashable {
         case .weeklyWrap:       return "Unlock your weekly wrap"
         case .goals:            return "Set goals and protect your streak"
         case .unlimitedHistory: return "Unlock your full history"
+        case .milestones:       return "Unlock your milestone shelf"
+        case .leaderboard:      return "See who's hottest this month"
+        case .seasonAwards:     return "See your season awards"
         }
     }
 }
