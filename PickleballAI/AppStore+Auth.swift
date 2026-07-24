@@ -433,6 +433,10 @@ extension AppStore {
             if let sessionId { pendingDeepLink = .comments(sessionId) }
         case "invite_received", "invite_response", "invite_cancelled":
             if let inviteId { pendingDeepLink = .invite(inviteId) }
+        case "rivalry":
+            pendingDeepLink = .rivals
+        case "weekly_wrap":
+            pendingDeepLink = .weeklyWrap
         default:
             if let sessionId { pendingDeepLink = .session(sessionId) }
         }

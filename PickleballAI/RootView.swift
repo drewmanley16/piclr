@@ -79,22 +79,33 @@ struct RootView: View {
             get: { store.pendingDeepLink },
             set: { store.pendingDeepLink = $0 }
         )) { link in
-            NavigationStack {
-                Group {
-                    switch link {
-                    case .session(let id):
-                        SessionDetailView(sessionId: id)
-                    case .comments(let id):
-                        SessionDetailView(sessionId: id, openComments: true)
-                    case .profile(let id):
-                        OtherProfileView(userId: id, placeholder: nil)
-                    case .invite(let id):
-                        InviteDetailView(inviteId: id)
+            // Rivals / weekly wrap bring their own navigation + Done, so present
+            // them directly; the id-based targets get a wrapping NavigationStack.
+            switch link {
+            case .rivals:
+                RivalsSheet()
+            case .weeklyWrap:
+                WeeklyWrapSheet()
+            default:
+                NavigationStack {
+                    Group {
+                        switch link {
+                        case .session(let id):
+                            SessionDetailView(sessionId: id)
+                        case .comments(let id):
+                            SessionDetailView(sessionId: id, openComments: true)
+                        case .profile(let id):
+                            OtherProfileView(userId: id, placeholder: nil)
+                        case .invite(let id):
+                            InviteDetailView(inviteId: id)
+                        default:
+                            EmptyView()
+                        }
                     }
-                }
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Done") { store.pendingDeepLink = nil }
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") { store.pendingDeepLink = nil }
+                        }
                     }
                 }
             }

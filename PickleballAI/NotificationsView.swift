@@ -122,6 +122,8 @@ enum DeepLink: Identifiable, Hashable {
     case comments(UUID)
     case profile(UUID)
     case invite(UUID)
+    case rivals       // a rivalry / heating-up push opens the Rivals sheet
+    case weeklyWrap   // a weekly-wrap push opens the wrap sheet
 
     var id: String {
         switch self {
@@ -129,6 +131,8 @@ enum DeepLink: Identifiable, Hashable {
         case .comments(let id): return "comments-\(id)"
         case .profile(let id):  return "profile-\(id)"
         case .invite(let id):   return "invite-\(id)"
+        case .rivals:           return "rivals"
+        case .weeklyWrap:       return "weekly-wrap"
         }
     }
 }
