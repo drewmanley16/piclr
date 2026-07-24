@@ -30,6 +30,12 @@ struct StatsSheet: View {
                             StatPill(title: "Avg Session", value: "\(avgMinutes) min", systemImage: "timer")
                             StatPill(title: "Longest", value: "\(longest) min", systemImage: "flame")
                         }
+                        if s.longestWeeklyStreak > 0 {
+                            HStack(spacing: 12) {
+                                StatPill(title: "Weekly Streak", value: "\(s.weeklyStreak) wk\(s.weeklyStreak == 1 ? "" : "s")", systemImage: "calendar")
+                                StatPill(title: "Best Streak", value: "\(s.longestWeeklyStreak) wk\(s.longestWeeklyStreak == 1 ? "" : "s")", systemImage: "trophy.fill")
+                            }
+                        }
                     }
 
                     if !s.opponents.isEmpty {
