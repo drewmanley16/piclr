@@ -38,10 +38,12 @@ extension AppStore {
 
     /// Loads and ranks the crew leaderboard: most wins first, then win rate,
     /// then games played. Players with no matches sink to the bottom.
-    func loadLeaderboard() async {
+    /// `period` narrows the match window server-side — `.month`/`.season` are
+    /// Pro-only filters on top of the free `.all` view (see `LeaderboardSheet`).
+    func loadLeaderboard(period: LeaderboardPeriod = .all) async {
         do {
             let rows: [LeaderboardEntry] = try await supabase
-                .rpc("crew_leaderboard")
+                .rpc("crew_leaderboard", params: ["p_period": period.rawValue])
                 .execute()
                 .value
             leaderboard = rows.sorted {
@@ -49,6 +51,44 @@ extension AppStore {
                 if $0.winRate != $1.winRate { return $0.winRate > $1.winRate }
                 return $0.matches > $1.matches
             }
+        } catch {
+            reportError(error)
+        }
+    }
+
+    /// This user's unlocked milestone IDs, for the Milestones shelf.
+    func loadMilestoneUnlocks() async {
+        guard let uid = currentProfile?.id else { return }
+        do {
+            struct Row: Decodable {
+                let milestoneId: String
+                enum CodingKeys: String, CodingKey { case milestoneId = "milestone_id" }
+            }
+            let rows: [Row] = try await supabase
+                .from("milestone_unlocks")
+                .select("milestone_id")
+                .eq("profile_id", value: uid.uuidString)
+                .execute()
+                .value
+            milestoneUnlocks = Set(rows.map(\.milestoneId))
+        } catch {
+            reportError(error)
+        }
+    }
+
+    /// This user's season awards, most recent season first.
+    func loadSeasonAwards() async {
+        guard let uid = currentProfile?.id else { return }
+        do {
+            let rows: [SeasonAward] = try await supabase
+                .from("season_awards")
+                .select()
+                .eq("profile_id", value: uid.uuidString)
+                .order("season_key", ascending: false)
+                .order("rank", ascending: true)
+                .execute()
+                .value
+            seasonAwards = rows
         } catch {
             reportError(error)
         }

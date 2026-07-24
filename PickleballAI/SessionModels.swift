@@ -213,7 +213,7 @@ struct FeedSession: Identifiable, Decodable, Hashable {
 
     var shareSummary: String {
         let matches = postActivities.filter(\.isMatch).count
-        var parts = ["\(postAuthor.displayName) — \(postDisplayTitle)"]
+        var parts = ["\(postAuthor.displayName): \(postDisplayTitle)"]
         if matches > 0 { parts.append("\(matches) match\(matches == 1 ? "" : "es")") }
         parts.append("\(postDurationMinutes) min")
         return parts.joined(separator: " · ") + " · on piclr"

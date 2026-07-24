@@ -20,10 +20,10 @@ struct WeekWrap {
     var hasData: Bool { sessions > 0 }
 
     var headline: String {
-        if matches == 0 { return "\(sessions) session\(sessions == 1 ? "" : "s") in — keep the streak alive." }
-        if wins > losses { return "Winning week — \(wins)–\(losses) across \(matches) matches." }
-        if wins == losses { return "Even week — \(wins)–\(losses). Settle it next time." }
-        return "Tough week — \(wins)–\(losses). Bounce back next session."
+        if matches == 0 { return "\(sessions) session\(sessions == 1 ? "" : "s") in. Keep the streak alive." }
+        if wins > losses { return "Winning week: \(wins)–\(losses) across \(matches) matches." }
+        if wins == losses { return "Even week: \(wins)–\(losses). Settle it next time." }
+        return "Tough week: \(wins)–\(losses). Bounce back next session."
     }
 
     init(allSessions: [FeedSession], playerID: UUID?) {

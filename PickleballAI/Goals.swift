@@ -47,12 +47,12 @@ struct GoalsCard: View {
                 ProgressBar(progress: locked ? 0.45 : progress, blurred: locked)
 
                 if streakAtRisk && !locked {
-                    Label("Your \(weeklyStreak)-week streak is at risk — play once to save it.", systemImage: "exclamationmark.triangle.fill")
+                    Label("Your \(weeklyStreak)-week streak is at risk. Play once to save it.", systemImage: "exclamationmark.triangle.fill")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Theme.loss)
                         .lineLimit(2)
                 } else if met && !locked {
-                    Label("Goal met — nice week.", systemImage: "checkmark.seal.fill")
+                    Label("Goal met. Nice week.", systemImage: "checkmark.seal.fill")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Theme.accent)
                 } else {

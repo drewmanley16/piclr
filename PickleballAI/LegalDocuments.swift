@@ -123,10 +123,10 @@ enum LegalText {
     **3. Content you post**
     You keep ownership of the sessions, comments, photos, and other content you post ("Your Content"). You grant us a non-exclusive, worldwide, royalty-free license to host, store, and display Your Content solely to operate and improve the App. You are responsible for Your Content and confirm you have the rights to share it.
 
-    **4. Community rules — zero tolerance for objectionable content and abusive users**
+    **4. Community rules: zero tolerance for objectionable content and abusive users**
     We have zero tolerance for objectionable content or abusive behavior. You agree not to post content or engage in conduct that is unlawful, harassing, bullying, threatening, hateful, defamatory, sexually explicit, violent, or that impersonates others, invades privacy, promotes cheating, or is spam. This is not an exhaustive list.
 
-    We reserve the right, but are not obligated, to review content. When we receive a report of objectionable content or abusive behavior, we act on it — including removing the content and ejecting the user who provided it — generally within 24 hours. You can report content or users from within the App (tap the "•••" menu on a profile, post, or comment) and block users at any time.
+    We reserve the right, but are not obligated, to review content. When we receive a report of objectionable content or abusive behavior, we act on it, including removing the content and ejecting the user who provided it, generally within 24 hours. You can report content or users from within the App (tap the "•••" menu on a profile, post, or comment) and block users at any time.
 
     **5. Termination**
     We may suspend or terminate your access to the App at any time if you violate these Terms. You may stop using the App at any time and can permanently delete your account from Settings → Account.
@@ -153,12 +153,12 @@ enum LegalText {
     This Privacy Policy explains what piclr ("we", "us") collects and how we use it. By using the App you agree to this policy.
 
     **1. Information we collect**
-    • Phone number — used to create and sign in to your account (via SMS one-time code).
-    • Profile information — display name, username, skill/rating, home court, and any photo you choose to add.
-    • Content — sessions, comments, likes, and other content you create.
-    • Contacts — if you choose to find friends, we match your contacts' phone numbers once to look for existing users. Contacts are matched in the moment and are not stored.
-    • Device tokens — if you enable notifications, we store a push token to deliver them.
-    • Apple Watch workout metrics — if you enable Watch metric sharing, your latest rounded heart rate and active-calorie total are relayed temporarily to the open iPhone app. We store average and maximum heart rate and active calories with the session you post. Raw heart-rate samples remain in Apple Health, and live readings are not stored or uploaded.
+    • Phone number: used to create and sign in to your account (via SMS one-time code).
+    • Profile information: display name, username, skill/rating, home court, and any photo you choose to add.
+    • Content: sessions, comments, likes, and other content you create.
+    • Contacts: if you choose to find friends, we match your contacts' phone numbers once to look for existing users. Contacts are matched in the moment and are not stored.
+    • Device tokens: if you enable notifications, we store a push token to deliver them.
+    • Apple Watch workout metrics: if you enable Watch metric sharing, your latest rounded heart rate and active-calorie total are relayed temporarily to the open iPhone app. We store average and maximum heart rate and active calories with the session you post. Raw heart-rate samples remain in Apple Health, and live readings are not stored or uploaded.
     • Basic usage/diagnostic data needed to operate the service.
 
     **2. How we use information**
