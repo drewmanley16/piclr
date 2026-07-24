@@ -40,10 +40,10 @@ struct ProfileView: View {
                     rivalsCard
                     insightsCard
                     weeklyWrapCard
-                    goalsCard
                     activityCard
                     WorkoutCalendarCard(sessions: store.mySessions)
                     dashboard
+                    goalsCard
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 24)
