@@ -77,7 +77,8 @@ struct FollowEntryRow: View {
             name: entry.profile?.displayName ?? "Unknown",
             detail: entry.profile.map { "@\($0.username)" },
             userId: entry.userId,
-            placeholder: entry.profile
+            placeholder: entry.profile,
+            isPro: entry.profile?.isPro ?? false
         ) {
             FollowActionButton(entry: entry)
 

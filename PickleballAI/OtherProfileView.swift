@@ -175,9 +175,12 @@ struct OtherProfileView: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(profile?.displayName ?? "Player")
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(Theme.textPrimary)
+                HStack(spacing: 6) {
+                    Text(profile?.displayName ?? "Player")
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(Theme.textPrimary)
+                    ProBadge(isPro: profile?.isPro ?? false, compact: false)
+                }
                 if let court = profile?.homeCourt, !court.isEmpty {
                     Text(court)
                         .font(.subheadline)

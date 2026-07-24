@@ -110,9 +110,12 @@ struct FeedCard: View {
                 HStack(spacing: 12) {
                     ProfileAvatar(profile: session.postAuthor, size: 44, unlinked: true)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(session.postAuthor.displayName)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Theme.textPrimary)
+                        HStack(spacing: 5) {
+                            Text(session.postAuthor.displayName)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Theme.textPrimary)
+                            ProBadge(isPro: session.postAuthor.isPro)
+                        }
                         Text("@\(session.postAuthor.username) · \(session.postDate.relativeLabel)")
                             .font(.caption)
                             .foregroundStyle(Theme.textSecondary)
