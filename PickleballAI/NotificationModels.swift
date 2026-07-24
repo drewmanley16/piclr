@@ -62,6 +62,8 @@ struct AppNotification: Identifiable, Decodable, Hashable {
         case "invite_received", "invite_response": return "figure.pickleball"
         case "invite_cancelled": return "xmark.circle.fill"
         case "rivalry": return "flame.fill"
+        case "streak":  return "circle.hexagongrid.fill"
+        case "weekly_wrap": return "sparkles"
         default:        return "bell.fill"
         }
     }
