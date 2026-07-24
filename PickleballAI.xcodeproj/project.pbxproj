@@ -37,6 +37,7 @@
 		42845FCF98B5DFD1F5D3BB16 /* PhoneNumberFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7475D1FF28E4358A4858B1E4 /* PhoneNumberFormatting.swift */; };
 		449EC4A27D19CBFFFABCB4CC /* ProfileModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 475451E24481504893FFE7ED /* ProfileModels.swift */; };
 		454F25CB28B5C41A3538D5E2 /* LogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3FA4363BCD03C413DB5D6C4 /* LogView.swift */; };
+		455E4344C365F0E80B739EA3 /* WeeklyWrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3C692535DA6A9EEFA9FF9D7 /* WeeklyWrap.swift */; };
 		47BE162BED8AB1033B9D7F8A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 26A5AD74AFBAB08E7BB33698 /* Assets.xcassets */; };
 		47D67C0BEA142E3C53143B14 /* AppStore+Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 417ED5579B58CC67197FFB16 /* AppStore+Notifications.swift */; };
 		496643F409765F3DCE496F80 /* WorkoutCalendarCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 323771872266981FD4A95C19 /* WorkoutCalendarCard.swift */; };
@@ -116,6 +117,7 @@
 		FBC5CA0F99C49D8AC902D659 /* ProfileIdentityValidation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C1946954DF585AB3AA78971 /* ProfileIdentityValidation.swift */; };
 		FCD1B8ABB0023F6FEE39758F /* FriendCandidateRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EB07F47E8E45FB47F54F244 /* FriendCandidateRow.swift */; };
 		FD52FEB282F1D784FD37A351 /* LiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF3D5A5AC51AF989571223E /* LiveActivityAttributes.swift */; };
+		FDF86D49A996AC9C10D83F6C /* Goals.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9ED74F6FDDD731FA70EEB6 /* Goals.swift */; };
 		FEF913231ECBFFED572681C2 /* MeasuresSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C9C301338EB6273D0AF46DC /* MeasuresSheet.swift */; };
 		FF7E62336D8A782F875BFBB4 /* GameSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBB6EBA59EF0E2D2816F9BF4 /* GameSetupView.swift */; };
 /* End PBXBuildFile section */
@@ -232,6 +234,7 @@
 		9A893407FB7651D422D87CC7 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A1ADA23D176823BB8CF93823 /* MediaHydrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaHydrator.swift; sourceTree = "<group>"; };
 		A26F3CB239971947B6371E26 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		A3C692535DA6A9EEFA9FF9D7 /* WeeklyWrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyWrap.swift; sourceTree = "<group>"; };
 		AC505C83297253D366673275 /* SuggestedAthleteCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedAthleteCard.swift; sourceTree = "<group>"; };
 		AF61E92F5637DA5570EACB1F /* SessionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionModels.swift; sourceTree = "<group>"; };
 		B054516CE1AEC6327D7AEA04 /* PickleballAIWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PickleballAIWatch.entitlements; sourceTree = "<group>"; };
@@ -273,6 +276,7 @@
 		F90BCB4C6BD7BCDF83062556 /* Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Analytics.swift; sourceTree = "<group>"; };
 		FC7CF99A3E687EB8A86C623F /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		FC8EB7A24D77C231E0A66684 /* WatchWorkoutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWorkoutManager.swift; sourceTree = "<group>"; };
+		FE9ED74F6FDDD731FA70EEB6 /* Goals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Goals.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -366,6 +370,7 @@
 				7EB07F47E8E45FB47F54F244 /* FriendCandidateRow.swift */,
 				68362579BCA6AA9DB6DC88EE /* GearModels.swift */,
 				D169CF8E4C9FDD09C74432A3 /* GearSheets.swift */,
+				FE9ED74F6FDDD731FA70EEB6 /* Goals.swift */,
 				65F9240942A799CF19EF40AC /* Haptics.swift */,
 				6BF6725B8FBFB5A75FCF41BB /* Info.plist */,
 				6AC6FBEEB80B18537D16C67A /* InsightsCard.swift */,
@@ -421,6 +426,7 @@
 				110EB1A0604D9D68DD50D886 /* Supabase.plist */,
 				812326B10CE11A6D68558757 /* SupabaseService.swift */,
 				1E1748736F7435B3CB977DC7 /* WatchConnectivityManager.swift */,
+				A3C692535DA6A9EEFA9FF9D7 /* WeeklyWrap.swift */,
 				323771872266981FD4A95C19 /* WorkoutCalendarCard.swift */,
 			);
 			path = PickleballAI;
@@ -633,6 +639,7 @@
 				FCD1B8ABB0023F6FEE39758F /* FriendCandidateRow.swift in Sources */,
 				01FBF11CB8802B2E11882178 /* GearModels.swift in Sources */,
 				4BA0FAC781BDC3A8DB6C1A00 /* GearSheets.swift in Sources */,
+				FDF86D49A996AC9C10D83F6C /* Goals.swift in Sources */,
 				DE6F84AD2314939D4E8C317C /* Haptics.swift in Sources */,
 				49CE65D8F627CAD2C793DA9C /* InsightsCard.swift in Sources */,
 				25DD14B5A7EB2FD974D866F7 /* InsightsSheet.swift in Sources */,
@@ -683,6 +690,7 @@
 				82D712BA16C2330A23E44710 /* SupabaseService.swift in Sources */,
 				98A517E08AFF6C1426A71B07 /* WatchConnectivityManager.swift in Sources */,
 				3977B08E8A0CE1938C991F12 /* WatchSyncMessage.swift in Sources */,
+				455E4344C365F0E80B739EA3 /* WeeklyWrap.swift in Sources */,
 				496643F409765F3DCE496F80 /* WorkoutCalendarCard.swift in Sources */,
 				2F9A36DC1B8974294F4993AA /* WorkoutMetrics.swift in Sources */,
 			);
