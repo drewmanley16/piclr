@@ -156,7 +156,8 @@ function buildMessage(
     }
     case "rivalry":         return { title: "Rivalry update", message: detail ?? `${handle} played you` };
     case "streak":          return { title: "Keep your streak", message: detail ?? "Your streak ends Sunday — log a session to keep it alive." };
-    default:                return { title: "pickleball.ai", message: `${handle} interacted with your post` };
+    case "weekly_wrap":     return { title: "Your week in piclr", message: detail ?? "Your weekly wrap is ready — tap to see it." };
+    default:                return { title: "piclr", message: `${handle} interacted with your post` };
   }
 }
 
