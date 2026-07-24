@@ -21,7 +21,7 @@ struct PostingRow: View {
                     Text(session.postDisplayTitle)
                         .font(.headline)
                         .foregroundStyle(Theme.textPrimary)
-                    Text("\(session.postDurationMinutes) min · \(session.postLocation ?? "—")")
+                    Text("\(session.postDurationMinutes) min · \(session.postLocation ?? "-")")
                         .font(.subheadline)
                         .foregroundStyle(Theme.textSecondary)
                         .lineLimit(1)

@@ -22,7 +22,7 @@ enum WatchWorkoutStatus: Equatable {
         case .starting: return "Starting Apple Watch…"
         case .waitingForHeartRate: return "Waiting for a heart-rate reading…"
         case .tracking: return "Live from Apple Watch"
-        case .disconnected: return "Apple Watch disconnected — reconnecting…"
+        case .disconnected: return "Apple Watch disconnected, reconnecting…"
         case .finalizing: return "Finalizing Apple Watch workout…"
         case .failed(let message): return message
         }
