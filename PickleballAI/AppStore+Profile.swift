@@ -80,6 +80,22 @@ extension AppStore {
         }
     }
 
+    /// Syncs the Goals card's weekly target + streak-save reminder toggle so
+    /// `notify_streak_reminders()` can actually honor it server-side (was
+    /// local-only `@AppStorage` before). Fire-and-forget from the UI's
+    /// perspective — see `GoalsSheet`.
+    func updateGoalPrefs(weeklyGoal: Int, streakRemindersEnabled: Bool) async {
+        guard let uid = currentProfile?.id else { return }
+        do {
+            let update = GoalPrefsUpdate(weeklyGoal: weeklyGoal, streakRemindersEnabled: streakRemindersEnabled)
+            try await supabase.from("profiles").update(update).eq("id", value: uid.uuidString).execute()
+            currentProfile?.weeklyGoal = weeklyGoal
+            currentProfile?.streakRemindersEnabled = streakRemindersEnabled
+        } catch {
+            reportError(error)
+        }
+    }
+
     func updateMeasures(heightInches: Double?, weightPounds: Double?, shoeSize: Double?) async -> Bool {
         guard let uid = currentProfile?.id else { return false }
         busyCount += 1
