@@ -39,6 +39,8 @@ struct ProfileView: View {
                     recordCard
                     rivalsCard
                     insightsCard
+                    weeklyWrapCard
+                    goalsCard
                     activityCard
                     WorkoutCalendarCard(sessions: store.mySessions)
                     dashboard
@@ -81,6 +83,8 @@ struct ProfileView: View {
                 case .measures: MeasuresSheet()
                 case .rivals: RivalsSheet()
                 case .insights: InsightsSheet()
+                case .weeklyWrap: WeeklyWrapSheet()
+                case .goals: GoalsSheet(sessionsThisWeek: sessionsThisWeek, weeklyStreak: stats.weeklyStreak)
                 case .leaderboard: LeaderboardSheet()
                 }
             }
@@ -446,6 +450,45 @@ struct ProfileView: View {
                 )
             }
         }
+    }
+
+    /// Pro "week in review" card — hidden in Release until monetization is on,
+    /// and only when there's a session logged this week.
+    @ViewBuilder
+    private var weeklyWrapCard: some View {
+        if subscriptions.showsLockedFeatures || subscriptions.showsProStatus {
+            let wrap = WeekWrap(allSessions: store.mySessions, playerID: profile?.id)
+            if wrap.hasData {
+                WeeklyWrapCard(
+                    wrap: wrap,
+                    locked: subscriptions.showsLockedFeatures,
+                    onUnlock: { subscriptions.presentPaywall(.weeklyWrap) },
+                    onOpen: { activeSheet = .weeklyWrap }
+                )
+            }
+        }
+    }
+
+    /// Pro weekly-goal + streak-save card.
+    @ViewBuilder
+    private var goalsCard: some View {
+        if subscriptions.showsLockedFeatures || subscriptions.showsProStatus {
+            GoalsCard(
+                sessionsThisWeek: sessionsThisWeek,
+                weeklyStreak: stats.weeklyStreak,
+                locked: subscriptions.showsLockedFeatures,
+                onUnlock: { subscriptions.presentPaywall(.goals) },
+                onOpen: { activeSheet = .goals }
+            )
+        }
+    }
+
+    /// Sessions logged in the current (Monday-based) week — for the goal card.
+    private var sessionsThisWeek: Int {
+        var cal = Calendar.current
+        cal.firstWeekday = 2
+        let start = cal.dateInterval(of: .weekOfYear, for: Date())?.start ?? cal.startOfDay(for: Date())
+        return store.mySessions.filter { $0.workoutDate >= start }.count
     }
 
     private func recordStat(_ value: String, _ label: String, accent: Bool = false) -> some View {
@@ -841,6 +884,6 @@ struct CustomRangeSheet: View {
 }
 
 enum ProfileSheet: String, Identifiable {
-    case stats, gear, measures, rivals, leaderboard, insights
+    case stats, gear, measures, rivals, leaderboard, insights, weeklyWrap, goals
     var id: String { rawValue }
 }
