@@ -76,7 +76,7 @@ struct SessionShareCard: View {
                                 .font(.subheadline)
                                 .foregroundStyle(Theme.textSecondary)
                             Spacer()
-                            Text(m.scoreLine ?? "—")
+                            Text(m.scoreLine ?? "-")
                                 .font(.callout.weight(.bold).monospacedDigit())
                                 .foregroundStyle(m.matchResult?.color ?? Theme.textPrimary)
                             if let result = m.matchResult {
@@ -173,7 +173,7 @@ struct WeeklyWrapShareCard: View {
                     Image(systemName: "flame.fill")
                         .font(.footnote.weight(.bold))
                         .foregroundStyle(rival.theyAreHot ? Theme.loss : Theme.accent)
-                    Text(rival.person.displayName + " — " + rival.momentumLabel)
+                    Text(rival.person.displayName + ": " + rival.momentumLabel)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Theme.textSecondary)
                         .lineLimit(1)

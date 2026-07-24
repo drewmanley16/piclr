@@ -137,7 +137,7 @@ struct LocationPickerSheet: View {
                             location = area
                             dismiss()
                         } label: {
-                            Label("Use my location — \(area)", systemImage: "location.fill")
+                            Label("Use my location: \(area)", systemImage: "location.fill")
                                 .foregroundStyle(Theme.accent)
                         }
                     }
@@ -148,7 +148,7 @@ struct LocationPickerSheet: View {
                         HStack { ProgressView().tint(Theme.accent); Text("Finding courts…").foregroundStyle(Theme.textSecondary) }
                     } else if model.results.isEmpty {
                         Text(model.permissionDenied
-                             ? "Location is off — search or type a place below."
+                             ? "Location is off. Search or type a place below."
                              : "No courts found nearby.")
                             .foregroundStyle(Theme.textSecondary)
                     } else {

@@ -164,12 +164,12 @@ struct SessionStats {
     var streakLabel: String {
         if currentStreak > 0 { return "W\(currentStreak)" }
         if currentStreak < 0 { return "L\(-currentStreak)" }
-        return "—"
+        return "-"
     }
 
-    /// Consistency streak label, e.g. "6 wk" or "—".
+    /// Consistency streak label, e.g. "6 wk" or "-".
     var weeklyStreakLabel: String {
-        weeklyStreak > 0 ? "\(weeklyStreak) wk" : "—"
+        weeklyStreak > 0 ? "\(weeklyStreak) wk" : "-"
     }
 
     /// Weekly play-streak from a list of session dates. Returns the current streak

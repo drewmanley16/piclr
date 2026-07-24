@@ -639,7 +639,7 @@ struct AuthView: View {
     private var onboardingInviteMessage: String {
         let link = store.myProfileLink.absoluteString
         let handle = username.trimmed
-        let intro = handle.isEmpty ? "Add me on piclr" : "Add me on piclr — @\(handle)"
+        let intro = handle.isEmpty ? "Add me on piclr" : "Add me on piclr: @\(handle)"
         return "\(intro)\n\n\(link)"
     }
 
