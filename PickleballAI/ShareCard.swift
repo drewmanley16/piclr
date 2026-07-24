@@ -125,6 +125,96 @@ func renderShareImage(for session: FeedSession) -> UIImage? {
     return renderer.uiImage
 }
 
+/// The Pro "weekly wrap" scorecard — richer than the free `SessionShareCard`
+/// (streak + hot-rival callouts a single session can't show), fulfilling the
+/// paywall's "Shareable cards" promise. Only reachable from `WeeklyWrapSheet`,
+/// itself Pro-gated, so no extra lock check is needed here.
+struct WeeklyWrapShareCard: View {
+    let wrap: WeekWrap
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(spacing: 8) {
+                Image(systemName: "figure.pickleball")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.background)
+                    .frame(width: 28, height: 28)
+                    .background(Theme.accent, in: Circle())
+                Text("piclr")
+                    .font(.headline.weight(.heavy))
+                    .tracking(-0.4)
+                    .foregroundStyle(Theme.textPrimary)
+                Spacer()
+                Text("WEEK OF \(wrap.weekStart.formatted(.dateTime.month(.abbreviated).day()))".uppercased())
+                    .font(.caption2.weight(.bold))
+                    .tracking(0.8)
+                    .foregroundStyle(Theme.textTertiary)
+            }
+
+            Text(wrap.headline)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(Theme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 10) {
+                shareStat(value: "\(wrap.sessions)", label: "Sessions")
+                shareStat(value: String(format: "%.1f", wrap.hours), label: "Hours")
+                shareStat(value: "\(wrap.wins)–\(wrap.losses)", label: "Record")
+            }
+
+            if wrap.weeklyStreak > 0 {
+                Label("\(wrap.weeklyStreak)-week streak", systemImage: "circle.hexagongrid.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.accent)
+            }
+
+            if let rival = wrap.hotRival {
+                HStack(spacing: 10) {
+                    Image(systemName: "flame.fill")
+                        .font(.footnote.weight(.bold))
+                        .foregroundStyle(rival.theyAreHot ? Theme.loss : Theme.accent)
+                    Text(rival.person.displayName + " — " + rival.momentumLabel)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .padding(24)
+        .frame(width: 380)
+        .background(Theme.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous)
+                .strokeBorder(Theme.accent.opacity(0.25), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous))
+    }
+
+    private func shareStat(value: String, label: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.title3.weight(.bold).monospacedDigit())
+                .foregroundStyle(Theme.textPrimary)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(Theme.textTertiary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Renders a Pro weekly-wrap scorecard to a high-resolution image for sharing.
+@MainActor
+func renderShareImage(for wrap: WeekWrap) -> UIImage? {
+    let renderer = ImageRenderer(
+        content: WeeklyWrapShareCard(wrap: wrap)
+            .padding(16)
+            .background(Theme.background)
+    )
+    renderer.scale = 3
+    return renderer.uiImage
+}
+
 /// Identifiable wrapper so a freshly-rendered image can drive a `.sheet(item:)`.
 struct ShareImage: Identifiable {
     let id = UUID()

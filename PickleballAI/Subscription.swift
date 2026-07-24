@@ -391,7 +391,6 @@ private extension SubscriptionPeriod {
 /// user just reached for, which converts far better than a generic pitch.
 enum PaywallContext: Identifiable, Hashable {
     case general
-    case recap
     case rivalryInsights
     case insights
     case weeklyWrap
@@ -401,7 +400,6 @@ enum PaywallContext: Identifiable, Hashable {
     var id: String {
         switch self {
         case .general:          return "general"
-        case .recap:            return "recap"
         case .rivalryInsights:  return "rivalry"
         case .insights:         return "insights"
         case .weeklyWrap:       return "weekly_wrap"
@@ -413,7 +411,6 @@ enum PaywallContext: Identifiable, Hashable {
     var headline: String {
         switch self {
         case .general:          return "Go further with Pro"
-        case .recap:            return "Unlock AI match recaps"
         case .rivalryInsights:  return "See the full rivalry breakdown"
         case .insights:         return "Unlock your play insights"
         case .weeklyWrap:       return "Unlock your weekly wrap"

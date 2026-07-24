@@ -91,6 +91,7 @@ struct WeeklyWrapCard: View {
 struct WeeklyWrapSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: AppStore
+    @State private var shareItem: ShareImage?
 
     private var wrap: WeekWrap {
         WeekWrap(allSessions: store.mySessions, playerID: store.currentProfile?.id)
@@ -105,6 +106,7 @@ struct WeeklyWrapSheet: View {
                     tiles(w)
                     if w.weeklyStreak > 0 { streakCard(w) }
                     if let rival = w.hotRival { rivalCard(rival) }
+                    shareButton(w)
                 }
                 .padding(16)
             }
@@ -113,6 +115,22 @@ struct WeeklyWrapSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
+        .sheet(item: $shareItem) { ActivityShareSheet(payload: $0) }
+    }
+
+    private func shareButton(_ w: WeekWrap) -> some View {
+        Button {
+            Haptics.tap()
+            guard let image = renderShareImage(for: w) else { return }
+            shareItem = ShareImage(image: image, caption: w.headline)
+        } label: {
+            Label("Share this week", systemImage: "square.and.arrow.up")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(Theme.background)
+                .frame(maxWidth: .infinity, minHeight: 46)
+                .background(Theme.accent, in: Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     private func header(_ w: WeekWrap) -> some View {
