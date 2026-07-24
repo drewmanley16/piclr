@@ -15,6 +15,13 @@ struct PlayerRecord: Identifiable {
     var recordLine: String { "\(wins)–\(losses)" }
 }
 
+/// One meeting in a head-to-head history, for the Rivalry Insights timeline.
+struct RivalryGame: Identifiable {
+    let id = UUID()
+    let won: Bool
+    let date: Date
+}
+
 /// Your ongoing head-to-head story with one opponent: not just a record, but a
 /// current streak and when you last met. This is what makes an opponent a rival.
 struct Rivalry: Identifiable {
@@ -26,6 +33,9 @@ struct Rivalry: Identifiable {
     /// Positive = you're on a win streak over them, negative = they're on you.
     let streak: Int
     let lastPlayed: Date
+    /// Every decided meeting, most-recent first. Powers the Rivalry Insights
+    /// timeline (Pro) — see `RivalryInsightsSheet`.
+    let log: [RivalryGame]
 
     var games: Int { wins + losses }
     var winRate: Int { games == 0 ? 0 : Int((Double(wins) / Double(games) * 100).rounded()) }
@@ -36,6 +46,19 @@ struct Rivalry: Identifiable {
         return "Even"
     }
     var leadingYou: Bool { wins >= losses }
+    var firstPlayed: Date { log.last?.date ?? lastPlayed }
+    /// Longest run of consecutive wins or losses across the whole history,
+    /// regardless of who was on it.
+    var bestStreak: Int {
+        var best = 0, current = 0
+        var last: Bool?
+        for game in log.reversed() {
+            current = (game.won == last) ? current + 1 : 1
+            last = game.won
+            best = max(best, current)
+        }
+        return best
+    }
 }
 
 /// All-time match stats derived from the signed-in user's logged sessions.
@@ -126,7 +149,8 @@ struct SessionStats {
             return Rivalry(
                 id: r.id, person: r.person,
                 wins: r.wins, losses: r.losses, streak: h2h,
-                lastPlayed: games.first?.date ?? .distantPast
+                lastPlayed: games.first?.date ?? .distantPast,
+                log: games.map { RivalryGame(won: $0.won, date: $0.date) }
             )
         }
         .sorted { $0.games != $1.games ? $0.games > $1.games : $0.lastPlayed > $1.lastPlayed }

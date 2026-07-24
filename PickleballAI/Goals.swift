@@ -87,6 +87,7 @@ private struct ProgressBar: View {
 
 struct GoalsSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: AppStore
     let sessionsThisWeek: Int
     let weeklyStreak: Int
 
@@ -161,6 +162,19 @@ struct GoalsSheet: View {
             .navigationTitle("Goals")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        }
+        .onAppear {
+            // Server is the source of truth across devices/reinstalls; local
+            // @AppStorage is just a fast cache for the picker/toggle controls.
+            if let serverGoal = store.currentProfile?.weeklyGoal { goal = serverGoal }
+            if let serverReminders = store.currentProfile?.streakRemindersEnabled { remindersOn = serverReminders }
+        }
+        .onChange(of: goal) { _, newValue in
+            Task { await store.updateGoalPrefs(weeklyGoal: newValue, streakRemindersEnabled: remindersOn) }
+        }
+        .onChange(of: remindersOn) { _, newValue in
+            Haptics.tap()
+            Task { await store.updateGoalPrefs(weeklyGoal: goal, streakRemindersEnabled: newValue) }
         }
     }
 }

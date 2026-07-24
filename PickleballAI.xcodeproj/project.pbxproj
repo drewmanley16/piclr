@@ -29,6 +29,7 @@
 		376C9B601A4FC26F598DE83D /* AppStore+MediaHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6BDD0A44254DC8637A543CE /* AppStore+MediaHelpers.swift */; };
 		391FAF94DA78C7840C956A01 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6358D9903D36AD9E9F526C34 /* SettingsView.swift */; };
 		3977B08E8A0CE1938C991F12 /* WatchSyncMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC017A194C54A644C612773C /* WatchSyncMessage.swift */; };
+		3A2C5420A1C5759EFA0BF794 /* RivalryInsights.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53F9DEA7EC6F600A7C9DF92D /* RivalryInsights.swift */; };
 		3B46F82532DA139D31A550D8 /* AppleWatchWorkoutLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40894D3797C7D56547B9FDF2 /* AppleWatchWorkoutLauncher.swift */; };
 		3C079EEC453B813B1EB1752C /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 192E99F8896BE798A879F57E /* PaywallView.swift */; };
 		3D6C3B86141C26738F80B2A1 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BCD8F33D0E442DCBB8E637F /* LeaderboardView.swift */; };
@@ -206,6 +207,7 @@
 		524C92C8AF8A9C6D3ADE7AC4 /* AuthComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthComponents.swift; sourceTree = "<group>"; };
 		528729889F780FEF8B81D160 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		52D13E9ABB0B1772747DBB02 /* SafetySheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetySheets.swift; sourceTree = "<group>"; };
+		53F9DEA7EC6F600A7C9DF92D /* RivalryInsights.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RivalryInsights.swift; sourceTree = "<group>"; };
 		594C30F607DCAA2E5D2E6245 /* EdgeFunctionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeFunctionModels.swift; sourceTree = "<group>"; };
 		5BC068B87E22A474B35B0E61 /* PickleballAIWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = PickleballAIWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		5D656AFC1851F5D01BC4BB70 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
@@ -405,6 +407,7 @@
 				8D1FBA77BA526A6415502267 /* RealtimeSubscription.swift */,
 				C105A93AC708CD4765D2974D /* RevenueCat.example.plist */,
 				DABB61C500760EEE65FB5F65 /* RevenueCatService.swift */,
+				53F9DEA7EC6F600A7C9DF92D /* RivalryInsights.swift */,
 				B10025ED05CD5F456B2D1934 /* RivalsFeature.swift */,
 				A26F3CB239971947B6371E26 /* RootView.swift */,
 				DBC7525B8F6249F516308D94 /* SafetyModels.swift */,
@@ -670,6 +673,7 @@
 				91C1312E7498D846C328A74E /* PushService.swift in Sources */,
 				67003847FAE65E98968EFA9E /* RealtimeSubscription.swift in Sources */,
 				53A4ED9BBF46A833CDCD422A /* RevenueCatService.swift in Sources */,
+				3A2C5420A1C5759EFA0BF794 /* RivalryInsights.swift in Sources */,
 				C470D17C473DC9B0C2DAF579 /* RivalsFeature.swift in Sources */,
 				89FF47F0442F182F044AEB75 /* RootView.swift in Sources */,
 				73DE9030ECD0D2F03C110221 /* SafetyModels.swift in Sources */,

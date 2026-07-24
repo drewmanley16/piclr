@@ -21,6 +21,8 @@ struct Profile: Identifiable, Codable, Hashable {
     var weightPounds: Double?
     var shoeSize: Double?
     var birthday: String?
+    var weeklyGoal: Int?
+    var streakRemindersEnabled: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id, username
@@ -40,6 +42,8 @@ struct Profile: Identifiable, Codable, Hashable {
         case weightPounds = "weight_pounds"
         case shoeSize = "shoe_size"
         case birthday
+        case weeklyGoal = "weekly_goal"
+        case streakRemindersEnabled = "streak_reminders_enabled"
     }
 
     var initials: String {
@@ -80,6 +84,8 @@ struct Profile: Identifiable, Codable, Hashable {
         weightPounds = nil
         shoeSize = nil
         birthday = nil
+        weeklyGoal = nil
+        streakRemindersEnabled = nil
     }
 }
 
@@ -202,6 +208,16 @@ struct ProfileUpdate: Encodable {
         case rating
         case preferredSide = "preferred_side"
         case birthday
+    }
+}
+
+struct GoalPrefsUpdate: Encodable {
+    let weeklyGoal: Int
+    let streakRemindersEnabled: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case weeklyGoal = "weekly_goal"
+        case streakRemindersEnabled = "streak_reminders_enabled"
     }
 }
 
