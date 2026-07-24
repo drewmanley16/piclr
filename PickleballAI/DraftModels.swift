@@ -84,6 +84,18 @@ struct DraftActivity: Identifiable, Codable, Hashable {
         opponentScore = liveMatch.them
     }
 
+    /// New match, optionally carrying forward the partners/opponents of `previous`
+    /// (the prior match in a live session), so players don't have to be re-picked
+    /// every game. Player structs get fresh ids — `updateSession` writes
+    /// `DraftPlayer.id` as the `activity_participants` row id, so reusing ids
+    /// across activities would collide on the backend.
+    init(kind: ActivityKind, carryingPlayersFrom previous: DraftActivity?) {
+        self.init(kind: kind)
+        guard kind == .match, let previous, previous.kind == .match else { return }
+        partners = previous.partners.map { DraftPlayer(profile: $0.profile, guestName: $0.guestName) }
+        opponents = previous.opponents.map { DraftPlayer(profile: $0.profile, guestName: $0.guestName) }
+    }
+
     init(activity: SessionActivity) {
         id = activity.id
         kind = activity.isMatch ? .match : .practice
