@@ -790,6 +790,28 @@ struct HeaderCircleButton: View {
     }
 }
 
+/// Same circular chrome as `HeaderCircleButton`, but opens a menu instead of
+/// firing a single action.
+struct HeaderCircleMenu<MenuItems: View>: View {
+    var systemImage: String
+    var accessibilityTitle: String
+    @ViewBuilder var items: () -> MenuItems
+
+    var body: some View {
+        Menu {
+            items()
+        } label: {
+            Image(systemName: systemImage)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(Theme.textPrimary)
+                .frame(width: 42, height: 42)
+                .background(Theme.surface, in: Circle())
+                .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
+        }
+        .accessibilityLabel(accessibilityTitle)
+    }
+}
+
 /// Bare icon button intended for use inside a `HeaderPill`.
 struct HeaderIconButton: View {
     var systemImage: String

@@ -4,6 +4,7 @@ import SwiftUI
 
 struct SettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: AppStore
     @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var showSavedToast = false
     @State private var restoreToast: String?
@@ -11,26 +12,17 @@ struct SettingsSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 14) {
-                    SettingsMenuRow(icon: "person.crop.circle", title: "Profile", subtitle: "Name, photo, rating, side") {
-                        SettingsProfileView(onSaved: { showSavedToast = true })
-                    }
-                    SettingsMenuRow(icon: "slider.horizontal.3", title: "Preferences", subtitle: "Notifications, Watch metrics, blocked accounts") {
-                        SettingsPreferencesView()
-                    }
+                VStack(alignment: .leading, spacing: 20) {
+                    identityCard
+                    menuCard
                     if subscriptions.monetizationEnabled {
                         restorePurchasesRow
-                    }
-                    SettingsMenuRow(icon: "person.crop.circle.badge.exclamationmark", title: "Account", subtitle: "Version, log out, delete account") {
-                        SettingsAccountView(onDismissAll: { dismiss() })
-                    }
-                    SettingsMenuRow(icon: "doc.text", title: "Legal", subtitle: "Terms of Use, Privacy Policy") {
-                        SettingsLegalView()
                     }
                 }
                 .padding(16)
             }
             .background(Theme.background.ignoresSafeArea())
+            .safeAreaInset(edge: .bottom) { footer }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -44,63 +36,91 @@ struct SettingsSheet: View {
                message: restoreToast ?? "")
     }
 
-    /// Re-syncs App Store purchases (required subscription-app affordance for
-    /// reinstalls / new devices). The paywall footer has the same action; this
-    /// one is reachable without a paywall trigger.
-    private var restorePurchasesRow: some View {
-        Button {
-            Task {
-                await subscriptions.restore()
-                // On failure/no-op the store sets errorText; success leaves it nil.
-                restoreToast = subscriptions.errorText ?? "Purchases restored"
-            }
+    // MARK: Identity
+
+    /// The user's own avatar + name stand in for a generic "Profile" menu row —
+    /// the card shows who you are and taps through to edit it.
+    private var identityCard: some View {
+        NavigationLink {
+            SettingsProfileView(onSaved: { showSavedToast = true })
         } label: {
             HStack(spacing: 14) {
-                Image(systemName: "arrow.clockwise.circle")
-                    .font(.title3)
-                    .foregroundStyle(Theme.accent)
-                    .frame(width: 40, height: 40)
-                    .background(Theme.accentSoft, in: Circle())
+                ProfileAvatar(profile: store.currentProfile, size: 56, unlinked: true)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Restore Purchases")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(Theme.textPrimary)
-                    Text("Re-sync your Pro subscription")
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(store.currentProfile?.displayName ?? "Your profile")
+                            .font(.headline)
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1)
+                        if subscriptions.showsProStatus {
+                            ProStatusBadge()
+                        }
+                    }
+                    Text(identitySubtitle)
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
                 }
 
-                Spacer()
+                Spacer(minLength: 8)
 
-                if subscriptions.isWorking {
-                    ProgressView().tint(Theme.accent)
-                }
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.textTertiary)
             }
             .cardStyle()
         }
         .buttonStyle(.plain)
-        .disabled(subscriptions.isWorking)
+        .accessibilityLabel("Edit profile")
     }
-}
 
-/// Root menu row for Settings: navigates to a category screen (Profile, Preferences, Account).
-private struct SettingsMenuRow<Destination: View>: View {
-    var icon: String
-    var title: String
-    var subtitle: String
-    @ViewBuilder var destination: () -> Destination
+    private var identitySubtitle: String {
+        if let username = store.currentProfile?.username {
+            return "@\(username) · Edit profile"
+        }
+        return "Edit name, photo, rating, side"
+    }
 
-    var body: some View {
+    // MARK: Menu
+
+    /// Navigation destinations grouped into one card of compact rows, matching
+    /// the app's grouped-field idiom (hairline dividers inside a single card).
+    private var menuCard: some View {
+        VStack(spacing: 0) {
+            menuRow(icon: "slider.horizontal.3", title: "Preferences",
+                    subtitle: "Notifications, Watch, blocked accounts") {
+                SettingsPreferencesView()
+            }
+            Divider().overlay(Theme.hairline)
+            menuRow(icon: "person.crop.circle.badge.exclamationmark", title: "Account",
+                    subtitle: "Log out, delete account") {
+                SettingsAccountView(onDismissAll: { dismiss() })
+            }
+            Divider().overlay(Theme.hairline)
+            menuRow(icon: "doc.text", title: "Legal",
+                    subtitle: "Terms of Use, Privacy Policy") {
+                SettingsLegalView()
+            }
+        }
+        .padding(.horizontal, 16)
+        .cardStyle(padding: 0)
+    }
+
+    private func menuRow<Destination: View>(
+        icon: String,
+        title: String,
+        subtitle: String,
+        @ViewBuilder destination: @escaping () -> Destination
+    ) -> some View {
         NavigationLink {
             destination()
         } label: {
-            HStack(spacing: 14) {
+            HStack(spacing: 12) {
                 Image(systemName: icon)
-                    .font(.title3)
+                    .font(.body.weight(.semibold))
                     .foregroundStyle(Theme.accent)
-                    .frame(width: 40, height: 40)
-                    .background(Theme.accentSoft, in: Circle())
+                    .frame(width: 26)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
@@ -109,15 +129,85 @@ private struct SettingsMenuRow<Destination: View>: View {
                     Text(subtitle)
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
                 }
 
-                Spacer()
+                Spacer(minLength: 8)
 
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Theme.textTertiary)
             }
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
         }
-        .cardStyle()
+        .buttonStyle(.plain)
+    }
+
+    // MARK: Restore purchases
+
+    /// Re-syncs App Store purchases (required subscription-app affordance for
+    /// reinstalls / new devices). The paywall footer has the same action; this
+    /// one is reachable without a paywall trigger. An action, not a destination,
+    /// so no chevron — a spinner takes its place while working.
+    private var restorePurchasesRow: some View {
+        Button {
+            Haptics.tap()
+            Task {
+                await subscriptions.restore()
+                // On failure/no-op the store sets errorText; success leaves it nil.
+                restoreToast = subscriptions.errorText ?? "Purchases restored"
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: 26)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Restore purchases")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("Already have Pro? Get it back on this device.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+
+                Spacer(minLength: 8)
+
+                if subscriptions.isWorking {
+                    ProgressView().tint(Theme.accent)
+                }
+            }
+            .cardStyle(padding: 12)
+        }
+        .buttonStyle(.plain)
+        .disabled(subscriptions.isWorking)
+    }
+
+    // MARK: Footer
+
+    /// Quiet brand mark + version pinned under the menu — puts the app version
+    /// somewhere visible instead of buried in the Account subscreen.
+    private var footer: some View {
+        VStack(spacing: 3) {
+            Text("piclr")
+                .font(.headline.weight(.heavy))
+                .tracking(-0.4)
+                .foregroundStyle(Theme.textTertiary)
+            Text("Version \(appVersion)")
+                .font(.caption2)
+                .foregroundStyle(Theme.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .background(Theme.background)
+    }
+
+    private var appVersion: String {
+        let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "\(v) (\(b))"
     }
 }

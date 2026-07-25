@@ -34,7 +34,9 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     profileRow
                     if !store.incomingFollowRequests.isEmpty { followRequestsBanner }
-                    if subscriptions.showsLockedFeatures { proBanner }
+                    // Once real locked numbers render in the Insights card, it's the
+                    // better ad — the standalone banner alongside it is redundant noise.
+                    if subscriptions.showsLockedFeatures && !playInsights.isReady { proBanner }
                     if completion < 1 && !dismissedCompletion { completionBanner }
                     recordCard
                     rivalsCard
@@ -437,10 +439,14 @@ struct ProfileView: View {
     /// Locked-but-visible Pro insights. Hidden entirely when monetization is off
     /// (Release) via `showsLockedFeatures`/`showsProStatus`, and only once there
     /// are enough decided matches to say something (`isReady`).
+    private var playInsights: PlayInsights {
+        PlayInsights(sessions: store.mySessions, playerID: profile?.id)
+    }
+
     @ViewBuilder
     private var insightsCard: some View {
         if subscriptions.showsLockedFeatures || subscriptions.showsProStatus {
-            let insights = PlayInsights(sessions: store.mySessions, playerID: profile?.id)
+            let insights = playInsights
             if insights.isReady {
                 InsightsCard(
                     insights: insights,
@@ -516,11 +522,22 @@ struct ProfileView: View {
         let mine = store.mySessions.filter { $0.date >= start && $0.date < endExclusive }
         switch metric {
         case .duration:
-            let hrs = Double(mine.reduce(0) { $0 + $1.durationMinutes }) / 60
+            let totalMinutes = mine.reduce(0) { $0 + $1.durationMinutes }
+            if usesMinutes {
+                return ("\(totalMinutes)", "min")
+            }
+            let hrs = Double(totalMinutes) / 60
             return (String(format: "%.1f", hrs), "hours")
         case .sessions:
             return ("\(mine.count)", mine.count == 1 ? "session" : "sessions")
         }
+    }
+
+    /// When the largest bucket in the selected range is under an hour, minutes
+    /// read far better than fractional hours (e.g. "18 min" vs "0.3 hours"),
+    /// and the y-axis gets whole-number gridlines (5/10/15) instead of 0.1/0.2/0.3.
+    private var usesMinutes: Bool {
+        (buckets.map(\.hours).max() ?? 0) < 1
     }
 
     private var activityCard: some View {
@@ -539,7 +556,7 @@ struct ProfileView: View {
             Chart(buckets) { b in
                 BarMark(
                     x: .value("Period", b.day, unit: chartUnit),
-                    y: .value(metric.rawValue, metric == .duration ? b.hours : Double(b.sessions))
+                    y: .value(metric.rawValue, durationBarValue(for: b))
                 )
                 .foregroundStyle(Theme.accent)
                 .cornerRadius(4)
@@ -552,8 +569,14 @@ struct ProfileView: View {
                 }
             }
             .chartXAxis {
-                AxisMarks { _ in
-                    AxisValueLabel(format: xAxisFormat).foregroundStyle(Theme.textTertiary)
+                if range.granularity == .day, spansAtMostTwoWeeks {
+                    AxisMarks(values: .stride(by: .day)) { _ in
+                        AxisValueLabel(format: xAxisFormat).foregroundStyle(Theme.textTertiary)
+                    }
+                } else {
+                    AxisMarks { _ in
+                        AxisValueLabel(format: xAxisFormat).foregroundStyle(Theme.textTertiary)
+                    }
                 }
             }
 
@@ -578,6 +601,19 @@ struct ProfileView: View {
                 range = .custom(start: customStart, end: customEnd)
             }
         }
+    }
+
+    private func durationBarValue(for bucket: ActivityBucket) -> Double {
+        guard metric == .duration else { return Double(bucket.sessions) }
+        return usesMinutes ? bucket.hours * 60 : bucket.hours
+    }
+
+    /// Day-granularity ranges spanning ≤14 days (1W, 2W, short custom ranges)
+    /// get every day labeled; 1M and longer keep automatic, decimated marks.
+    private var spansAtMostTwoWeeks: Bool {
+        let (start, end) = range.interval
+        let days = Calendar.current.dateComponents([.day], from: start, to: end).day ?? 0
+        return days <= 14
     }
 
     private var chartUnit: Calendar.Component {
