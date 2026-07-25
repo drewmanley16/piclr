@@ -79,6 +79,11 @@ targets:
     info:
       path: PickleballAI/Info.plist
       properties:
+        # INFOPLIST_KEY_CFBundleDisplayName (settings.base above) has no effect
+        # with a checked-in info.path — that build-setting-to-plist synthesis
+        # only happens with GENERATE_INFOPLIST_FILE=YES. The literal key here
+        # is what actually lands in the compiled Info.plist.
+        CFBundleDisplayName: "piclr"
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         # Enable Live Activities (session lock-screen timer).
