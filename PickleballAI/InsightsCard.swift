@@ -28,7 +28,7 @@ struct InsightsCard: View {
                 if locked { ProLockBadge() }
             }
             CourtLineRule()
-            VStack(spacing: 13) {
+            VStack(spacing: 14) {
                 ForEach(Array(insights.rows.enumerated()), id: \.element.id) { index, row in
                     // The first line is the free hook; the rest stay sealed.
                     rowView(row, sealed: locked && index > 0)
@@ -36,9 +36,8 @@ struct InsightsCard: View {
             }
             CourtLineRule(weight: 2)
             HStack {
-                Text("FULL STAT SHEET")
-                    .font(.caption.weight(.heavy))
-                    .tracking(1.5)
+                Text("Full stat sheet")
+                    .font(.subheadline.weight(.semibold))
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.bold))
@@ -50,13 +49,16 @@ struct InsightsCard: View {
 
     private func rowView(_ row: InsightRow, sealed: Bool) -> some View {
         HStack(spacing: 8) {
-            StatLabel(row.title)
+            Text(row.title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.textPrimary)
             Spacer(minLength: 8)
             if sealed {
-                SealedStat(placeholder: row.sealedPlaceholder)
+                SealedStat(width: 72, size: 15)
             } else {
                 Text(row.value)
-                    .font(Theme.scoreboard(16))
+                    .font(.subheadline.weight(.bold))
+                    .monospacedDigit()
                     .foregroundStyle(row.positive ? Theme.accent : Theme.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)

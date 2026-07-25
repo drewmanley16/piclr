@@ -186,17 +186,17 @@ struct WeeklyWrapSheet: View {
             CourtLineRule(weight: 2)
             HStack(spacing: 0) {
                 quadrant(value: boardSettled ? "\(w.wins)–\(w.losses)" : "0–0", label: "Record",
-                         sealed: locked, placeholder: "– –")
+                         sealed: locked)
                 quadrantDivider
                 quadrant(value: "\(boardSettled ? w.winRate : 0)%", label: "Win rate",
-                         sealed: locked, placeholder: "––%")
+                         sealed: locked)
             }
         }
         .cardStyle(padding: 0)
     }
 
-    private func quadrant(value: String, label: String, sealed: Bool = false, placeholder: String = "– –") -> some View {
-        StatSegment(value: value, label: label, sealed: sealed, placeholder: placeholder,
+    private func quadrant(value: String, label: String, sealed: Bool = false) -> some View {
+        StatSegment(value: value, label: label, sealed: sealed, sealedWidth: 56,
                     size: 30, alignment: .center)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 20)
@@ -209,17 +209,18 @@ struct WeeklyWrapSheet: View {
     private func streakCard(_ w: WeekWrap) -> some View {
         HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
-                StatLabel("Weekly streak")
+                StatHeading("Weekly streak")
                 Text(locked ? "Play every week to keep your run alive." : "Log a session next week to keep it going.")
                     .font(.caption)
                     .foregroundStyle(Theme.textSecondary)
             }
             Spacer()
             if locked {
-                SealedStat(placeholder: "– –", size: 22)
+                SealedStat(width: 44, size: 22)
             } else {
                 Text("\(w.weeklyStreak) wk")
-                    .font(Theme.scoreboard(22))
+                    .font(.title3.weight(.bold))
+                    .monospacedDigit()
                     .foregroundStyle(Theme.accent)
             }
         }
@@ -231,7 +232,7 @@ struct WeeklyWrapSheet: View {
     @ViewBuilder
     private func rivalCard(_ rival: Rivalry) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            StatLabel("Watch out for")
+            StatHeading("Watch out for")
             if locked {
                 HStack(spacing: 12) {
                     Image(systemName: "lock.fill")
@@ -239,10 +240,8 @@ struct WeeklyWrapSheet: View {
                         .foregroundStyle(Theme.textTertiary)
                         .frame(width: 40, height: 40)
                         .background(Theme.surfaceElevated, in: Circle())
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("– – – –")
-                            .font(Theme.scoreboard(16))
-                            .foregroundStyle(Theme.textTertiary)
+                    VStack(alignment: .leading, spacing: 6) {
+                        SealedStat(width: 110, size: 15, showsLock: false)
                         Text("Someone's on a run against you.")
                             .font(.caption)
                             .foregroundStyle(Theme.textSecondary)

@@ -1,14 +1,15 @@
 import SwiftUI
 
-/// Shared pieces of the Pro teaser experience, in the app's courtside-scoreboard
-/// voice. Free users open the *real* feature sheet filled with their real data:
-/// the free slice renders normally, premium values show as `SealedStat` slots
-/// (the number's slot exists, the number is waiting), and one
-/// `ProTeaserUnlockBar` opens the paywall for that feature. The pitch is the
-/// user's own numbers, not marketing copy.
+/// Shared pieces of the Pro teaser experience. Free users open the *real*
+/// feature sheet filled with their real data: the free slice renders normally,
+/// premium values sit behind `SealedStat` redaction bars (the value's slot is
+/// visibly there, covered), and one `ProTeaserUnlockBar` opens the paywall for
+/// that feature. The pitch is the user's own numbers, not marketing copy.
+/// Type mirrors the profile's Record card so Pro surfaces don't grow a second
+/// voice: `.headline` titles, `.title3`-bold-style numerals, `.caption2` labels.
 extension View {
-    /// Blur-locks premium content whose *shape* is the tease (charts). For plain
-    /// numbers prefer `SealedStat` — crisp dashes over smeared pixels.
+    /// Blur-locks premium content whose *shape* is the tease (charts). For
+    /// plain numbers prefer `SealedStat` — a crisp bar over smeared pixels.
     @ViewBuilder
     func proLocked(_ locked: Bool = true) -> some View {
         if locked {
@@ -33,7 +34,8 @@ extension View {
 
 // MARK: - Stat board kit
 
-/// Micro label under or beside a scoreboard numeral: uppercase, tracked, small.
+/// Uppercase micro eyebrow, matching the app's existing ones ("BEST PARTNERS",
+/// "WEEK OF JUL 20"). For section markers only — never under a numeral.
 struct StatLabel: View {
     let text: String
     var color: Color = Theme.textSecondary
@@ -45,24 +47,24 @@ struct StatLabel: View {
 
     var body: some View {
         Text(text.uppercased())
-            .font(.caption2.weight(.heavy))
-            .tracking(1.3)
+            .font(.caption2.weight(.semibold))
+            .tracking(1.2)
             .foregroundStyle(color)
             .lineLimit(1)
             .minimumScaleFactor(0.7)
     }
 }
 
-/// Card/section heading on Pro stat boards ("INSIGHTS", "BY COURT").
+/// Card/section heading on Pro surfaces — the same `.headline` voice as the
+/// Record and Rivals cards.
 struct StatHeading: View {
     let text: String
 
     init(_ text: String) { self.text = text }
 
     var body: some View {
-        Text(text.uppercased())
-            .font(.footnote.weight(.heavy))
-            .tracking(1.5)
+        Text(text)
+            .font(.headline)
             .foregroundStyle(Theme.textPrimary)
     }
 }
@@ -77,24 +79,25 @@ struct CourtLineRule: View {
     }
 }
 
-/// A locked value's slot: fixed placeholder dashes in the scoreboard face, so
-/// the board clearly *has* a number here that the viewer can't read yet. The
-/// placeholder never derives from the real value, so nothing leaks (not even
-/// digit count). `showsLock: false` is the "awaiting results" variant for
-/// values that don't exist yet (an open season) rather than locked ones.
+/// A locked value's slot: a solid redaction bar covering exactly where the
+/// number goes, so the board clearly *has* a value here that the viewer can't
+/// read yet. The bar's size never derives from the real value, so nothing
+/// leaks. `showsLock: false` is the "awaiting results" variant for values that
+/// don't exist yet (an open season) rather than locked ones.
 struct SealedStat: View {
-    var placeholder = "– –"
+    var width: CGFloat = 52
+    /// Point size of the numeral this bar stands in for; sets the bar height.
     var size: CGFloat = 16
     var showsLock = true
 
     var body: some View {
-        HStack(spacing: 5) {
-            Text(placeholder)
-                .font(Theme.scoreboard(size))
-                .foregroundStyle(Theme.textTertiary)
+        HStack(spacing: 6) {
+            Capsule()
+                .fill(Theme.surfaceElevated)
+                .frame(width: width, height: max(size * 0.55, 10))
             if showsLock {
                 Image(systemName: "lock.fill")
-                    .font(.system(size: max(size * 0.5, 8), weight: .bold))
+                    .font(.system(size: max(size * 0.5, 9), weight: .semibold))
                     .foregroundStyle(Theme.textTertiary)
             }
         }
@@ -103,36 +106,41 @@ struct SealedStat: View {
     }
 }
 
-/// One numeral + label block on a stat board. Numbers are the heroes: the value
-/// sets in the scoreboard face, the label goes small and uppercase beneath it.
+/// One numeral + label block on a stat board — the Record card's stat column,
+/// extracted: bold number over a quiet caption.
 struct StatSegment: View {
     let value: String
     let label: String
     var sealed = false
-    var placeholder = "– –"
-    var size: CGFloat = 24
+    var sealedWidth: CGFloat = 52
+    var size: CGFloat = 22
     var valueColor: Color = Theme.textPrimary
     var alignment: HorizontalAlignment = .leading
 
     var body: some View {
-        VStack(alignment: alignment, spacing: 5) {
+        VStack(alignment: alignment, spacing: 4) {
             if sealed {
-                SealedStat(placeholder: placeholder, size: size)
+                SealedStat(width: sealedWidth, size: size)
             } else {
                 Text(value)
-                    .font(Theme.scoreboard(size))
+                    .font(.system(size: size, weight: .bold))
+                    .monospacedDigit()
                     .foregroundStyle(valueColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                     .contentTransition(.numericText())
             }
-            StatLabel(label, color: Theme.textTertiary)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(Theme.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
     }
 }
 
-/// Header row shared by the Pro stat-board cards on the profile: heading on the
-/// left, PRO badge when locked, chevron affordance on the right.
+/// Header row shared by the Pro stat-board cards on the profile: `.headline`
+/// title like every other card, PRO badge when locked, chevron affordance.
 struct StatBoardHeader: View {
     let title: String
     let locked: Bool
@@ -175,15 +183,12 @@ struct ProTeaserUnlockBar: View {
                 HStack(spacing: 8) {
                     Image(systemName: "lock.open.fill")
                         .font(.footnote.weight(.bold))
-                    Text(title.uppercased())
-                        .font(.subheadline.weight(.heavy))
-                        .tracking(1.1)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                    Text(title)
+                        .font(.headline)
                 }
                 .foregroundStyle(Theme.background)
-                .frame(maxWidth: .infinity, minHeight: 52)
-                .background(Theme.accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .frame(maxWidth: .infinity, minHeight: 50)
+                .background(Theme.accent, in: Capsule())
             }
             .buttonStyle(.plain)
             Text(trialLine)

@@ -190,7 +190,8 @@ private struct MilestoneRow: View {
             // The threshold is the row's hero: a scoreboard numeral, lit when
             // the badge is yours.
             Text(milestone.rung)
-                .font(Theme.scoreboard(18))
+                .font(.system(size: 18, weight: .bold))
+                .monospacedDigit()
                 .foregroundStyle(showsUnlocked ? Theme.accent : Theme.textTertiary)
                 .frame(width: 44, alignment: .leading)
             Text(milestone.rowLabel)

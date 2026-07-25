@@ -37,7 +37,8 @@ struct GoalsCard: View {
                 HStack(spacing: 12) {
                     ProgressBar(progress: progress)
                     Text("\(sessionsThisWeek)/\(goal)")
-                        .font(Theme.scoreboard(16))
+                        .font(.subheadline.weight(.bold))
+                        .monospacedDigit()
                         .foregroundStyle(met ? Theme.accent : Theme.textSecondary)
                 }
 

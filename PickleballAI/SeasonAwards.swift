@@ -110,7 +110,7 @@ struct SeasonAwardsCard: View {
         } else if locked, let latest {
             StatSegment(value: "Top 3", label: "In \(latest.monthAbbrev)", size: 22, valueColor: Theme.accent)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            StatSegment(value: "", label: "All time", sealed: true, placeholder: "–", size: 22)
+            StatSegment(value: "", label: "All time", sealed: true, sealedWidth: 36, size: 22)
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else {
             StatSegment(value: "\(awards.count)", label: awards.count == 1 ? "Award" : "Awards", size: 22,
@@ -203,13 +203,16 @@ struct SeasonAwardsSheet: View {
                     if index > 0 { CourtLineRule().padding(.leading, 74) }
                     HStack(spacing: 16) {
                         Text("#\(award.rank)")
-                            .font(Theme.scoreboard(30))
+                            .font(.system(size: 30, weight: .bold))
+                            .monospacedDigit()
                             .foregroundStyle(award.rank == 1 ? Theme.accent : Theme.textPrimary)
                             .frame(width: 58, alignment: .leading)
                             .scaleEffect(medalSettled ? 1 : 0.4, anchor: .leading)
                             .opacity(medalSettled ? 1 : 0)
                         VStack(alignment: .leading, spacing: 3) {
-                            StatLabel(award.title, color: Theme.textPrimary)
+                            Text(award.title)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Theme.textPrimary)
                             Text(award.valueLabel)
                                 .font(.caption)
                                 .foregroundStyle(Theme.textSecondary)
@@ -263,9 +266,11 @@ struct SeasonAwardsSheet: View {
 
     private func openSlot(_ category: String) -> some View {
         HStack {
-            StatLabel(category)
+            Text(category)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.textPrimary)
             Spacer()
-            SealedStat(placeholder: "– – –", showsLock: false)
+            SealedStat(width: 56, size: 14, showsLock: false)
         }
     }
 }
@@ -279,18 +284,17 @@ private struct SeasonAwardRow: View {
     var body: some View {
         HStack(spacing: 14) {
             if sealed {
-                SealedStat(placeholder: "#–", size: 20, showsLock: false)
+                SealedStat(width: 32, size: 18, showsLock: false)
                     .frame(width: 44, alignment: .leading)
-                Text("– – – –")
-                    .font(Theme.scoreboard(14))
-                    .foregroundStyle(Theme.textTertiary)
+                SealedStat(width: 110, size: 15, showsLock: false)
                 Spacer()
                 Image(systemName: "lock.fill")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Theme.textTertiary)
             } else {
                 Text("#\(award.rank)")
-                    .font(Theme.scoreboard(20))
+                    .font(.system(size: 20, weight: .bold))
+                    .monospacedDigit()
                     .foregroundStyle(award.rank == 1 ? Theme.accent : Theme.textPrimary)
                     .frame(width: 44, alignment: .leading)
                 VStack(alignment: .leading, spacing: 2) {

@@ -76,20 +76,21 @@ struct InsightsSheet: View {
             // The close record stays free: it's the hook the profile card
             // already reveals. Only the deeper cuts seal.
             Text(heroSettled ? clutch.closeRecord : "0–0")
-                .font(Theme.scoreboard(54))
+                .font(.system(size: 44, weight: .bold, design: .rounded))
+                .monospacedDigit()
                 .foregroundStyle(Theme.accent)
                 .contentTransition(.numericText())
             HStack(spacing: 0) {
                 StatSegment(value: "\(clutch.closeWinRate)%", label: "Close win rate",
-                            sealed: locked, placeholder: "––%", size: 20, alignment: .center)
+                            sealed: locked, sealedWidth: 44, size: 20, alignment: .center)
                     .frame(maxWidth: .infinity)
                 heroDivider
                 StatSegment(value: clutch.avgMarginLabel, label: "Avg margin",
-                            sealed: locked, placeholder: "+–.–", size: 20, alignment: .center)
+                            sealed: locked, sealedWidth: 44, size: 20, alignment: .center)
                     .frame(maxWidth: .infinity)
                 heroDivider
                 StatSegment(value: "\(clutch.decidedMatches)", label: "Matches",
-                            sealed: locked, placeholder: "––", size: 20, alignment: .center)
+                            sealed: locked, sealedWidth: 32, size: 20, alignment: .center)
                     .frame(maxWidth: .infinity)
             }
         }
@@ -149,24 +150,12 @@ private struct SplitRow: View {
                 .lineLimit(1)
             Spacer(minLength: 8)
             if sealed {
-                HStack(spacing: 10) {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(Theme.textTertiary)
-                    Text("– –")
-                        .font(Theme.scoreboard(15))
-                        .foregroundStyle(Theme.textTertiary)
-                    Text("––%")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(Theme.textTertiary)
-                        .frame(width: 36, alignment: .trailing)
-                }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Locked. Unlock with Pro.")
+                SealedStat(width: 76, size: 15)
             } else {
                 HStack(spacing: 10) {
                     Text(record.recordLine)
-                        .font(Theme.scoreboard(15))
+                        .font(.subheadline.weight(.bold))
+                        .monospacedDigit()
                         .foregroundStyle(record.leading ? Theme.accent : Theme.textPrimary)
                     Text("\(record.winRate)%")
                         .font(.caption2.weight(.semibold))
