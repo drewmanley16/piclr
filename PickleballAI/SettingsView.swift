@@ -19,6 +19,9 @@ struct SettingsSheet: View {
                         SettingsPreferencesView()
                     }
                     if subscriptions.monetizationEnabled {
+                        if subscriptions.isPro {
+                            manageSubscriptionRow
+                        }
                         restorePurchasesRow
                     }
                     SettingsMenuRow(icon: "person.crop.circle.badge.exclamationmark", title: "Account", subtitle: "Version, log out, delete account") {
@@ -42,6 +45,34 @@ struct SettingsSheet: View {
         .toast(isPresented: $showSavedToast, message: "Profile saved")
         .toast(isPresented: .init(get: { restoreToast != nil }, set: { if !$0 { restoreToast = nil } }),
                message: restoreToast ?? "")
+    }
+
+    /// Opens the native "manage/cancel subscription" sheet for Pro subscribers.
+    private var manageSubscriptionRow: some View {
+        Button {
+            Task { await subscriptions.manageSubscriptions() }
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "creditcard.circle")
+                    .font(.title3)
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: 40, height: 40)
+                    .background(Theme.accentSoft, in: Circle())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Manage Subscription")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("Change plan, cancel, or view renewal date")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+
+                Spacer()
+            }
+            .cardStyle()
+        }
+        .buttonStyle(.plain)
     }
 
     /// Re-syncs App Store purchases (required subscription-app affordance for

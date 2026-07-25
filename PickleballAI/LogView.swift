@@ -12,11 +12,6 @@ struct WorkoutView: View {
     @State private var showHealthMetricsConsent = false
     @AppStorage(HealthMetricsSharing.defaultsKey) private var shareHealthMetrics = false
 
-    private var thisWeek: [FeedSession] {
-        let weekStart = Calendar.current.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
-        return store.mySessions.filter { $0.workoutDate >= weekStart }
-    }
-
     var body: some View {
         ProfileNavigationStack(reselectSignal: reselectSignal) {
             content
@@ -29,7 +24,6 @@ struct WorkoutView: View {
                 if store.activeDraft != nil {
                     liveBanner
                 } else {
-                    weekStrip
                     startLiveButton
                     quickLog
                     planGameButton
@@ -155,32 +149,6 @@ struct WorkoutView: View {
     private func elapsed(since start: Date) -> String {
         let s = max(0, Int(Date().timeIntervalSince(start)))
         return String(format: "%d:%02d", s / 60, s % 60)
-    }
-
-    // MARK: This week
-
-    private var weekStrip: some View {
-        let hours = Double(thisWeek.reduce(0) { $0 + $1.workoutDurationMinutes }) / 60
-        let streak = SessionStats(
-            sessions: store.mySessions,
-            playerID: store.currentProfile?.id
-        ).weeklyStreakLabel
-        return HStack(spacing: 0) {
-            weekStat("\(thisWeek.count)", "sessions")
-            Divider().frame(height: 30).overlay(Theme.hairline)
-            weekStat(String(format: "%.1f", hours), "hours")
-            Divider().frame(height: 30).overlay(Theme.hairline)
-            weekStat(streak, "streak")
-        }
-        .cardStyle()
-    }
-
-    private func weekStat(_ value: String, _ label: String) -> some View {
-        VStack(spacing: 3) {
-            Text(value).font(.title3.weight(.bold)).foregroundStyle(Theme.textPrimary)
-            Text(label).font(.caption).foregroundStyle(Theme.textSecondary)
-        }
-        .frame(maxWidth: .infinity)
     }
 
     // MARK: Quick log
