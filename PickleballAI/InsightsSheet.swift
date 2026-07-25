@@ -1,15 +1,19 @@
 import SwiftUI
 
-/// The Pro "Insights" breakdown, opened from the profile [[InsightsCard]].
-/// Shows the full tables the card only teases: clutch/margin hero, and
-/// per-court, per-time, per-partner, and first-game splits. For free users it
-/// doubles as its own teaser: every table's labels render, the first value of
-/// each split is real, and the rest blur behind the unlock bar. Recomputes
-/// [[PlayInsights]] from the signed-in user's sessions, like `StatsSheet`.
+/// The Pro "Insights" breakdown, opened from the profile [[InsightsCard]] and
+/// set as a full stat sheet: scoreboard hero up top, split tables beneath. For
+/// free users it doubles as its own teaser: every table's labels render, the
+/// first value of each split is real, and the rest sit as sealed dash slots
+/// above the unlock bar. Recomputes [[PlayInsights]] from the signed-in user's
+/// sessions, like `StatsSheet`.
 struct InsightsSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var store: AppStore
     @EnvironmentObject private var subscriptions: SubscriptionStore
+    /// Drives the hero record's roll-up from 0–0 on appear (the sheet's one
+    /// orchestrated moment). Starts true under Reduce Motion.
+    @State private var heroSettled = false
 
     private var locked: Bool { subscriptions.showsLockedFeatures }
 
@@ -57,43 +61,45 @@ struct InsightsSheet: View {
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
         .trackProTeaser(.insights, locked: locked)
+        .onAppear {
+            if reduceMotion {
+                heroSettled = true
+            } else {
+                withAnimation(.snappy(duration: 0.8).delay(0.15)) { heroSettled = true }
+            }
+        }
     }
 
     private func clutchHero(_ clutch: ClutchStats) -> some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
+            StatLabel("Close games · decided by 2 or fewer")
             // The close record stays free: it's the hook the profile card
-            // already reveals. Only the deeper cuts blur.
-            Text(clutch.closeRecord)
-                .font(.system(size: 44, weight: .bold, design: .rounded))
+            // already reveals. Only the deeper cuts seal.
+            Text(heroSettled ? clutch.closeRecord : "0–0")
+                .font(Theme.scoreboard(54))
                 .foregroundStyle(Theme.accent)
-            Text("IN CLOSE GAMES (≤2 POINTS)")
-                .font(.caption2.weight(.semibold))
-                .tracking(1.2)
-                .foregroundStyle(Theme.textSecondary)
-            HStack(spacing: 10) {
-                HeroStat(value: "\(clutch.closeWinRate)%", label: "Close win rate")
-                Divider().frame(height: 28).overlay(Theme.hairline)
-                HeroStat(value: clutch.avgMarginLabel, label: "Avg margin")
-                Divider().frame(height: 28).overlay(Theme.hairline)
-                HeroStat(value: "\(clutch.decidedMatches)", label: "Matches")
+                .contentTransition(.numericText())
+            HStack(spacing: 0) {
+                StatSegment(value: "\(clutch.closeWinRate)%", label: "Close win rate",
+                            sealed: locked, placeholder: "––%", size: 20, alignment: .center)
+                    .frame(maxWidth: .infinity)
+                heroDivider
+                StatSegment(value: clutch.avgMarginLabel, label: "Avg margin",
+                            sealed: locked, placeholder: "+–.–", size: 20, alignment: .center)
+                    .frame(maxWidth: .infinity)
+                heroDivider
+                StatSegment(value: "\(clutch.decidedMatches)", label: "Matches",
+                            sealed: locked, placeholder: "––", size: 20, alignment: .center)
+                    .frame(maxWidth: .infinity)
             }
-            .proLocked(locked)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 22)
         .cardStyle()
     }
-}
 
-private struct HeroStat: View {
-    let value: String
-    let label: String
-    var body: some View {
-        VStack(spacing: 3) {
-            Text(value).font(.title3.weight(.bold)).foregroundStyle(Theme.textPrimary)
-            Text(label).font(.caption2).foregroundStyle(Theme.textSecondary)
-        }
-        .frame(maxWidth: .infinity)
+    private var heroDivider: some View {
+        Rectangle().fill(Theme.courtLine).frame(width: 1, height: 32)
     }
 }
 
@@ -107,16 +113,18 @@ private struct SplitSection: View {
     var body: some View {
         if !records.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
-                Text(title).font(.headline).foregroundStyle(Theme.textPrimary)
+                StatHeading(title)
                 if let caption {
                     Text(caption).font(.caption).foregroundStyle(Theme.textSecondary)
                 }
                 VStack(spacing: 0) {
                     ForEach(Array(records.enumerated()), id: \.element.id) { index, record in
-                        if index > 0 { Divider().overlay(Theme.hairline).padding(.leading, showsAvatar ? 56 : 14) }
+                        if index > 0 {
+                            CourtLineRule().padding(.leading, showsAvatar ? 56 : 14)
+                        }
                         // The first value of every split is the free hook; the
-                        // rest blur for free users.
-                        SplitRow(record: record, showsAvatar: showsAvatar, blurred: locked && index > 0)
+                        // rest stay sealed for free users.
+                        SplitRow(record: record, showsAvatar: showsAvatar, sealed: locked && index > 0)
                     }
                 }
                 .cardStyle(padding: 0)
@@ -128,7 +136,7 @@ private struct SplitSection: View {
 private struct SplitRow: View {
     let record: SplitRecord
     var showsAvatar = false
-    var blurred = false
+    var sealed = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -140,17 +148,33 @@ private struct SplitRow: View {
                 .foregroundStyle(Theme.textPrimary)
                 .lineLimit(1)
             Spacer(minLength: 8)
-            HStack(spacing: 12) {
-                Text(record.recordLine)
-                    .font(.subheadline.weight(.bold))
-                    .monospacedDigit()
-                    .foregroundStyle(record.leading ? Theme.accent : Theme.textPrimary)
-                Text("\(record.winRate)%")
-                    .font(.caption2)
-                    .foregroundStyle(Theme.textSecondary)
-                    .frame(width: 36, alignment: .trailing)
+            if sealed {
+                HStack(spacing: 10) {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Theme.textTertiary)
+                    Text("– –")
+                        .font(Theme.scoreboard(15))
+                        .foregroundStyle(Theme.textTertiary)
+                    Text("––%")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(Theme.textTertiary)
+                        .frame(width: 36, alignment: .trailing)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Locked. Unlock with Pro.")
+            } else {
+                HStack(spacing: 10) {
+                    Text(record.recordLine)
+                        .font(Theme.scoreboard(15))
+                        .foregroundStyle(record.leading ? Theme.accent : Theme.textPrimary)
+                    Text("\(record.winRate)%")
+                        .font(.caption2.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 36, alignment: .trailing)
+                }
             }
-            .proLocked(blurred)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)

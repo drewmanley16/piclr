@@ -11,8 +11,25 @@ struct Milestone: Identifiable, Hashable {
     let title: String
     let detail: String
     let icon: String
+    /// The threshold set in scoreboard numerals at the head of the row ("50",
+    /// "1st") — the track header carries the units.
+    let rung: String
+    /// The rest of the row's phrase after the rung numeral ("matches played"),
+    /// so the row reads as one line without repeating the number. `title`
+    /// stays the standalone name used in unlock notifications.
+    let rowLabel: String
 
-    static let catalog: [Milestone] = matchMilestones + weeklyStreakMilestones + winStreakMilestones + rivalryMilestones
+    static let catalog: [Milestone] = tracks.flatMap(\.milestones)
+
+    /// The four progression tracks, in display order. Each sheet section is one
+    /// track so a free user can see the next rung sitting one step past the
+    /// starter badge they own.
+    static let tracks: [(title: String, milestones: [Milestone])] = [
+        ("Matches", matchMilestones),
+        ("Weekly streak", weeklyStreakMilestones),
+        ("Win streak", winStreakMilestones),
+        ("Rivalries", rivalryMilestones)
+    ]
 
     /// The free starter set: the first rung of each track. Free users can earn
     /// and keep these four, so every player samples every badge type — and the
@@ -23,21 +40,26 @@ struct Milestone: Identifiable, Hashable {
 
     private static let matchMilestones: [Milestone] = [1, 10, 50, 100, 250].map {
         Milestone(id: "matches_\($0)", title: "\($0) match\($0 == 1 ? "" : "es") played",
-                  detail: "Log \($0) match\($0 == 1 ? "" : "es").", icon: "figure.pickleball")
+                  detail: "Log \($0) match\($0 == 1 ? "" : "es").", icon: "figure.pickleball",
+                  rung: "\($0)", rowLabel: "match\($0 == 1 ? "" : "es") played")
     }
     private static let weeklyStreakMilestones: [Milestone] = [4, 10, 26, 52].map {
         Milestone(id: "weekly_streak_\($0)", title: "\($0)-week streak",
-                  detail: "Play at least once a week, \($0) weeks running.", icon: "circle.hexagongrid.fill")
+                  detail: "Play at least once a week, \($0) weeks running.", icon: "circle.hexagongrid.fill",
+                  rung: "\($0)", rowLabel: "weeks in a row")
     }
     private static let winStreakMilestones: [Milestone] = [3, 5, 10].map {
         Milestone(id: "win_streak_\($0)", title: "\($0)-match win streak",
-                  detail: "Win \($0) matches in a row.", icon: "flame.fill")
+                  detail: "Win \($0) matches in a row.", icon: "flame.fill",
+                  rung: "\($0)", rowLabel: "wins in a row")
     }
     private static let rivalryMilestones: [Milestone] = [
         Milestone(id: "first_rivalry_win", title: "First rivalry win",
-                  detail: "Beat a rival for the first time.", icon: "trophy.fill"),
+                  detail: "Beat a rival for the first time.", icon: "trophy.fill",
+                  rung: "1st", rowLabel: "rivalry win"),
         Milestone(id: "rivalry_veteran", title: "Rivalry veteran",
-                  detail: "Play 10 matches against a single rival.", icon: "person.2.fill")
+                  detail: "Play 10 matches against a single rival.", icon: "person.2.fill",
+                  rung: "10", rowLabel: "matches vs one rival")
     ]
 
     /// Milestone IDs satisfied by these stats right now — a snapshot, not
@@ -63,39 +85,25 @@ struct MilestonesCard: View {
     var earnedLockedCount: Int = 0
     var onOpen: () -> Void = {}
 
-    private var subtitle: String {
-        if earnedLockedCount > 0 {
-            return "\(unlockedCount) of \(Milestone.catalog.count) · \(earnedLockedCount) earned & locked"
-        }
-        return "\(unlockedCount) of \(Milestone.catalog.count) unlocked"
-    }
-
     var body: some View {
         Button {
             Haptics.tap()
             onOpen()
         } label: {
-            HStack(spacing: 14) {
-                Image(systemName: "medal.fill")
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(Theme.accent)
-                    .frame(width: 44, height: 44)
-                    .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text("Milestones")
-                            .font(.headline)
-                            .foregroundStyle(Theme.textPrimary)
-                        if locked { ProLockBadge() }
+            VStack(alignment: .leading, spacing: 14) {
+                StatBoardHeader(title: "Milestones", locked: locked)
+                CourtLineRule()
+                HStack(spacing: 0) {
+                    StatSegment(value: "\(unlockedCount)", label: "Earned", size: 22,
+                                valueColor: unlockedCount > 0 ? Theme.accent : Theme.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if earnedLockedCount > 0 {
+                        StatSegment(value: "\(earnedLockedCount)", label: "Locked", size: 22)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    Text(subtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.textSecondary)
+                    StatSegment(value: "\(Milestone.catalog.count)", label: "Total", size: 22)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(Theme.accent)
             }
             .cardStyle()
         }
@@ -118,17 +126,24 @@ struct MilestonesSheet: View {
     var body: some View {
         ProfileNavigationStack {
             ScrollView {
-                VStack(spacing: 0) {
-                    ForEach(Array(Milestone.catalog.enumerated()), id: \.element.id) { index, milestone in
-                        if index > 0 { Divider().overlay(Theme.hairline).padding(.leading, 60) }
-                        MilestoneRow(
-                            milestone: milestone,
-                            unlocked: store.milestoneUnlocks.contains(milestone.id),
-                            sealed: locked && !milestone.isFree
-                        )
+                VStack(alignment: .leading, spacing: 20) {
+                    ForEach(Milestone.tracks, id: \.title) { track in
+                        VStack(alignment: .leading, spacing: 10) {
+                            StatHeading(track.title)
+                            VStack(spacing: 0) {
+                                ForEach(Array(track.milestones.enumerated()), id: \.element.id) { index, milestone in
+                                    if index > 0 { CourtLineRule().padding(.leading, 66) }
+                                    MilestoneRow(
+                                        milestone: milestone,
+                                        unlocked: store.milestoneUnlocks.contains(milestone.id),
+                                        sealed: locked && !milestone.isFree
+                                    )
+                                }
+                            }
+                            .cardStyle(padding: 8)
+                        }
                     }
                 }
-                .cardStyle(padding: 8)
                 .padding(16)
             }
             .background(Theme.background.ignoresSafeArea())
@@ -172,19 +187,15 @@ private struct MilestoneRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: milestone.icon)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(showsUnlocked ? Theme.background : Theme.textTertiary)
-                .frame(width: 36, height: 36)
-                .background(showsUnlocked ? Theme.accent : Theme.surfaceElevated, in: Circle())
-            VStack(alignment: .leading, spacing: 2) {
-                Text(milestone.title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(showsUnlocked ? Theme.textPrimary : Theme.textSecondary)
-                Text(milestone.detail)
-                    .font(.caption)
-                    .foregroundStyle(Theme.textTertiary)
-            }
+            // The threshold is the row's hero: a scoreboard numeral, lit when
+            // the badge is yours.
+            Text(milestone.rung)
+                .font(Theme.scoreboard(18))
+                .foregroundStyle(showsUnlocked ? Theme.accent : Theme.textTertiary)
+                .frame(width: 44, alignment: .leading)
+            Text(milestone.rowLabel)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(showsUnlocked ? Theme.textPrimary : Theme.textSecondary)
             Spacer()
             if showsUnlocked {
                 Image(systemName: "checkmark.circle.fill")
@@ -205,6 +216,6 @@ private struct MilestoneRow: View {
             }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 12)
+        .padding(.vertical, 13)
     }
 }

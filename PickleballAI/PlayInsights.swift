@@ -55,6 +55,9 @@ struct InsightRow: Identifiable {
     let lockedSubtitle: String
     let value: String
     let positive: Bool
+    /// Fixed dash slot rendered in place of `value` for free users. Shaped like
+    /// the value's format, never derived from it, so nothing leaks.
+    let sealedPlaceholder: String
 }
 
 /// Pro "Insights": deeper cuts on a player's match history — clutch record,
@@ -157,25 +160,29 @@ struct PlayInsights {
                 subtitle: "Games decided by 2 or fewer",
                 lockedSubtitle: "Games decided by 2 or fewer",
                 value: "\(clutch.closeRecord) · \(clutch.closeWinRate)%",
-                positive: clutch.closeWinRate >= 50))
+                positive: clutch.closeWinRate >= 50,
+                sealedPlaceholder: "– – · ––%"))
         }
         if clutch.hasData {
             out.append(InsightRow(
                 id: "margin", icon: "plusminus.circle", title: "Point margin",
                 subtitle: "Average per game", lockedSubtitle: "Average per game",
-                value: clutch.avgMarginLabel, positive: clutch.avgMargin >= 0))
+                value: clutch.avgMarginLabel, positive: clutch.avgMargin >= 0,
+                sealedPlaceholder: "+–.–"))
         }
         if let court = bestCourt {
             out.append(InsightRow(
                 id: "court", icon: "mappin.and.ellipse", title: "Best court",
                 subtitle: court.label, lockedSubtitle: "Where you win most",
-                value: "\(court.recordLine) · \(court.winRate)%", positive: court.leading))
+                value: "\(court.recordLine) · \(court.winRate)%", positive: court.leading,
+                sealedPlaceholder: "– – · ––%"))
         }
         if let partner = bestPartner {
             out.append(InsightRow(
                 id: "partner", icon: "person.2.fill", title: "Best partner",
                 subtitle: partner.label, lockedSubtitle: "Who you win most with",
-                value: "\(partner.recordLine) · \(partner.winRate)%", positive: partner.leading))
+                value: "\(partner.recordLine) · \(partner.winRate)%", positive: partner.leading,
+                sealedPlaceholder: "– – · ––%"))
         }
         return out
     }

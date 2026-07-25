@@ -1,10 +1,11 @@
 import SwiftUI
 
-/// Pro "Insights" surface on the profile — LinkedIn-style tease. Free users see
-/// the first insight for real, the rest **blurred**; tapping opens the full
-/// breakdown sheet, which carries its own teaser treatment and unlock bar.
-/// Pro users see every value. Fed by [[PlayInsights]]; only rendered when
-/// `insights.isReady`.
+/// Pro "Insights" on the profile, set like a courtside stat sheet: tracked
+/// uppercase labels on the left, scoreboard numerals on the right. Free users
+/// get the first line for real; the rest render as sealed slots — the number
+/// is there, just not readable yet. Tapping anywhere opens the full breakdown
+/// sheet, which carries its own teaser treatment and unlock bar. Fed by
+/// [[PlayInsights]]; only rendered when `insights.isReady`.
 struct InsightsCard: View {
     let insights: PlayInsights
     let locked: Bool
@@ -21,77 +22,45 @@ struct InsightsCard: View {
 
     private var card: some View {
         VStack(alignment: .leading, spacing: 14) {
-            header
-            VStack(spacing: 0) {
-                ForEach(Array(insights.rows.enumerated()), id: \.element.id) { index, item in
-                    if index > 0 { Divider().overlay(Theme.hairline) }
-                    // Reveal the first row as the hook; blur the rest for free users.
-                    rowView(item, blurred: locked && index > 0)
+            HStack(spacing: 8) {
+                StatHeading("Insights")
+                Spacer()
+                if locked { ProLockBadge() }
+            }
+            CourtLineRule()
+            VStack(spacing: 13) {
+                ForEach(Array(insights.rows.enumerated()), id: \.element.id) { index, row in
+                    // The first line is the free hook; the rest stay sealed.
+                    rowView(row, sealed: locked && index > 0)
                 }
             }
-            if locked { unlockButton }
+            CourtLineRule(weight: 2)
+            HStack {
+                Text("FULL STAT SHEET")
+                    .font(.caption.weight(.heavy))
+                    .tracking(1.5)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+            }
+            .foregroundStyle(Theme.accent)
         }
         .cardStyle()
     }
 
-    private var header: some View {
-        HStack {
-            Label("Insights", systemImage: "chart.bar.xaxis")
-                .font(.headline)
-                .foregroundStyle(Theme.textPrimary)
-            Spacer()
-            if locked {
-                ProLockBadge()
-            } else {
-                Text("Details")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.accent)
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(Theme.accent)
-            }
-        }
-    }
-
-    private var unlockButton: some View {
+    private func rowView(_ row: InsightRow, sealed: Bool) -> some View {
         HStack(spacing: 8) {
-            Image(systemName: "lock.fill").font(.footnote.weight(.bold))
-            Text("Unlock all insights").font(.subheadline.weight(.bold))
-        }
-        .foregroundStyle(Theme.background)
-        .frame(maxWidth: .infinity, minHeight: 46)
-        .background(Theme.accent, in: Capsule())
-        .padding(.top, 2)
-    }
-
-    private func rowView(_ row: InsightRow, blurred: Bool) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: row.icon)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Theme.accent)
-                .frame(width: 34, height: 34)
-                .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(row.title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.textPrimary)
-                Text(locked ? row.lockedSubtitle : row.subtitle)
-                    .font(.caption)
-                    .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(1)
-            }
-
+            StatLabel(row.title)
             Spacer(minLength: 8)
-
-            Text(row.value)
-                .font(.subheadline.weight(.bold))
-                .monospacedDigit()
-                .foregroundStyle(row.positive ? Theme.accent : Theme.textPrimary)
-                .blur(radius: blurred ? 5 : 0)
-                .opacity(blurred ? 0.85 : 1)
-                .accessibilityLabel(blurred ? "Locked" : row.value)
+            if sealed {
+                SealedStat(placeholder: row.sealedPlaceholder)
+            } else {
+                Text(row.value)
+                    .font(Theme.scoreboard(16))
+                    .foregroundStyle(row.positive ? Theme.accent : Theme.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
         }
-        .padding(.vertical, 10)
     }
 }

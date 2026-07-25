@@ -37,6 +37,16 @@ struct SeasonAward: Identifiable, Decodable, Hashable {
         }
     }
 
+    /// What `value` counts, in the category's own units ("12 wins").
+    var valueLabel: String {
+        switch category {
+        case "most_wins":        return "\(value) win\(value == 1 ? "" : "s")"
+        case "most_active":      return "\(value) session\(value == 1 ? "" : "s")"
+        case "rivalry_champion": return "\(value) rivalry win\(value == 1 ? "" : "s")"
+        default:                 return "\(value)"
+        }
+    }
+
     /// "January 2026" from a "2026-01" season key.
     var seasonLabel: String {
         let parts = seasonKey.split(separator: "-")
@@ -47,63 +57,85 @@ struct SeasonAward: Identifiable, Decodable, Hashable {
         guard let date = Calendar.current.date(from: comps) else { return seasonKey }
         return date.formatted(.dateTime.month(.wide).year())
     }
+
+    /// "Jul" from a "2026-07" season key, for tight stat-board labels.
+    var monthAbbrev: String {
+        let parts = seasonKey.split(separator: "-")
+        guard parts.count == 2, let year = Int(parts[0]), let month = Int(parts[1]) else { return seasonKey }
+        var comps = DateComponents()
+        comps.year = year
+        comps.month = month
+        guard let date = Calendar.current.date(from: comps) else { return seasonKey }
+        return date.formatted(.dateTime.month(.abbreviated))
+    }
 }
 
-/// Profile entry point for season awards. Everyone taps into the history;
-/// free users see the latest month live and older seasons sealed behind Pro.
+/// Profile entry point for season awards, set as a mini stat board. Everyone
+/// taps into the history; free users see the latest month live and older
+/// seasons sealed behind Pro.
 struct SeasonAwardsCard: View {
     let awards: [SeasonAward]
     let locked: Bool
     var onOpen: () -> Void = {}
 
-    private var subtitle: String {
-        if awards.isEmpty { return "No awards yet" }
-        if locked, let latest = awards.max(by: { $0.seasonKey < $1.seasonKey }) {
-            return "You placed top 3 in \(latest.seasonLabel)"
-        }
-        return "\(awards.count) award\(awards.count == 1 ? "" : "s") earned"
-    }
+    private var latest: SeasonAward? { awards.max(by: { $0.seasonKey < $1.seasonKey }) }
+    private var bestRank: Int? { awards.map(\.rank).min() }
 
     var body: some View {
         Button {
             Haptics.tap()
             onOpen()
         } label: {
-            HStack(spacing: 14) {
-                Image(systemName: "rosette")
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(Theme.accent)
-                    .frame(width: 44, height: 44)
-                    .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text("Season awards")
-                            .font(.headline)
-                            .foregroundStyle(Theme.textPrimary)
-                        if locked { ProLockBadge() }
-                    }
-                    Text(subtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.textSecondary)
+            VStack(alignment: .leading, spacing: 14) {
+                StatBoardHeader(title: "Season awards", locked: locked)
+                CourtLineRule()
+                HStack(spacing: 0) {
+                    segments
                 }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(Theme.accent)
             }
             .cardStyle()
         }
         .buttonStyle(.plain)
     }
+
+    @ViewBuilder
+    private var segments: some View {
+        if awards.isEmpty {
+            // Season in play: the podium is still open — that's the pitch.
+            StatSegment(value: Date().formatted(.dateTime.month(.abbreviated)), label: "In play", size: 22,
+                        valueColor: Theme.accent)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            StatSegment(value: "Top 3", label: "To place", size: 22)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else if locked, let latest {
+            StatSegment(value: "Top 3", label: "In \(latest.monthAbbrev)", size: 22, valueColor: Theme.accent)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            StatSegment(value: "", label: "All time", sealed: true, placeholder: "–", size: 22)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            StatSegment(value: "\(awards.count)", label: awards.count == 1 ? "Award" : "Awards", size: 22,
+                        valueColor: Theme.accent)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if let bestRank {
+                StatSegment(value: "#\(bestRank)", label: "Best finish", size: 22)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
 }
 
-/// Award history, doubling as its own teaser for free users: the latest month's
-/// placement celebrates in full, older seasons sit sealed (month visible, award
-/// blurred) — a trophy case accumulating behind glass.
+/// Award history as a trophy case: the latest month's placement celebrates in
+/// full (its rank settling into place on open — the sheet's one orchestrated
+/// moment), older seasons sit sealed for free users with the month visible and
+/// the award itself a dash slot. With no awards yet, the current season shows
+/// its three open podium slots instead of a bare empty state.
 struct SeasonAwardsSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var store: AppStore
     @EnvironmentObject private var subscriptions: SubscriptionStore
+    /// Drives the latest award's settle-in. Starts true under Reduce Motion.
+    @State private var medalSettled = false
 
     private var locked: Bool { subscriptions.showsLockedFeatures }
     /// The most recent month with an award — the free window into the feature.
@@ -111,21 +143,27 @@ struct SeasonAwardsSheet: View {
     private var sealedCount: Int {
         store.seasonAwards.filter { $0.seasonKey != latestSeasonKey }.count
     }
+    /// Awards grouped by month, newest first, ranks best-first within a month.
+    private var seasons: [(key: String, awards: [SeasonAward])] {
+        Dictionary(grouping: store.seasonAwards, by: \.seasonKey)
+            .map { (key: $0.key, awards: $0.value.sorted { $0.rank < $1.rank }) }
+            .sorted { $0.key > $1.key }
+    }
 
     var body: some View {
         ProfileNavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 20) {
                     if store.seasonAwards.isEmpty {
-                        emptyState
+                        openSeasonBoard
                     } else {
-                        VStack(spacing: 0) {
-                            ForEach(Array(store.seasonAwards.enumerated()), id: \.element.id) { index, award in
-                                if index > 0 { Divider().overlay(Theme.hairline).padding(.leading, 60) }
-                                SeasonAwardRow(award: award, sealed: locked && award.seasonKey != latestSeasonKey)
+                        ForEach(Array(seasons.enumerated()), id: \.element.key) { index, season in
+                            if index == 0 {
+                                latestSeason(season)
+                            } else {
+                                pastSeason(season)
                             }
                         }
-                        .cardStyle(padding: 8)
                     }
                     if locked {
                         ProTeaserUnlockBar(
@@ -147,63 +185,128 @@ struct SeasonAwardsSheet: View {
             .refreshable { await store.loadSeasonAwards() }
         }
         .trackProTeaser(.seasonAwards, locked: locked)
+        .onAppear {
+            if reduceMotion {
+                medalSettled = true
+            } else {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.62).delay(0.2)) { medalSettled = true }
+            }
+        }
     }
 
-    private var emptyState: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "rosette")
-                .font(.largeTitle)
-                .foregroundStyle(Theme.accent)
-            Text("No awards yet")
-                .font(.headline)
-                .foregroundStyle(Theme.textPrimary)
-            Text("Awards are handed out at the start of each month for the month just played.")
-                .font(.subheadline)
-                .foregroundStyle(Theme.textSecondary)
-                .multilineTextAlignment(.center)
+    /// The latest month, celebrated in full — free for everyone.
+    private func latestSeason(_ season: (key: String, awards: [SeasonAward])) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            StatLabel("\(season.awards[0].seasonLabel) · Latest season")
+            VStack(spacing: 0) {
+                ForEach(Array(season.awards.enumerated()), id: \.element.id) { index, award in
+                    if index > 0 { CourtLineRule().padding(.leading, 74) }
+                    HStack(spacing: 16) {
+                        Text("#\(award.rank)")
+                            .font(Theme.scoreboard(30))
+                            .foregroundStyle(award.rank == 1 ? Theme.accent : Theme.textPrimary)
+                            .frame(width: 58, alignment: .leading)
+                            .scaleEffect(medalSettled ? 1 : 0.4, anchor: .leading)
+                            .opacity(medalSettled ? 1 : 0)
+                        VStack(alignment: .leading, spacing: 3) {
+                            StatLabel(award.title, color: Theme.textPrimary)
+                            Text(award.valueLabel)
+                                .font(.caption)
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 14)
+                }
+            }
+            .padding(.horizontal, 16)
+            .cardStyle(padding: 0)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 80)
+    }
+
+    /// A past month: visible on the shelf, sealed for free users.
+    private func pastSeason(_ season: (key: String, awards: [SeasonAward])) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            StatLabel(season.awards[0].seasonLabel)
+            VStack(spacing: 0) {
+                ForEach(Array(season.awards.enumerated()), id: \.element.id) { index, award in
+                    if index > 0 { CourtLineRule().padding(.leading, 58) }
+                    SeasonAwardRow(award: award, sealed: locked && season.key != latestSeasonKey)
+                }
+            }
+            .cardStyle(padding: 8)
+        }
+    }
+
+    /// No awards yet: the current season's podium, slots open. The three
+    /// categories render with awaiting-results slots — your name could be there.
+    private var openSeasonBoard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            StatLabel("\(Date().formatted(.dateTime.month(.wide).year())) · In play")
+            VStack(alignment: .leading, spacing: 14) {
+                Text("The podium is open.")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(Theme.textPrimary)
+                CourtLineRule()
+                VStack(spacing: 13) {
+                    openSlot("Most wins")
+                    openSlot("Most active")
+                    openSlot("Rivalry champion")
+                }
+                Text("Top 3 land here when the month ends.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            .cardStyle()
+        }
+    }
+
+    private func openSlot(_ category: String) -> some View {
+        HStack {
+            StatLabel(category)
+            Spacer()
+            SealedStat(placeholder: "– – –", showsLock: false)
+        }
     }
 }
 
 private struct SeasonAwardRow: View {
     let award: SeasonAward
-    /// Behind Pro for this (free) viewer: the month stays visible, the award
-    /// itself (category, rank) blurs behind a lock.
+    /// Behind Pro for this (free) viewer: the month header stays visible, the
+    /// rank and category render as sealed slots.
     var sealed = false
-
-    private var rankColor: Color {
-        switch award.rank {
-        case 1:  return Theme.accent
-        case 2:  return Theme.surfaceElevated
-        default: return Theme.loss.opacity(0.5)
-        }
-    }
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: sealed ? "lock.fill" : award.icon)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(sealed ? Theme.textTertiary : (award.rank == 1 ? Theme.background : Theme.textPrimary))
-                .frame(width: 36, height: 36)
-                .background(sealed ? Theme.surfaceElevated : rankColor, in: Circle())
-            VStack(alignment: .leading, spacing: 2) {
-                Text(award.title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.textPrimary)
-                    .proLocked(sealed)
-                HStack(spacing: 4) {
-                    Text("#\(award.rank)")
-                        .proLocked(sealed)
-                    Text("· \(award.seasonLabel)")
+            if sealed {
+                SealedStat(placeholder: "#–", size: 20, showsLock: false)
+                    .frame(width: 44, alignment: .leading)
+                Text("– – – –")
+                    .font(Theme.scoreboard(14))
+                    .foregroundStyle(Theme.textTertiary)
+                Spacer()
+                Image(systemName: "lock.fill")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.textTertiary)
+            } else {
+                Text("#\(award.rank)")
+                    .font(Theme.scoreboard(20))
+                    .foregroundStyle(award.rank == 1 ? Theme.accent : Theme.textPrimary)
+                    .frame(width: 44, alignment: .leading)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(award.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text(award.valueLabel)
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
                 }
-                .font(.caption)
-                .foregroundStyle(Theme.textSecondary)
+                Spacer()
             }
-            Spacer()
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 12)
+        .accessibilityElement(children: sealed ? .ignore : .combine)
+        .accessibilityLabel(sealed ? "Locked award. Unlock with Pro." : "\(award.title), rank \(award.rank)")
     }
 }

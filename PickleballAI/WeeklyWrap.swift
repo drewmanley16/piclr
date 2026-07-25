@@ -56,8 +56,9 @@ struct WeekWrap {
     }
 }
 
-/// Profile entry point for the weekly wrap. Everyone taps into the recap sheet;
-/// free users get the teaser treatment there (see `WeeklyWrapSheet`).
+/// Profile entry point for the weekly wrap, set as a mini stat board: this
+/// week's numbers are the card. Everyone taps into the recap sheet; free users
+/// get the teaser treatment there (see `WeeklyWrapSheet`).
 struct WeeklyWrapCard: View {
     let wrap: WeekWrap
     let locked: Bool
@@ -68,27 +69,17 @@ struct WeeklyWrapCard: View {
             Haptics.tap()
             onOpen()
         } label: {
-            HStack(spacing: 14) {
-                Image(systemName: "sparkles")
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(Theme.accent)
-                    .frame(width: 44, height: 44)
-                    .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text("This week, wrapped")
-                            .font(.headline)
-                            .foregroundStyle(Theme.textPrimary)
-                        if locked { ProLockBadge() }
-                    }
-                    Text("\(wrap.sessions) session\(wrap.sessions == 1 ? "" : "s") · \(wrap.matches) match\(wrap.matches == 1 ? "" : "es")")
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.textSecondary)
+            VStack(alignment: .leading, spacing: 14) {
+                StatBoardHeader(title: "This week, wrapped", locked: locked)
+                CourtLineRule()
+                HStack(spacing: 0) {
+                    StatSegment(value: "\(wrap.sessions)", label: wrap.sessions == 1 ? "Session" : "Sessions", size: 22)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    StatSegment(value: "\(wrap.matches)", label: wrap.matches == 1 ? "Match" : "Matches", size: 22)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    StatSegment(value: String(format: "%.1f", wrap.hours), label: "Hours", size: 22)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(Theme.accent)
             }
             .cardStyle()
         }
@@ -96,14 +87,18 @@ struct WeeklyWrapCard: View {
     }
 }
 
-/// The recap sheet, doubling as its own teaser for free users: the headline and
-/// session/hours tiles are real, while record, win rate, streak, and rival sit
-/// blurred behind Pro with the unlock bar where the share button would be.
+/// The recap sheet, set as a week board: one court-shaped 2×2 card split by
+/// chalk lines, sessions and hours real for everyone, record and win rate
+/// sealed behind Pro along with the streak and rival cards. The free numbers
+/// roll up from zero on open — the sheet's one orchestrated moment.
 struct WeeklyWrapSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var store: AppStore
     @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var shareItem: ShareImage?
+    /// Drives the board's roll-up on appear. Starts true under Reduce Motion.
+    @State private var boardSettled = false
 
     private var locked: Bool { subscriptions.showsLockedFeatures }
 
@@ -117,9 +112,9 @@ struct WeeklyWrapSheet: View {
                 let w = wrap
                 VStack(spacing: 20) {
                     header(w)
-                    tiles(w)
-                    if w.weeklyStreak > 0 { streakCard(w).proLocked(locked) }
-                    if let rival = w.hotRival { rivalCard(rival).proLocked(locked) }
+                    board(w)
+                    if w.weeklyStreak > 0 { streakCard(w) }
+                    if let rival = w.hotRival { rivalCard(rival) }
                     if locked {
                         ProTeaserUnlockBar(
                             context: .weeklyWrap,
@@ -141,6 +136,13 @@ struct WeeklyWrapSheet: View {
         }
         .sheet(item: $shareItem) { ActivityShareSheet(payload: $0) }
         .trackProTeaser(.weeklyWrap, locked: locked)
+        .onAppear {
+            if reduceMotion {
+                boardSettled = true
+            } else {
+                withAnimation(.snappy(duration: 0.8).delay(0.15)) { boardSettled = true }
+            }
+        }
     }
 
     private func shareButton(_ w: WeekWrap) -> some View {
@@ -160,10 +162,7 @@ struct WeeklyWrapSheet: View {
 
     private func header(_ w: WeekWrap) -> some View {
         VStack(spacing: 8) {
-            Text("WEEK OF \(w.weekStart.formatted(.dateTime.month(.abbreviated).day()))".uppercased())
-                .font(.caption2.weight(.semibold))
-                .tracking(1.2)
-                .foregroundStyle(Theme.textSecondary)
+            StatLabel("Week of \(w.weekStart.formatted(.dateTime.month(.abbreviated).day()))")
             Text(locked ? w.lockedHeadline : w.headline)
                 .font(.title3.weight(.bold))
                 .foregroundStyle(Theme.textPrimary)
@@ -174,46 +173,89 @@ struct WeeklyWrapSheet: View {
         .padding(.vertical, 8)
     }
 
-    private func tiles(_ w: WeekWrap) -> some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                StatPill(title: "Sessions", value: "\(w.sessions)", systemImage: "figure.pickleball")
-                StatPill(title: "Hours", value: String(format: "%.1f", w.hours), systemImage: "clock")
+    /// The week as a court: four quadrants split by chalk lines, the heavier
+    /// center rule the net. Top half (played) is free; bottom half (results)
+    /// is the Pro side.
+    private func board(_ w: WeekWrap) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                quadrant(value: "\(boardSettled ? w.sessions : 0)", label: w.sessions == 1 ? "Session" : "Sessions")
+                quadrantDivider
+                quadrant(value: String(format: "%.1f", boardSettled ? w.hours : 0), label: "Hours")
             }
-            HStack(spacing: 12) {
-                StatPill(title: "Record", value: "\(w.wins)–\(w.losses)", systemImage: "flag.checkered")
-                StatPill(title: "Win rate", value: "\(w.winRate)%", systemImage: "chart.line.uptrend.xyaxis")
+            CourtLineRule(weight: 2)
+            HStack(spacing: 0) {
+                quadrant(value: boardSettled ? "\(w.wins)–\(w.losses)" : "0–0", label: "Record",
+                         sealed: locked, placeholder: "– –")
+                quadrantDivider
+                quadrant(value: "\(boardSettled ? w.winRate : 0)%", label: "Win rate",
+                         sealed: locked, placeholder: "––%")
             }
-            .proLocked(locked)
         }
+        .cardStyle(padding: 0)
+    }
+
+    private func quadrant(value: String, label: String, sealed: Bool = false, placeholder: String = "– –") -> some View {
+        StatSegment(value: value, label: label, sealed: sealed, placeholder: placeholder,
+                    size: 30, alignment: .center)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 20)
+    }
+
+    private var quadrantDivider: some View {
+        Rectangle().fill(Theme.courtLine).frame(width: 1)
     }
 
     private func streakCard(_ w: WeekWrap) -> some View {
         HStack(spacing: 14) {
-            Image(systemName: "circle.hexagongrid.fill")
-                .font(.title2.weight(.bold))
-                .foregroundStyle(Theme.accent)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(w.weeklyStreak)-week streak")
-                    .font(.headline)
-                    .foregroundStyle(Theme.textPrimary)
-                Text("Log a session next week to keep it going.")
+            VStack(alignment: .leading, spacing: 4) {
+                StatLabel("Weekly streak")
+                Text(locked ? "Play every week to keep your run alive." : "Log a session next week to keep it going.")
                     .font(.caption)
                     .foregroundStyle(Theme.textSecondary)
             }
             Spacer()
+            if locked {
+                SealedStat(placeholder: "– –", size: 22)
+            } else {
+                Text("\(w.weeklyStreak) wk")
+                    .font(Theme.scoreboard(22))
+                    .foregroundStyle(Theme.accent)
+            }
         }
         .cardStyle()
     }
 
+    /// Free users know a rival is on a run; who it is stays sealed — the name
+    /// slot is the tease.
+    @ViewBuilder
     private func rivalCard(_ rival: Rivalry) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label("Watch out for", systemImage: "flame.fill")
-                .font(.headline)
-                .foregroundStyle(Theme.textPrimary)
-            HeatingUpRow(rivalry: rival)
-                .padding(.vertical, 4)
+        VStack(alignment: .leading, spacing: 12) {
+            StatLabel("Watch out for")
+            if locked {
+                HStack(spacing: 12) {
+                    Image(systemName: "lock.fill")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Theme.textTertiary)
+                        .frame(width: 40, height: 40)
+                        .background(Theme.surfaceElevated, in: Circle())
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("– – – –")
+                            .font(Theme.scoreboard(16))
+                            .foregroundStyle(Theme.textTertiary)
+                        Text("Someone's on a run against you.")
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Rival locked. Unlock with Pro.")
+            } else {
+                HeatingUpRow(rivalry: rival)
+                    .padding(.vertical, 4)
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .cardStyle()
     }
 }

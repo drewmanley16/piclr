@@ -30,22 +30,16 @@ struct GoalsCard: View {
             onOpen()
         } label: {
             VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Label("Weekly goal", systemImage: "target")
-                        .font(.headline)
-                        .foregroundStyle(Theme.textPrimary)
-                    Spacer()
-                    if locked {
-                        ProLockBadge()
-                    } else {
-                        Text(met ? "Done" : "\(sessionsThisWeek)/\(goal)")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(met ? Theme.accent : Theme.textSecondary)
-                    }
-                }
+                StatBoardHeader(title: "Weekly goal", locked: locked)
+                CourtLineRule()
 
                 // Real progress even for free users — their own week is the ad.
-                ProgressBar(progress: progress)
+                HStack(spacing: 12) {
+                    ProgressBar(progress: progress)
+                    Text("\(sessionsThisWeek)/\(goal)")
+                        .font(Theme.scoreboard(16))
+                        .foregroundStyle(met ? Theme.accent : Theme.textSecondary)
+                }
 
                 if streakAtRisk && !locked {
                     Label("Your \(weeklyStreak)-week streak is at risk. Play once to save it.", systemImage: "exclamationmark.triangle.fill")
@@ -146,7 +140,11 @@ struct GoalsSheet: View {
                         .tint(Theme.accent)
                     }
                     .cardStyle()
-                    .proLocked(locked)
+                    // Locked controls dim like native disabled settings; the
+                    // stepper and toggle stay legible so the offer is concrete.
+                    .opacity(locked ? 0.45 : 1)
+                    .disabled(locked)
+                    .accessibilityHint(locked ? "Unlock with Pro to change." : "")
 
                     if locked {
                         ProTeaserUnlockBar(
