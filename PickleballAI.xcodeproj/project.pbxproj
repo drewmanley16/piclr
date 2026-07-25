@@ -27,6 +27,7 @@
 		2BC5A464046492AC5C8379C4 /* PlayInsights.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E6F8C2B52FA6E47498094F /* PlayInsights.swift */; };
 		2C8385E386ACCE3A125AEADA /* LegalDocuments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32CF1AA306E5F578AA3022F7 /* LegalDocuments.swift */; };
 		2F9A36DC1B8974294F4993AA /* WorkoutMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B33C1504DA3DA204EE4A1046 /* WorkoutMetrics.swift */; };
+		3298B7A018FD4692835255C7 /* ProTeaser.swift in Sources */ = {isa = PBXBuildFile; fileRef = D102C35019EBAFBC8A6123DF /* ProTeaser.swift */; };
 		337E8774FB64CFE5D6978913 /* OnboardingPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D28EC049E2380767AA0A2B6 /* OnboardingPreview.swift */; };
 		33C8ACB4E3D0F1DAE5FC4EEF /* CommentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F6C03EC3ED4D2A8C098B84F /* CommentsView.swift */; };
 		376C9B601A4FC26F598DE83D /* AppStore+MediaHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6BDD0A44254DC8637A543CE /* AppStore+MediaHelpers.swift */; };
@@ -261,6 +262,7 @@
 		C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		CF895DB874A0AA5FBE3CB948 /* StatsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsSheet.swift; sourceTree = "<group>"; };
 		D0E6F8C2B52FA6E47498094F /* PlayInsights.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayInsights.swift; sourceTree = "<group>"; };
+		D102C35019EBAFBC8A6123DF /* ProTeaser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProTeaser.swift; sourceTree = "<group>"; };
 		D169CF8E4C9FDD09C74432A3 /* GearSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearSheets.swift; sourceTree = "<group>"; };
 		D1DA9EA8FD022D18FABEBD5A /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		D27DDC2F5BDF963F1B298D8A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -410,6 +412,7 @@
 				1C1946954DF585AB3AA78971 /* ProfileIdentityValidation.swift */,
 				475451E24481504893FFE7ED /* ProfileModels.swift */,
 				528729889F780FEF8B81D160 /* ProfileView.swift */,
+				D102C35019EBAFBC8A6123DF /* ProTeaser.swift */,
 				C49D15DAFAF823EF6B673ADE /* PushService.swift */,
 				8D1FBA77BA526A6415502267 /* RealtimeSubscription.swift */,
 				C105A93AC708CD4765D2974D /* RevenueCat.example.plist */,
@@ -678,6 +681,7 @@
 				42845FCF98B5DFD1F5D3BB16 /* PhoneNumberFormatting.swift in Sources */,
 				09769653678BBE3A0E31E1CB /* PickleballAIApp.swift in Sources */,
 				2BC5A464046492AC5C8379C4 /* PlayInsights.swift in Sources */,
+				3298B7A018FD4692835255C7 /* ProTeaser.swift in Sources */,
 				FBC5CA0F99C49D8AC902D659 /* ProfileIdentityValidation.swift in Sources */,
 				449EC4A27D19CBFFFABCB4CC /* ProfileModels.swift in Sources */,
 				C5338F649A3DC6D11AE71F0B /* ProfileView.swift in Sources */,

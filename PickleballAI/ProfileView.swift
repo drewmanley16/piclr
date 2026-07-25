@@ -464,7 +464,6 @@ struct ProfileView: View {
                 InsightsCard(
                     insights: insights,
                     locked: subscriptions.showsLockedFeatures,
-                    onUnlock: { subscriptions.presentPaywall(.insights) },
                     onOpen: { activeSheet = .insights }
                 )
             }
@@ -481,7 +480,6 @@ struct ProfileView: View {
                 WeeklyWrapCard(
                     wrap: wrap,
                     locked: subscriptions.showsLockedFeatures,
-                    onUnlock: { subscriptions.presentPaywall(.weeklyWrap) },
                     onOpen: { activeSheet = .weeklyWrap }
                 )
             }
@@ -492,10 +490,14 @@ struct ProfileView: View {
     @ViewBuilder
     private var milestonesCard: some View {
         if subscriptions.showsLockedFeatures || subscriptions.showsProStatus {
+            // Free users "own" only the starter badges; the rest they've earned
+            // count as sealed — the card advertises exactly that split.
+            let locked = subscriptions.showsLockedFeatures
+            let earnedLocked = locked ? store.milestoneUnlocks.subtracting(Milestone.freeIDs).count : 0
             MilestonesCard(
-                unlockedCount: store.milestoneUnlocks.count,
-                locked: subscriptions.showsLockedFeatures,
-                onUnlock: { subscriptions.presentPaywall(.milestones) },
+                unlockedCount: store.milestoneUnlocks.count - earnedLocked,
+                locked: locked,
+                earnedLockedCount: earnedLocked,
                 onOpen: { activeSheet = .milestones }
             )
         }
@@ -508,7 +510,6 @@ struct ProfileView: View {
             SeasonAwardsCard(
                 awards: store.seasonAwards,
                 locked: subscriptions.showsLockedFeatures,
-                onUnlock: { subscriptions.presentPaywall(.seasonAwards) },
                 onOpen: { activeSheet = .seasonAwards }
             )
         }
@@ -522,7 +523,6 @@ struct ProfileView: View {
                 sessionsThisWeek: sessionsThisWeek,
                 weeklyStreak: stats.weeklyStreak,
                 locked: subscriptions.showsLockedFeatures,
-                onUnlock: { subscriptions.presentPaywall(.goals) },
                 onOpen: { activeSheet = .goals }
             )
         }
@@ -579,11 +579,18 @@ struct ProfileView: View {
         (buckets.map(\.hours).max() ?? 0) < 1
     }
 
+    /// A free user has a Pro range selected: the chart renders their real data
+    /// blurred behind an unlock overlay — the tease *is* the chart.
+    private var rangeIsSealed: Bool {
+        range.isPro && subscriptions.showsLockedFeatures
+    }
+
     private var activityCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .firstTextBaseline) {
-                Text(rangeValue.0).font(.title2.weight(.bold)).foregroundStyle(Theme.textPrimary)
-                + Text("  \(rangeValue.1)").font(.subheadline).foregroundStyle(Theme.textSecondary)
+                (Text(rangeValue.0).font(.title2.weight(.bold)).foregroundStyle(Theme.textPrimary)
+                + Text("  \(rangeValue.1)").font(.subheadline).foregroundStyle(Theme.textSecondary))
+                    .proLocked(rangeIsSealed)
                 Spacer()
                 Text(range.caption)
                     .font(.subheadline.weight(.semibold))
@@ -599,6 +606,24 @@ struct ProfileView: View {
                 )
                 .foregroundStyle(Theme.accent)
                 .cornerRadius(4)
+            }
+            .proLocked(rangeIsSealed)
+            .overlay {
+                if rangeIsSealed {
+                    Button {
+                        subscriptions.presentPaywall(.unlimitedHistory)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "lock.open.fill").font(.footnote.weight(.bold))
+                            Text("Unlock \(range.caption.lowercased())").font(.subheadline.weight(.bold))
+                        }
+                        .foregroundStyle(Theme.background)
+                        .padding(.horizontal, 18)
+                        .frame(height: 42)
+                        .background(Theme.accent, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .frame(height: 170)
             .chartYAxis {
@@ -672,8 +697,10 @@ struct ProfileView: View {
     }
 
     /// Range chips. Hidden entirely when monetization is off (App Store build),
-    /// so the chart quietly stays on the free week view there. When on, Pro ranges
-    /// show a lock for non-Pro users and open the paywall on tap.
+    /// so the chart quietly stays on the free week view there. When on, Pro
+    /// ranges still *select* for free users — the chart teases that range
+    /// blurred with an unlock overlay (see `rangeIsSealed`) instead of
+    /// dead-ending in the paywall.
     @ViewBuilder
     private var rangeSelector: some View {
         if subscriptions.monetizationEnabled {
@@ -683,10 +710,9 @@ struct ProfileView: View {
                         rangeChip(label: preset.shortLabel, locked: preset.isPro && !subscriptions.isPro,
                                   selected: range == preset) {
                             if preset.isPro && !subscriptions.isPro {
-                                subscriptions.presentPaywall(.unlimitedHistory)
-                            } else {
-                                withAnimation(.snappy(duration: 0.2)) { range = preset }
+                                Analytics.capture(.proTeaserViewed, [Analytics.Property.context: PaywallContext.unlimitedHistory.id])
                             }
+                            withAnimation(.snappy(duration: 0.2)) { range = preset }
                         }
                     }
                     rangeChip(label: "Custom", locked: !subscriptions.isPro, selected: isCustom) {
