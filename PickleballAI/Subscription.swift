@@ -351,6 +351,19 @@ final class SubscriptionStore: ObservableObject {
         }
     }
 
+    /// Opens Apple's native subscription management sheet (cancel, change plan,
+    /// see renewal date) via StoreKit. RevenueCat just forwards to the system UI.
+    func manageSubscriptions() async {
+        guard purchasesActive else { return }
+        do {
+            try await Purchases.shared.showManageSubscriptions()
+        } catch {
+            logger.error("showManageSubscriptions failed: \(error)")
+            errorText = "Couldn't open subscription management. Please try again."
+            Haptics.warning()
+        }
+    }
+
     #if DEBUG
     /// Pre-RevenueCat pretend purchase, for DEBUG builds without a
     /// RevenueCat.plist. Compiled out of Release: an unconfigured store there
