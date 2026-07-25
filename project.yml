@@ -20,7 +20,7 @@ packages:
 settings:
   base:
     MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "124"
+    CURRENT_PROJECT_VERSION: "125"
     DEVELOPMENT_TEAM: "X9H68STU8F"
     CODE_SIGN_STYLE: Automatic
 # Explicit scheme (replaces the auto-generated one) so the run action can attach
@@ -51,10 +51,6 @@ targets:
           # Stray tool config (e.g. a .claude/ dir from running Claude Code
           # inside this folder) must never ship in the app bundle.
           - ".claude"
-          # Gitignored, optional-per-CLAUDE.md dev config: if xcodegen runs on
-          # a machine where it exists, the generated project would reference
-          # it and clean checkouts (CI, teammates) would fail to build.
-          - RevenueCat.plist
       - path: PickleballAI/PickleballAI.storekit
         buildPhase: none
       # Live-game score model + WC contract, shared with the watch target.

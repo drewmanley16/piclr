@@ -14,6 +14,7 @@
 		09769653678BBE3A0E31E1CB /* PickleballAIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81B8CE679ACD5A6F4E5DCB13 /* PickleballAIApp.swift */; };
 		0B5E11A83FB5BA7AB8BAA542 /* PickleballAIWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 19B5187EB34F5664E703C43B /* PickleballAIWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		0C149EF49C81B28648ED3BA8 /* Supabase.example.plist in Resources */ = {isa = PBXBuildFile; fileRef = DD24443783672F30DD360A7A /* Supabase.example.plist */; };
+		12137FA9EDD1588C7B1641B1 /* RevenueCat.plist in Resources */ = {isa = PBXBuildFile; fileRef = AF6FF037B809FB38076632ED /* RevenueCat.plist */; };
 		13E2AFEB96A070D6E439D80C /* SessionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF61E92F5637DA5570EACB1F /* SessionModels.swift */; };
 		15CF34EA18544A33E028145B /* ScoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51D694E41512C0CE99B1C56 /* ScoreView.swift */; };
 		16DD6B39109593928B5583A3 /* ContactsImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EC4FAB3BC7409E94B9F0E1 /* ContactsImporter.swift */; };
@@ -243,6 +244,7 @@
 		A3C692535DA6A9EEFA9FF9D7 /* WeeklyWrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyWrap.swift; sourceTree = "<group>"; };
 		AC505C83297253D366673275 /* SuggestedAthleteCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedAthleteCard.swift; sourceTree = "<group>"; };
 		AF61E92F5637DA5570EACB1F /* SessionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionModels.swift; sourceTree = "<group>"; };
+		AF6FF037B809FB38076632ED /* RevenueCat.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = RevenueCat.plist; sourceTree = "<group>"; };
 		B054516CE1AEC6327D7AEA04 /* PickleballAIWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PickleballAIWatch.entitlements; sourceTree = "<group>"; };
 		B10025ED05CD5F456B2D1934 /* RivalsFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RivalsFeature.swift; sourceTree = "<group>"; };
 		B33C1504DA3DA204EE4A1046 /* WorkoutMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutMetrics.swift; sourceTree = "<group>"; };
@@ -411,6 +413,7 @@
 				C49D15DAFAF823EF6B673ADE /* PushService.swift */,
 				8D1FBA77BA526A6415502267 /* RealtimeSubscription.swift */,
 				C105A93AC708CD4765D2974D /* RevenueCat.example.plist */,
+				AF6FF037B809FB38076632ED /* RevenueCat.plist */,
 				DABB61C500760EEE65FB5F65 /* RevenueCatService.swift */,
 				53F9DEA7EC6F600A7C9DF92D /* RivalryInsights.swift */,
 				B10025ED05CD5F456B2D1934 /* RivalsFeature.swift */,
@@ -584,6 +587,7 @@
 				D60B10153096A64D929AE1AC /* Assets.xcassets in Resources */,
 				7DF814116828AB723F79A1E6 /* PrivacyInfo.xcprivacy in Resources */,
 				8F4F2063447038819A1AE2A3 /* RevenueCat.example.plist in Resources */,
+				12137FA9EDD1588C7B1641B1 /* RevenueCat.plist in Resources */,
 				0C149EF49C81B28648ED3BA8 /* Supabase.example.plist in Resources */,
 				F9D4FE283820E25A05692966 /* Supabase.plist in Resources */,
 			);
@@ -792,7 +796,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 124;
+				CURRENT_PROJECT_VERSION = 125;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = X9H68STU8F;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -852,7 +856,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 124;
+				CURRENT_PROJECT_VERSION = 125;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = X9H68STU8F;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
