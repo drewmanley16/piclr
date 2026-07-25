@@ -1,23 +1,22 @@
 import SwiftUI
 
 /// Pro "Insights" surface on the profile — LinkedIn-style tease. Free users see
-/// the first insight for real, the rest **blurred**, and an "Unlock all
-/// insights" button that opens the paywall. Pro users see every value and tap
-/// through to the full breakdown sheet. Fed by [[PlayInsights]]; only rendered
-/// when `insights.isReady`.
+/// the first insight for real, the rest **blurred**; tapping opens the full
+/// breakdown sheet, which carries its own teaser treatment and unlock bar.
+/// Pro users see every value. Fed by [[PlayInsights]]; only rendered when
+/// `insights.isReady`.
 struct InsightsCard: View {
     let insights: PlayInsights
     let locked: Bool
-    var onUnlock: () -> Void = {}
     var onOpen: () -> Void = {}
 
     var body: some View {
         Button {
             Haptics.tap()
-            if locked { onUnlock() } else { onOpen() }
+            onOpen()
         } label: { card }
         .buttonStyle(.plain)
-        .accessibilityHint(locked ? "Unlock the full breakdown with Pro" : "See all insights")
+        .accessibilityHint("See all insights")
     }
 
     private var card: some View {

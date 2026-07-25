@@ -60,6 +60,7 @@ enum Analytics {
         case pushNotificationsEnabled = "push_notifications_enabled"
 
         // Monetization funnel
+        case proTeaserViewed = "pro_teaser_viewed"
         case paywallViewed = "paywall_viewed"
         case paywallPlanSelected = "paywall_plan_selected"
         case purchaseCompleted = "purchase_completed"

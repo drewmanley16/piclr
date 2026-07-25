@@ -9,13 +9,13 @@ enum GoalDefaults {
     static let defaultGoal = 3
 }
 
-/// Profile card: weekly session goal progress + streak-at-risk nudge. Locked for
-/// free users (opens the paywall); Pro users tap in to adjust the goal.
+/// Profile card: weekly session goal progress + streak-at-risk nudge. Everyone
+/// taps into the sheet; free users see their real progress there with the
+/// goal/reminder controls sealed behind Pro.
 struct GoalsCard: View {
     let sessionsThisWeek: Int
     let weeklyStreak: Int
     let locked: Bool
-    var onUnlock: () -> Void = {}
     var onOpen: () -> Void = {}
 
     @AppStorage(GoalDefaults.weeklyGoalKey) private var goal = GoalDefaults.defaultGoal
@@ -27,7 +27,7 @@ struct GoalsCard: View {
     var body: some View {
         Button {
             Haptics.tap()
-            if locked { onUnlock() } else { onOpen() }
+            onOpen()
         } label: {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
@@ -44,7 +44,8 @@ struct GoalsCard: View {
                     }
                 }
 
-                ProgressBar(progress: locked ? 0.45 : progress, blurred: locked)
+                // Real progress even for free users — their own week is the ad.
+                ProgressBar(progress: progress)
 
                 if streakAtRisk && !locked {
                     Label("Your \(weeklyStreak)-week streak is at risk. Play once to save it.", systemImage: "exclamationmark.triangle.fill")
@@ -67,10 +68,9 @@ struct GoalsCard: View {
     }
 }
 
-/// Slim lime progress bar; blurred when teased to a free user.
+/// Slim lime progress bar.
 private struct ProgressBar: View {
     let progress: Double
-    var blurred = false
 
     var body: some View {
         GeometryReader { geo in
@@ -81,15 +81,19 @@ private struct ProgressBar: View {
             }
         }
         .frame(height: 10)
-        .blur(radius: blurred ? 4 : 0)
     }
 }
 
+/// Goal settings, doubling as its own teaser for free users: real weekly
+/// progress up top, the target/reminder controls sealed behind Pro below.
 struct GoalsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: AppStore
+    @EnvironmentObject private var subscriptions: SubscriptionStore
     let sessionsThisWeek: Int
     let weeklyStreak: Int
+
+    private var locked: Bool { subscriptions.showsLockedFeatures }
 
     @AppStorage(GoalDefaults.weeklyGoalKey) private var goal = GoalDefaults.defaultGoal
     @AppStorage(GoalDefaults.streakReminderKey) private var remindersOn = true
@@ -142,6 +146,17 @@ struct GoalsSheet: View {
                         .tint(Theme.accent)
                     }
                     .cardStyle()
+                    .proLocked(locked)
+
+                    if locked {
+                        ProTeaserUnlockBar(
+                            context: .goals,
+                            title: "Unlock goals & reminders",
+                            caption: weeklyStreak > 0
+                                ? "Protect your \(weeklyStreak)-week streak with save reminders."
+                                : "Set a target and get nudged before a streak breaks."
+                        )
+                    }
 
                     if weeklyStreak > 0 {
                         HStack(spacing: 14) {
@@ -163,6 +178,7 @@ struct GoalsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
+        .trackProTeaser(.goals, locked: locked)
         .onAppear {
             // Server is the source of truth across devices/reinstalls; local
             // @AppStorage is just a fast cache for the picker/toggle controls.

@@ -65,15 +65,32 @@ struct PaywallView: View {
         .padding(.top, 28)
     }
 
+    /// The feature the user was reaching for when the paywall opened, if the
+    /// context maps to one. It leads the list, highlighted.
+    private var leadFeature: ProFeature? {
+        ProFeature.catalog.first { $0.contextID == context.id }
+    }
+
+    /// Lead feature first, then the strongest of the rest, capped at five rows
+    /// so the pitch stays scannable.
+    private var features: [ProFeature] {
+        guard let lead = leadFeature else { return Array(ProFeature.catalog.prefix(5)) }
+        return [lead] + ProFeature.catalog.filter { $0.title != lead.title }.prefix(4)
+    }
+
     private var featureList: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            ProFeatureRow(icon: "chart.bar.xaxis", title: "Play insights", detail: "Clutch record, best court, best partner, and more.")
-            ProFeatureRow(icon: "flame.fill", title: "Rivalry insights", detail: "Full head-to-head trends and who's heating up.")
-            ProFeatureRow(icon: "square.and.arrow.up", title: "Shareable cards", detail: "Premium recap cards built to post to the group chat.")
-            ProFeatureRow(icon: "infinity", title: "Unlimited history", detail: "Every session and stat, all the way back.")
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(Array(features.enumerated()), id: \.element.title) { index, feature in
+                ProFeatureRow(
+                    icon: feature.icon,
+                    title: feature.title,
+                    detail: feature.detail,
+                    highlighted: index == 0 && leadFeature != nil
+                )
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .cardStyle()
+        .cardStyle(padding: 10)
     }
 
     private var planPicker: some View {
@@ -155,18 +172,52 @@ struct PaywallView: View {
     }
 }
 
+/// One row of the paywall's "what you get" list. `contextID` ties a feature to
+/// the `PaywallContext` that reaches for it, so the paywall can lead with the
+/// exact thing the user just tapped. Catalog order doubles as the default list:
+/// the first five rows are the general-context pitch.
+private struct ProFeature {
+    /// Matching `PaywallContext.id`, or nil for features with no entry point.
+    let contextID: String?
+    let icon: String
+    let title: String
+    let detail: String
+
+    static let catalog: [ProFeature] = [
+        ProFeature(contextID: "insights", icon: "chart.bar.xaxis", title: "Play insights",
+                   detail: "Clutch record, best court, best partner, and more."),
+        ProFeature(contextID: "rivalry", icon: "flame.fill", title: "Rivalry insights",
+                   detail: "Full head-to-head trends and who's heating up."),
+        ProFeature(contextID: "weekly_wrap", icon: "sparkles", title: "Weekly wrap",
+                   detail: "Your record, streak, and hottest rival, recapped and shareable every week."),
+        ProFeature(contextID: "milestones", icon: "medal.fill", title: "All 14 milestones",
+                   detail: "Claim every badge you earn, from first match to a 52-week streak."),
+        ProFeature(contextID: "history", icon: "infinity", title: "Unlimited history",
+                   detail: "Every session and stat, all the way back."),
+        ProFeature(contextID: "season_awards", icon: "rosette", title: "Season awards",
+                   detail: "Monthly podium finishes, kept in your trophy case forever."),
+        ProFeature(contextID: "goals", icon: "target", title: "Goals and streak saves",
+                   detail: "Set a weekly target and get nudged before your streak breaks."),
+        ProFeature(contextID: "leaderboard", icon: "trophy.fill", title: "Leaderboard filters",
+                   detail: "Slice the crew leaderboard by wins, activity, and month."),
+        ProFeature(contextID: nil, icon: "square.and.arrow.up", title: "Shareable cards",
+                   detail: "Premium recap cards built to post to the group chat.")
+    ]
+}
+
 private struct ProFeatureRow: View {
     let icon: String
     let title: String
     let detail: String
+    var highlighted = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
                 .font(.body.weight(.semibold))
-                .foregroundStyle(Theme.accent)
+                .foregroundStyle(highlighted ? Theme.background : Theme.accent)
                 .frame(width: 30, height: 30)
-                .background(Theme.accentSoft, in: Circle())
+                .background(highlighted ? Theme.accent : Theme.accentSoft, in: Circle())
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
@@ -176,7 +227,13 @@ private struct ProFeatureRow: View {
                     .foregroundStyle(Theme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            if highlighted { Spacer(minLength: 0) }
         }
+        .padding(10)
+        .background(
+            highlighted ? Theme.accentSoft : .clear,
+            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+        )
     }
 }
 

@@ -26,6 +26,15 @@ struct WeekWrap {
         return "Tough week: \(wins)–\(losses). Bounce back next session."
     }
 
+    /// Headline for free viewers: sells the week's outcome without giving away
+    /// the record and win rate blurred right below it.
+    var lockedHeadline: String {
+        if matches == 0 { return headline }
+        if wins > losses { return "A winning week is in the books." }
+        if wins == losses { return "A week that came down to the wire." }
+        return "A grinder of a week. The full story is inside."
+    }
+
     init(allSessions: [FeedSession], playerID: UUID?) {
         var cal = Calendar.current
         cal.firstWeekday = 2 // Monday, matching SessionStats.weeklyStreaks
@@ -47,18 +56,17 @@ struct WeekWrap {
     }
 }
 
-/// Profile entry point for the weekly wrap. Locked for free users (opens the
-/// paywall); Pro users tap into the full recap sheet.
+/// Profile entry point for the weekly wrap. Everyone taps into the recap sheet;
+/// free users get the teaser treatment there (see `WeeklyWrapSheet`).
 struct WeeklyWrapCard: View {
     let wrap: WeekWrap
     let locked: Bool
-    var onUnlock: () -> Void = {}
     var onOpen: () -> Void = {}
 
     var body: some View {
         Button {
             Haptics.tap()
-            if locked { onUnlock() } else { onOpen() }
+            onOpen()
         } label: {
             HStack(spacing: 14) {
                 Image(systemName: "sparkles")
@@ -88,10 +96,16 @@ struct WeeklyWrapCard: View {
     }
 }
 
+/// The recap sheet, doubling as its own teaser for free users: the headline and
+/// session/hours tiles are real, while record, win rate, streak, and rival sit
+/// blurred behind Pro with the unlock bar where the share button would be.
 struct WeeklyWrapSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: AppStore
+    @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var shareItem: ShareImage?
+
+    private var locked: Bool { subscriptions.showsLockedFeatures }
 
     private var wrap: WeekWrap {
         WeekWrap(allSessions: store.mySessions, playerID: store.currentProfile?.id)
@@ -104,9 +118,19 @@ struct WeeklyWrapSheet: View {
                 VStack(spacing: 20) {
                     header(w)
                     tiles(w)
-                    if w.weeklyStreak > 0 { streakCard(w) }
-                    if let rival = w.hotRival { rivalCard(rival) }
-                    shareButton(w)
+                    if w.weeklyStreak > 0 { streakCard(w).proLocked(locked) }
+                    if let rival = w.hotRival { rivalCard(rival).proLocked(locked) }
+                    if locked {
+                        ProTeaserUnlockBar(
+                            context: .weeklyWrap,
+                            title: "Unlock your full wrap",
+                            caption: w.matches > 0
+                                ? "Your record and win rate for this week are in."
+                                : "Your streak and full recap are waiting."
+                        )
+                    } else {
+                        shareButton(w)
+                    }
                 }
                 .padding(16)
             }
@@ -116,6 +140,7 @@ struct WeeklyWrapSheet: View {
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
         .sheet(item: $shareItem) { ActivityShareSheet(payload: $0) }
+        .trackProTeaser(.weeklyWrap, locked: locked)
     }
 
     private func shareButton(_ w: WeekWrap) -> some View {
@@ -139,7 +164,7 @@ struct WeeklyWrapSheet: View {
                 .font(.caption2.weight(.semibold))
                 .tracking(1.2)
                 .foregroundStyle(Theme.textSecondary)
-            Text(w.headline)
+            Text(locked ? w.lockedHeadline : w.headline)
                 .font(.title3.weight(.bold))
                 .foregroundStyle(Theme.textPrimary)
                 .multilineTextAlignment(.center)
@@ -159,6 +184,7 @@ struct WeeklyWrapSheet: View {
                 StatPill(title: "Record", value: "\(w.wins)–\(w.losses)", systemImage: "flag.checkered")
                 StatPill(title: "Win rate", value: "\(w.winRate)%", systemImage: "chart.line.uptrend.xyaxis")
             }
+            .proLocked(locked)
         }
     }
 

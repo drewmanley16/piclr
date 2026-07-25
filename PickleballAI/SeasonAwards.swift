@@ -49,18 +49,25 @@ struct SeasonAward: Identifiable, Decodable, Hashable {
     }
 }
 
-/// Profile entry point for season awards. Locked for free users (opens the
-/// paywall); Pro users tap into their full award history.
+/// Profile entry point for season awards. Everyone taps into the history;
+/// free users see the latest month live and older seasons sealed behind Pro.
 struct SeasonAwardsCard: View {
     let awards: [SeasonAward]
     let locked: Bool
-    var onUnlock: () -> Void = {}
     var onOpen: () -> Void = {}
+
+    private var subtitle: String {
+        if awards.isEmpty { return "No awards yet" }
+        if locked, let latest = awards.max(by: { $0.seasonKey < $1.seasonKey }) {
+            return "You placed top 3 in \(latest.seasonLabel)"
+        }
+        return "\(awards.count) award\(awards.count == 1 ? "" : "s") earned"
+    }
 
     var body: some View {
         Button {
             Haptics.tap()
-            if locked { onUnlock() } else { onOpen() }
+            onOpen()
         } label: {
             HStack(spacing: 14) {
                 Image(systemName: "rosette")
@@ -75,7 +82,7 @@ struct SeasonAwardsCard: View {
                             .foregroundStyle(Theme.textPrimary)
                         if locked { ProLockBadge() }
                     }
-                    Text(awards.isEmpty ? "No awards yet" : "\(awards.count) award\(awards.count == 1 ? "" : "s") earned")
+                    Text(subtitle)
                         .font(.subheadline)
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -90,9 +97,20 @@ struct SeasonAwardsCard: View {
     }
 }
 
+/// Award history, doubling as its own teaser for free users: the latest month's
+/// placement celebrates in full, older seasons sit sealed (month visible, award
+/// blurred) — a trophy case accumulating behind glass.
 struct SeasonAwardsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: AppStore
+    @EnvironmentObject private var subscriptions: SubscriptionStore
+
+    private var locked: Bool { subscriptions.showsLockedFeatures }
+    /// The most recent month with an award — the free window into the feature.
+    private var latestSeasonKey: String? { store.seasonAwards.map(\.seasonKey).max() }
+    private var sealedCount: Int {
+        store.seasonAwards.filter { $0.seasonKey != latestSeasonKey }.count
+    }
 
     var body: some View {
         ProfileNavigationStack {
@@ -104,10 +122,19 @@ struct SeasonAwardsSheet: View {
                         VStack(spacing: 0) {
                             ForEach(Array(store.seasonAwards.enumerated()), id: \.element.id) { index, award in
                                 if index > 0 { Divider().overlay(Theme.hairline).padding(.leading, 60) }
-                                SeasonAwardRow(award: award)
+                                SeasonAwardRow(award: award, sealed: locked && award.seasonKey != latestSeasonKey)
                             }
                         }
                         .cardStyle(padding: 8)
+                    }
+                    if locked {
+                        ProTeaserUnlockBar(
+                            context: .seasonAwards,
+                            title: "Unlock your trophy case",
+                            caption: sealedCount > 0
+                                ? "\(sealedCount) past award\(sealedCount == 1 ? "" : "s") sealed in your trophy case."
+                                : "Pro keeps every season's awards, forever."
+                        )
                     }
                 }
                 .padding(16)
@@ -119,6 +146,7 @@ struct SeasonAwardsSheet: View {
             .task { await store.loadSeasonAwards() }
             .refreshable { await store.loadSeasonAwards() }
         }
+        .trackProTeaser(.seasonAwards, locked: locked)
     }
 
     private var emptyState: some View {
@@ -141,6 +169,9 @@ struct SeasonAwardsSheet: View {
 
 private struct SeasonAwardRow: View {
     let award: SeasonAward
+    /// Behind Pro for this (free) viewer: the month stays visible, the award
+    /// itself (category, rank) blurs behind a lock.
+    var sealed = false
 
     private var rankColor: Color {
         switch award.rank {
@@ -152,18 +183,23 @@ private struct SeasonAwardRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: award.icon)
+            Image(systemName: sealed ? "lock.fill" : award.icon)
                 .font(.body.weight(.semibold))
-                .foregroundStyle(award.rank == 1 ? Theme.background : Theme.textPrimary)
+                .foregroundStyle(sealed ? Theme.textTertiary : (award.rank == 1 ? Theme.background : Theme.textPrimary))
                 .frame(width: 36, height: 36)
-                .background(rankColor, in: Circle())
+                .background(sealed ? Theme.surfaceElevated : rankColor, in: Circle())
             VStack(alignment: .leading, spacing: 2) {
                 Text(award.title)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Theme.textPrimary)
-                Text("#\(award.rank) · \(award.seasonLabel)")
-                    .font(.caption)
-                    .foregroundStyle(Theme.textSecondary)
+                    .proLocked(sealed)
+                HStack(spacing: 4) {
+                    Text("#\(award.rank)")
+                        .proLocked(sealed)
+                    Text("· \(award.seasonLabel)")
+                }
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
             }
             Spacer()
         }
