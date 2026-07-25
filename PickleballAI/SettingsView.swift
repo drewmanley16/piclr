@@ -16,6 +16,9 @@ struct SettingsSheet: View {
                     identityCard
                     menuCard
                     if subscriptions.monetizationEnabled {
+                        if subscriptions.isPro {
+                            manageSubscriptionRow
+                        }
                         restorePurchasesRow
                     }
                 }
@@ -140,6 +143,36 @@ struct SettingsSheet: View {
             }
             .padding(.vertical, 12)
             .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: Manage subscription
+
+    /// Opens the native "manage/cancel subscription" sheet for Pro subscribers.
+    private var manageSubscriptionRow: some View {
+        Button {
+            Haptics.tap()
+            Task { await subscriptions.manageSubscriptions() }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "creditcard")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: 26)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Manage subscription")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("Change plan, cancel, or view renewal date")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+
+                Spacer(minLength: 8)
+            }
+            .cardStyle(padding: 12)
         }
         .buttonStyle(.plain)
     }
