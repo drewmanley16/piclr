@@ -7,10 +7,37 @@ struct SettingsPreferencesView: View {
     @AppStorage("notificationsEnabled") private var notifications = true
     @AppStorage(HealthMetricsSharing.defaultsKey) private var shareHealthMetrics = false
     @State private var showBlockedAccounts = false
+    @State private var privateAccount = false
+    @State private var isSavingPrivacy = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 14) {
+                Toggle(isOn: $privateAccount) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label("Private account", systemImage: "lock")
+                            .foregroundStyle(Theme.textPrimary)
+                        Text("Only accepted followers can see your sessions")
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                }
+                .tint(Theme.accent)
+                .disabled(isSavingPrivacy)
+                .onChange(of: privateAccount) { _, enabled in
+                    Haptics.tap()
+                    isSavingPrivacy = true
+                    Task {
+                        let succeeded = await store.updatePrivacy(isPrivate: enabled)
+                        // Serialized by `isSavingPrivacy` disabling the toggle
+                        // mid-flight, so this can't race a second in-flight write.
+                        if !succeeded { privateAccount = !enabled }
+                        isSavingPrivacy = false
+                    }
+                }
+
+                Divider().overlay(Theme.hairline)
+
                 Toggle(isOn: $notifications) {
                     Label("Push notifications", systemImage: "bell")
                         .foregroundStyle(Theme.textPrimary)
@@ -64,6 +91,9 @@ struct SettingsPreferencesView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showBlockedAccounts) {
             BlockedAccountsView()
+        }
+        .onAppear {
+            privateAccount = store.currentProfile?.isPrivate ?? false
         }
     }
 }

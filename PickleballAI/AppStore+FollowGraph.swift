@@ -101,9 +101,36 @@ extension AppStore {
     /// `isFollowedByMe` reflects whether the *signed-in* user follows that
     /// person (accepted) — so the follow-back button is relative to me,
     /// Instagram-style. Returns the entries rather than mutating the store's
-    /// own published lists.
+    /// own published lists. Empty for private accounts unless self/following —
+    /// defense in depth behind `OtherProfileView`'s own gate.
     func followList(for userId: UUID, kind: FollowListKind) async -> [FollowListEntry] {
         guard let me = currentProfile?.id else { return [] }
+        if userId != me {
+            do {
+                let rows: [PrivacyFlag] = try await supabase
+                    .from("profiles")
+                    .select("id, is_private")
+                    .eq("id", value: userId.uuidString)
+                    .limit(1)
+                    .execute()
+                    .value
+                if rows.first?.isPrivate == true {
+                    let edges: [FollowRow] = try await supabase
+                        .from("follows")
+                        .select("follower_id, followee_id, status, created_at")
+                        .eq("follower_id", value: me.uuidString)
+                        .eq("followee_id", value: userId.uuidString)
+                        .eq("status", value: "accepted")
+                        .limit(1)
+                        .execute()
+                        .value
+                    if edges.isEmpty { return [] }
+                }
+            } catch {
+                reportError(error)
+                return []
+            }
+        }
         do {
             let column = kind == .followers ? "followee_id" : "follower_id"
             let edges: [FollowRow] = try await supabase
