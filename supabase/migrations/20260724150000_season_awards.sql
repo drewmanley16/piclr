@@ -112,9 +112,9 @@ begin
               when 'most_active'      then 'Most active'
               when 'rivalry_champion' then 'Rivalry champion'
             end)
-           || ' — ' || to_char(season_start, 'Month YYYY')
+           || ': ' || to_char(season_start, 'Month YYYY')
   from public.season_awards
-  where season_key = season_key and rank = 1
+  where season_awards.season_key = compute_season_awards.season_key and rank = 1
     and created_at >= now() - interval '5 minutes'; -- only this run's inserts
 
   return inserted;
