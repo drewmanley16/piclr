@@ -76,24 +76,6 @@ extension AppStore {
         }
     }
 
-    /// This user's season awards, most recent season first.
-    func loadSeasonAwards() async {
-        guard let uid = currentProfile?.id else { return }
-        do {
-            let rows: [SeasonAward] = try await supabase
-                .from("season_awards")
-                .select()
-                .eq("profile_id", value: uid.uuidString)
-                .order("season_key", ascending: false)
-                .order("rank", ascending: true)
-                .execute()
-                .value
-            seasonAwards = rows
-        } catch {
-            reportError(error)
-        }
-    }
-
     func markNotificationsRead() async {
         guard let uid = currentProfile?.id, unreadNotificationCount > 0 else { return }
         do {

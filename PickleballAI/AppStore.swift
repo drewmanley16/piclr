@@ -52,8 +52,6 @@ final class AppStore: ObservableObject {
     /// IDs of milestones the signed-in user has unlocked (see `Milestone.catalog`).
     /// Server-authoritative — loaded on demand from `milestone_unlocks`.
     @Published var milestoneUnlocks: Set<String> = []
-    /// This user's season awards, newest season first. Loaded on demand.
-    @Published var seasonAwards: [SeasonAward] = []
     /// Count of in-flight user-initiated operations. `isBusy` is *derived* from
     /// this so concurrent operations (e.g. saving profile fields and a photo at
     /// once) don't clobber each other — the UI reads idle only once every one of
