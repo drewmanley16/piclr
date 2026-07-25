@@ -147,6 +147,7 @@ function buildMessage(
     case "mention":         return { title: "You were mentioned", message: `${handle} mentioned you: ${comment}` };
     case "follow":          return { title: "New follower", message: `${handle} started following you` };
     case "tag":             return { title: "You were tagged", message: `${handle} tagged you in a session` };
+    case "repost":          return { title: "New repost", message: `${handle} reposted your session` };
     case "repost_approved": return { title: "Repost approved", message: `${handle} approved your repost` };
     case "invite_received": return { title: "You're invited", message: `${handle} invited you to play` };
     case "invite_cancelled": return { title: "Invite canceled", message: detail ?? `${handle} canceled the invite` };

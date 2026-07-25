@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(41);
+select plan(44);
 
 insert into auth.users (id, email) values
   ('10000001-0000-0000-0000-000000000001', 'repost-author@example.test'),
@@ -111,6 +111,19 @@ select lives_ok(
 reset role;
 
 select is(
+  (select count(*)::integer
+   from public.notifications n
+   join public.sessions wrapper on wrapper.id = n.session_id
+   where wrapper.user_id = '10000002-0000-0000-0000-000000000002'
+     and wrapper.reposted_from = '20000000-0000-0000-0000-000000000001'
+     and n.type = 'repost'
+     and n.actor_id = '10000002-0000-0000-0000-000000000002'
+     and n.user_id = '10000001-0000-0000-0000-000000000001'),
+  1,
+  'the author is notified when the tagged player publishes a repost'
+);
+
+select is(
   (select posted from public.sessions
    where user_id = '10000002-0000-0000-0000-000000000002'
      and reposted_from = '20000000-0000-0000-0000-000000000001'),
@@ -145,6 +158,17 @@ select lives_ok(
   'the private credit can be reposted again without approval'
 );
 reset role;
+
+select is(
+  (select count(*)::integer
+   from public.notifications n
+   join public.sessions wrapper on wrapper.id = n.session_id
+   where wrapper.user_id = '10000002-0000-0000-0000-000000000002'
+     and wrapper.reposted_from = '20000000-0000-0000-0000-000000000001'
+     and n.type = 'repost'),
+  2,
+  'republishing after an unrepost notifies the author again'
+);
 
 select is(
   (select count(*)::integer from public.sessions
@@ -252,6 +276,17 @@ select lives_ok(
   'a duplicate tap is idempotent'
 );
 reset role;
+
+select is(
+  (select count(*)::integer
+   from public.notifications n
+   join public.sessions wrapper on wrapper.id = n.session_id
+   where wrapper.user_id = '10000002-0000-0000-0000-000000000002'
+     and wrapper.reposted_from = '20000000-0000-0000-0000-000000000001'
+     and n.type = 'repost'),
+  2,
+  'a duplicate tap does not create a second notification'
+);
 
 select is(
   (select count(*)::integer from public.sessions
