@@ -43,7 +43,6 @@ struct ProfileView: View {
                     insightsCard
                     weeklyWrapCard
                     milestonesCard
-                    seasonAwardsCard
                     activityCard
                     WorkoutCalendarCard(sessions: store.mySessions)
                     dashboard
@@ -91,7 +90,6 @@ struct ProfileView: View {
                 case .goals: GoalsSheet(sessionsThisWeek: sessionsThisWeek, weeklyStreak: stats.weeklyStreak)
                 case .leaderboard: LeaderboardSheet()
                 case .milestones: MilestonesSheet()
-                case .seasonAwards: SeasonAwardsSheet()
                 }
             }
             .alert("Couldn't update photo", isPresented: profilePhotoErrorBinding) {
@@ -109,9 +107,7 @@ struct ProfileView: View {
                 // users, so load regardless of Pro status (just not when
                 // monetization is off entirely and the cards never render).
                 guard subscriptions.monetizationEnabled else { return }
-                async let milestones: Void = store.loadMilestoneUnlocks()
-                async let awards: Void = store.loadSeasonAwards()
-                _ = await (milestones, awards)
+                await store.loadMilestoneUnlocks()
             }
         }
     }
@@ -499,18 +495,6 @@ struct ProfileView: View {
                 locked: locked,
                 earnedLockedCount: earnedLocked,
                 onOpen: { activeSheet = .milestones }
-            )
-        }
-    }
-
-    /// Pro monthly-award history card.
-    @ViewBuilder
-    private var seasonAwardsCard: some View {
-        if subscriptions.showsLockedFeatures || subscriptions.showsProStatus {
-            SeasonAwardsCard(
-                awards: store.seasonAwards,
-                locked: subscriptions.showsLockedFeatures,
-                onOpen: { activeSheet = .seasonAwards }
             )
         }
     }
@@ -985,6 +969,6 @@ struct CustomRangeSheet: View {
 }
 
 enum ProfileSheet: String, Identifiable {
-    case stats, gear, measures, rivals, leaderboard, insights, weeklyWrap, goals, milestones, seasonAwards
+    case stats, gear, measures, rivals, leaderboard, insights, weeklyWrap, goals, milestones
     var id: String { rawValue }
 }
