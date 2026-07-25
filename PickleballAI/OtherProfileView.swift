@@ -63,9 +63,9 @@ struct ProfileNavigationStack<Root: View>: View {
 }
 
 /// Another user's profile, reached by tapping a name in a follower/following
-/// list. Header (name, avatar, counts) is always visible. Their sessions are
-/// shown only when the signed-in user follows them (accepted); otherwise an
-/// Instagram-style "This profile is private" state with a follow control.
+/// list. Header and counts are always visible. Sessions and follower/
+/// following lists are visible to everyone unless the account is private, in
+/// which case they're gated behind an accepted follow (`PublicProfile.contentVisible`).
 struct OtherProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: AppStore
@@ -90,7 +90,7 @@ struct OtherProfileView: View {
             VStack(alignment: .leading, spacing: 20) {
                 header
                 if let loaded {
-                    if loaded.relationship.canViewContent {
+                    if loaded.contentVisible {
                         sessionsSection(loaded.sessions)
                     } else {
                         privateCard
@@ -152,8 +152,7 @@ struct OtherProfileView: View {
             HStack(spacing: 20) {
                 ProfileAvatar(profile: profile, size: 76, unlinked: true)
 
-                if let loaded, loaded.relationship.canViewContent {
-                    // You follow them → their graph is visible (tappable).
+                if let loaded, loaded.contentVisible {
                     ProfileStat(label: "Sessions", value: "\(loaded.sessions.count)")
                     NavigationLink {
                         UserFollowListView(userId: userId, kind: .followers)
@@ -167,10 +166,10 @@ struct OtherProfileView: View {
                         ProfileStat(label: "Following", value: "\(loaded.followingCount)")
                     }
                     .buttonStyle(.plain)
-                } else {
+                } else if let loaded {
                     // Private to you → counts show, but the lists stay hidden.
-                    ProfileStat(label: "Followers", value: "\(loaded?.followerCount ?? 0)")
-                    ProfileStat(label: "Following", value: "\(loaded?.followingCount ?? 0)")
+                    ProfileStat(label: "Followers", value: "\(loaded.followerCount)")
+                    ProfileStat(label: "Following", value: "\(loaded.followingCount)")
                 }
             }
 
@@ -262,14 +261,14 @@ struct OtherProfileView: View {
             .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: filled ? 0 : 1))
     }
 
-    // MARK: Private state
+    // MARK: Private account
 
     private var privateCard: some View {
         VStack(spacing: 10) {
             Image(systemName: "lock.fill")
                 .font(.title2)
                 .foregroundStyle(Theme.textSecondary)
-            Text("This profile is private")
+            Text("This account is private")
                 .font(.headline)
                 .foregroundStyle(Theme.textPrimary)
             Text("Follow this player to see their sessions.")

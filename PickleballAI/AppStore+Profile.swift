@@ -96,6 +96,23 @@ extension AppStore {
         }
     }
 
+    /// Toggles the private-account setting. Private accounts require an
+    /// accepted follow to view sessions/comments/likes (`can_view_session`
+    /// RLS); profile header, follower/following counts stay public either way.
+    @discardableResult
+    func updatePrivacy(isPrivate: Bool) async -> Bool {
+        guard let uid = currentProfile?.id else { return false }
+        do {
+            let update = PrivacyUpdate(isPrivate: isPrivate)
+            try await supabase.from("profiles").update(update).eq("id", value: uid.uuidString).execute()
+            currentProfile?.isPrivate = isPrivate
+            return true
+        } catch {
+            reportError(error)
+            return false
+        }
+    }
+
     func updateMeasures(heightInches: Double?, weightPounds: Double?, shoeSize: Double?) async -> Bool {
         guard let uid = currentProfile?.id else { return false }
         busyCount += 1
@@ -220,10 +237,10 @@ extension AppStore {
         }
     }
 
-    /// Loads another user's public profile. Basic fields + follower/following
-    /// counts are always visible; sessions are fetched only when the signed-in
-    /// user follows them (accepted). The `sessions` query is additionally
-    /// RLS-gated, so it returns nothing even if this check were bypassed.
+    /// Loads another user's public profile. Basic fields, follower/following
+    /// counts, and posted sessions are visible to anyone — following only
+    /// affects the following feed, not profile visibility. The `sessions`
+    /// query is additionally RLS-gated to `posted = true` rows.
     func loadPublicProfile(userId: UUID) async -> PublicProfile? {
         guard let me = currentProfile?.id else { return nil }
         do {
@@ -256,35 +273,27 @@ extension AppStore {
                 }
             }
 
-            let followerCount = try await supabase
-                .from("follows")
-                .select("*", head: true, count: .exact)
-                .eq("followee_id", value: userId.uuidString)
-                .eq("status", value: "accepted")
+            // Via RPC (not a direct `follows` select) so a private target's
+            // tightened follows_read policy doesn't zero these out — counts
+            // stay visible even when the follower/following list is hidden.
+            let counts: [FollowCounts] = try await supabase
+                .rpc("follow_counts", params: ["target_id": userId.uuidString])
                 .execute()
-                .count ?? 0
-            let followingCount = try await supabase
-                .from("follows")
-                .select("*", head: true, count: .exact)
-                .eq("follower_id", value: userId.uuidString)
-                .eq("status", value: "accepted")
-                .execute()
-                .count ?? 0
+                .value
+            let followerCount = counts.first?.followerCount ?? 0
+            let followingCount = counts.first?.followingCount ?? 0
 
-            var sessions: [FeedSession] = []
-            if relationship.canViewContent {
-                let rows: [FeedSession] = try await supabase
-                    .from("sessions")
-                    .select(selectWithCounts)
-                    .is("comments.deleted_at", value: nil)
-                    .eq("user_id", value: userId.uuidString)
-                    .eq("posted", value: true)
-                    .order("created_at", ascending: false)
-                    .limit(50)
-                    .execute()
-                    .value
-                sessions = await media.hydrateSessions(rows)
-            }
+            let sessionRows: [FeedSession] = try await supabase
+                .from("sessions")
+                .select(selectWithCounts)
+                .is("comments.deleted_at", value: nil)
+                .eq("user_id", value: userId.uuidString)
+                .eq("posted", value: true)
+                .order("created_at", ascending: false)
+                .limit(50)
+                .execute()
+                .value
+            let sessions = await media.hydrateSessions(sessionRows)
 
             return PublicProfile(
                 profile: profile,

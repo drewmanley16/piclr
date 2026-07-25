@@ -23,6 +23,7 @@ struct Profile: Identifiable, Codable, Hashable {
     var birthday: String?
     var weeklyGoal: Int?
     var streakRemindersEnabled: Bool?
+    var isPrivate: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id, username
@@ -44,6 +45,7 @@ struct Profile: Identifiable, Codable, Hashable {
         case birthday
         case weeklyGoal = "weekly_goal"
         case streakRemindersEnabled = "streak_reminders_enabled"
+        case isPrivate = "is_private"
     }
 
     var initials: String {
@@ -86,6 +88,7 @@ struct Profile: Identifiable, Codable, Hashable {
         birthday = nil
         weeklyGoal = nil
         streakRemindersEnabled = nil
+        isPrivate = nil
     }
 }
 
@@ -166,14 +169,20 @@ struct PersonRef: Identifiable, Hashable, Codable {
 }
 
 /// A snapshot of another user's profile as seen by the signed-in user.
-/// `sessions` is only populated when `relationship.canViewContent` is true;
-/// otherwise it's empty and the UI shows a "This profile is private" state.
+/// `sessions` holds the subject's posted sessions, visible to anyone.
 struct PublicProfile {
     let profile: Profile
     var relationship: FollowRelationship
     let followerCount: Int
     let followingCount: Int
     var sessions: [FeedSession]
+
+    /// Whether sessions and follower/following lists are visible to the
+    /// signed-in user. Public accounts (or self/accepted-follow) are always
+    /// visible; other private accounts show a "This account is private" lock.
+    var contentVisible: Bool {
+        profile.isPrivate != true || relationship == .isSelf || relationship == .following
+    }
 }
 
 // MARK: - Profile write models
@@ -188,6 +197,27 @@ struct NewProfile: Encodable {
         case id, username
         case displayName = "display_name"
         case avatarInitials = "avatar_initials"
+    }
+}
+
+/// Lightweight partial-profile response for `select("id, is_private")` — the
+/// full `Profile` type has non-optional `username`/`display_name` and throws
+/// decoding a row that omits them.
+struct PrivacyFlag: Decodable {
+    let id: UUID
+    let isPrivate: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case isPrivate = "is_private"
+    }
+}
+
+struct PrivacyUpdate: Encodable {
+    let isPrivate: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case isPrivate = "is_private"
     }
 }
 
