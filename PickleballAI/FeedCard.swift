@@ -186,10 +186,11 @@ struct FeedCard: View {
                         .fixedSize()
                 }
             }
-            if let subtitle = metaSubtitle {
-                Text(subtitle)
+            if let subtitle = metaSubtitleText {
+                subtitle
                     .font(.caption)
                     .foregroundStyle(Theme.textTertiary)
+                    .accessibilityLabel(metaSubtitleAccessibilityLabel ?? "")
             }
         }
     }
@@ -330,13 +331,33 @@ struct FeedCard: View {
     }
 
     /// Focus · location · duration — duration folds into the quiet context when
-    /// there is no aggregate multi-activity summary.
-    private var metaSubtitle: String? {
-        var parts = [session.postFocus, session.postLocation]
+    /// there is no aggregate multi-activity summary. The duration is prefixed
+    /// with a clock glyph so it can't be misread as a relative timestamp
+    /// (e.g. "Austin, TX · 1m" reading like "1 minute ago" under the post's
+    /// "2d ago" header timestamp).
+    private var metaSubtitleText: Text? {
+        let parts = [session.postFocus, session.postLocation]
             .compactMap { $0 }
             .filter { !$0.isEmpty }
-        if !isMultiActivity { parts.append(session.postCompactDuration) }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        let leading = parts.isEmpty ? nil : Text(parts.joined(separator: " · "))
+        guard !isMultiActivity else { return leading }
+
+        let durationText = Text(Image(systemName: "clock")) + Text(" " + session.postCompactDuration)
+        if let leading {
+            return leading + Text(" · ") + durationText
+        }
+        return durationText
+    }
+
+    private var metaSubtitleAccessibilityLabel: String? {
+        let parts = [session.postFocus, session.postLocation]
+            .compactMap { $0 }
+            .filter { !$0.isEmpty }
+        guard !isMultiActivity else {
+            return parts.isEmpty ? nil : parts.joined(separator: ", ")
+        }
+        let playedLabel = "\(session.postCompactDuration) played"
+        return (parts + [playedLabel]).joined(separator: ", ")
     }
 
     private var isMultiActivity: Bool { session.postActivities.count >= 2 }

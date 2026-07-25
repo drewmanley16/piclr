@@ -56,8 +56,22 @@ struct WorkoutView: View {
         }
         .safeAreaInset(edge: .top) {
             AppHeader(title: "Play") {
-                HeaderCircleButton(systemImage: "plus", accessibilityTitle: "Start session") {
-                    startLive()
+                HeaderCircleMenu(systemImage: "plus", accessibilityTitle: "Log or start a session") {
+                    Button {
+                        startLive()
+                    } label: {
+                        Label("Start live session", systemImage: "play.fill")
+                    }
+                    Button {
+                        quickEditor = .newMatch
+                    } label: {
+                        Label("Log a match", systemImage: "flag.checkered")
+                    }
+                    Button {
+                        quickEditor = .newPractice
+                    } label: {
+                        Label("Log practice", systemImage: "figure.cooldown")
+                    }
                 }
             }
             .background(Theme.background)
