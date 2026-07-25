@@ -40,6 +40,8 @@ struct ProfileView: View {
                     rivalsCard
                     insightsCard
                     weeklyWrapCard
+                    milestonesCard
+                    seasonAwardsCard
                     activityCard
                     WorkoutCalendarCard(sessions: store.mySessions)
                     dashboard
@@ -86,6 +88,8 @@ struct ProfileView: View {
                 case .weeklyWrap: WeeklyWrapSheet()
                 case .goals: GoalsSheet(sessionsThisWeek: sessionsThisWeek, weeklyStreak: stats.weeklyStreak)
                 case .leaderboard: LeaderboardSheet()
+                case .milestones: MilestonesSheet()
+                case .seasonAwards: SeasonAwardsSheet()
                 }
             }
             .alert("Couldn't update photo", isPresented: profilePhotoErrorBinding) {
@@ -97,6 +101,15 @@ struct ProfileView: View {
                 guard let item else { return }
                 Haptics.tap()
                 Task { await updateProfilePhoto(from: item) }
+            }
+            .task {
+                // Teasers on the locked cards need real counts even for free
+                // users, so load regardless of Pro status (just not when
+                // monetization is off entirely and the cards never render).
+                guard subscriptions.monetizationEnabled else { return }
+                async let milestones: Void = store.loadMilestoneUnlocks()
+                async let awards: Void = store.loadSeasonAwards()
+                _ = await (milestones, awards)
             }
         }
     }
@@ -466,6 +479,32 @@ struct ProfileView: View {
                     onOpen: { activeSheet = .weeklyWrap }
                 )
             }
+        }
+    }
+
+    /// Pro achievement shelf — hidden in Release until monetization is on.
+    @ViewBuilder
+    private var milestonesCard: some View {
+        if subscriptions.showsLockedFeatures || subscriptions.showsProStatus {
+            MilestonesCard(
+                unlockedCount: store.milestoneUnlocks.count,
+                locked: subscriptions.showsLockedFeatures,
+                onUnlock: { subscriptions.presentPaywall(.milestones) },
+                onOpen: { activeSheet = .milestones }
+            )
+        }
+    }
+
+    /// Pro monthly-award history card.
+    @ViewBuilder
+    private var seasonAwardsCard: some View {
+        if subscriptions.showsLockedFeatures || subscriptions.showsProStatus {
+            SeasonAwardsCard(
+                awards: store.seasonAwards,
+                locked: subscriptions.showsLockedFeatures,
+                onUnlock: { subscriptions.presentPaywall(.seasonAwards) },
+                onOpen: { activeSheet = .seasonAwards }
+            )
         }
     }
 
@@ -884,6 +923,6 @@ struct CustomRangeSheet: View {
 }
 
 enum ProfileSheet: String, Identifiable {
-    case stats, gear, measures, rivals, leaderboard, insights, weeklyWrap, goals
+    case stats, gear, measures, rivals, leaderboard, insights, weeklyWrap, goals, milestones, seasonAwards
     var id: String { rawValue }
 }

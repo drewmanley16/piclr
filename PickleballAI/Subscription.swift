@@ -391,34 +391,40 @@ private extension SubscriptionPeriod {
 /// user just reached for, which converts far better than a generic pitch.
 enum PaywallContext: Identifiable, Hashable {
     case general
-    case recap
     case rivalryInsights
     case insights
     case weeklyWrap
     case goals
     case unlimitedHistory
+    case milestones
+    case leaderboard
+    case seasonAwards
 
     var id: String {
         switch self {
         case .general:          return "general"
-        case .recap:            return "recap"
         case .rivalryInsights:  return "rivalry"
         case .insights:         return "insights"
         case .weeklyWrap:       return "weekly_wrap"
         case .goals:            return "goals"
         case .unlimitedHistory: return "history"
+        case .milestones:       return "milestones"
+        case .leaderboard:      return "leaderboard"
+        case .seasonAwards:     return "season_awards"
         }
     }
 
     var headline: String {
         switch self {
         case .general:          return "Go further with Pro"
-        case .recap:            return "Unlock AI match recaps"
         case .rivalryInsights:  return "See the full rivalry breakdown"
         case .insights:         return "Unlock your play insights"
         case .weeklyWrap:       return "Unlock your weekly wrap"
         case .goals:            return "Set goals and protect your streak"
         case .unlimitedHistory: return "Unlock your full history"
+        case .milestones:       return "Unlock your milestone shelf"
+        case .leaderboard:      return "See who's hottest this month"
+        case .seasonAwards:     return "See your season awards"
         }
     }
 }

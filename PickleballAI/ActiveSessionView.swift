@@ -251,7 +251,7 @@ struct ActiveSessionView: View {
 
     private func liveMetric(value: Int?, label: String, suffix: String, color: Color) -> some View {
         VStack(spacing: 2) {
-            Text(value.map { "\($0) \(suffix)" } ?? "—")
+            Text(value.map { "\($0) \(suffix)" } ?? "-")
                 .font(.subheadline.weight(.bold).monospacedDigit())
                 .foregroundStyle(color)
             Text(label)

@@ -134,7 +134,7 @@ struct SettingsProfileView: View {
             }
             .buttonStyle(.plain)
 
-            Text(store.currentProfile.map { "@\($0.username)" } ?? "—")
+            Text(store.currentProfile.map { "@\($0.username)" } ?? "-")
                 .font(.subheadline)
                 .foregroundStyle(Theme.textSecondary)
 

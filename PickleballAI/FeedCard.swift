@@ -423,7 +423,7 @@ struct HealthMetricStrip: View {
 
     private func metric(value: Int?, label: String, suffix: String) -> some View {
         VStack(spacing: 2) {
-            Text(value.map { "\($0) \(suffix)" } ?? "—")
+            Text(value.map { "\($0) \(suffix)" } ?? "-")
                 .font(.subheadline.weight(.bold).monospacedDigit())
                 .foregroundStyle(Theme.textPrimary)
             Text(label)
@@ -573,7 +573,7 @@ struct MatchScorecard: View {
 
             Spacer(minLength: 8)
 
-            Text(score.map(String.init) ?? "—")
+            Text(score.map(String.init) ?? "-")
                 .font(.title3.weight(.bold).monospacedDigit())
                 .foregroundStyle(accent ?? Theme.textSecondary)
         }
@@ -655,7 +655,7 @@ struct DrillRow: View {
 
     private var detail: String? {
         let bits = [activity.reps, activity.notes].compactMap { $0 }.filter { !$0.isEmpty }
-        return bits.isEmpty ? nil : bits.joined(separator: " — ")
+        return bits.isEmpty ? nil : bits.joined(separator: " · ")
     }
 }
 

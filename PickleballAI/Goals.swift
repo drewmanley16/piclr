@@ -47,12 +47,12 @@ struct GoalsCard: View {
                 ProgressBar(progress: locked ? 0.45 : progress, blurred: locked)
 
                 if streakAtRisk && !locked {
-                    Label("Your \(weeklyStreak)-week streak is at risk — play once to save it.", systemImage: "exclamationmark.triangle.fill")
+                    Label("Your \(weeklyStreak)-week streak is at risk. Play once to save it.", systemImage: "exclamationmark.triangle.fill")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Theme.loss)
                         .lineLimit(2)
                 } else if met && !locked {
-                    Label("Goal met — nice week.", systemImage: "checkmark.seal.fill")
+                    Label("Goal met. Nice week.", systemImage: "checkmark.seal.fill")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Theme.accent)
                 } else {
@@ -87,6 +87,7 @@ private struct ProgressBar: View {
 
 struct GoalsSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: AppStore
     let sessionsThisWeek: Int
     let weeklyStreak: Int
 
@@ -161,6 +162,19 @@ struct GoalsSheet: View {
             .navigationTitle("Goals")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        }
+        .onAppear {
+            // Server is the source of truth across devices/reinstalls; local
+            // @AppStorage is just a fast cache for the picker/toggle controls.
+            if let serverGoal = store.currentProfile?.weeklyGoal { goal = serverGoal }
+            if let serverReminders = store.currentProfile?.streakRemindersEnabled { remindersOn = serverReminders }
+        }
+        .onChange(of: goal) { _, newValue in
+            Task { await store.updateGoalPrefs(weeklyGoal: newValue, streakRemindersEnabled: remindersOn) }
+        }
+        .onChange(of: remindersOn) { _, newValue in
+            Haptics.tap()
+            Task { await store.updateGoalPrefs(weeklyGoal: goal, streakRemindersEnabled: newValue) }
         }
     }
 }

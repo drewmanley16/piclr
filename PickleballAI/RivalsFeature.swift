@@ -118,6 +118,8 @@ struct HeatingUpRow: View {
 struct RivalsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: AppStore
+    @EnvironmentObject private var subscriptions: SubscriptionStore
+    @State private var insightsRival: Rivalry?
 
     private var stats: SessionStats {
         SessionStats(sessions: store.mySessions, playerID: store.currentProfile?.id)
@@ -143,6 +145,18 @@ struct RivalsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
+        .sheet(item: $insightsRival) { RivalryInsightsSheet(rivalry: $0) }
+    }
+
+    /// Tapping a rival either opens the full Rivalry Insights breakdown (Pro)
+    /// or the paywall (free) — the row itself stays fully visible either way.
+    private func openInsights(for rivalry: Rivalry) {
+        Haptics.tap()
+        if subscriptions.isPro {
+            insightsRival = rivalry
+        } else if subscriptions.monetizationEnabled {
+            subscriptions.presentPaywall(.rivalryInsights)
+        }
     }
 
     private var heatingUpSection: some View {
@@ -153,7 +167,10 @@ struct RivalsSheet: View {
             VStack(spacing: 0) {
                 ForEach(Array(heatingUp.enumerated()), id: \.element.id) { index, rivalry in
                     if index > 0 { Divider().overlay(Theme.hairline).padding(.leading, 52) }
-                    HeatingUpRow(rivalry: rivalry).padding(.vertical, 12)
+                    Button { openInsights(for: rivalry) } label: {
+                        HeatingUpRow(rivalry: rivalry).padding(.vertical, 12)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .cardStyle(padding: 14)
@@ -168,7 +185,10 @@ struct RivalsSheet: View {
             VStack(spacing: 0) {
                 ForEach(Array(rivalries.enumerated()), id: \.element.id) { index, rivalry in
                     if index > 0 { Divider().overlay(Theme.hairline).padding(.leading, 56) }
-                    RivalRow(rivalry: rivalry).padding(.vertical, 12)
+                    Button { openInsights(for: rivalry) } label: {
+                        RivalRow(rivalry: rivalry).padding(.vertical, 12)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .cardStyle(padding: 14)

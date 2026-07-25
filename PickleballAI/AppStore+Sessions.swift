@@ -194,6 +194,7 @@ extension AppStore {
         // Derive "first-ever session" from state we already have: no network call
         // just for analytics. `mySessions` is empty before the user's first post.
         let isFirstSession = mySessions.isEmpty
+        let milestonesBefore = Milestone.satisfiedIDs(for: SessionStats(sessions: mySessions, playerID: uid))
         busyCount += 1
         errorMessage = nil
         defer { busyCount -= 1 }
@@ -270,6 +271,7 @@ extension AppStore {
             if isFirstSession {
                 Analytics.captureOnce(.firstSessionLogged, flag: .firstSessionLogged, properties)
             }
+            await unlockNewlyCrossedMilestones(previouslySatisfied: milestonesBefore, playerID: uid)
             return true
         } catch {
             reportError(error)
@@ -391,6 +393,30 @@ extension AppStore {
         } catch {
             reportError(error)
             return false
+        }
+    }
+
+    /// Diffs milestone state before/after a session post and unlocks (server-side,
+    /// idempotently) any newly-crossed thresholds. Best-effort — a missed unlock
+    /// just means the badge appears next time this diff runs, same trust level
+    /// as `updateGoalPrefs`.
+    private func unlockNewlyCrossedMilestones(previouslySatisfied: Set<String>, playerID: UUID) async {
+        let after = Milestone.satisfiedIDs(for: SessionStats(sessions: mySessions, playerID: playerID))
+        let newlyUnlocked = after.subtracting(previouslySatisfied)
+        guard !newlyUnlocked.isEmpty else { return }
+        let byID = Dictionary(uniqueKeysWithValues: Milestone.catalog.map { ($0.id, $0) })
+        for milestoneID in newlyUnlocked {
+            guard let milestone = byID[milestoneID] else { continue }
+            do {
+                try await supabase.rpc("unlock_milestone", params: [
+                    "p_milestone_id": milestone.id,
+                    "p_title": milestone.title
+                ]).execute()
+                milestoneUnlocks.insert(milestoneID)
+                Analytics.capture(.milestoneUnlocked, [Analytics.Property.milestoneID: milestoneID])
+            } catch {
+                // Non-fatal: the next session post's diff will retry this milestone.
+            }
         }
     }
 }

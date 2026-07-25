@@ -148,7 +148,7 @@ struct WorkoutView: View {
 
     private var liveSubtitle: String {
         let count = store.activeDraft?.activities.count ?? 0
-        if count == 0 { return "No games logged yet — tap to add matches and practice." }
+        if count == 0 { return "No games logged yet. Tap to add matches and practice." }
         return count == 1 ? "1 activity logged" : "\(count) activities logged"
     }
 
@@ -281,7 +281,7 @@ struct WorkoutView: View {
                 .font(.headline)
                 .foregroundStyle(Theme.textPrimary)
             if store.mySessions.isEmpty {
-                Text("No sessions yet — log a match or start a session above.")
+                Text("No sessions yet. Log a match or start a session above.")
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)
                     .padding(.vertical, 8)

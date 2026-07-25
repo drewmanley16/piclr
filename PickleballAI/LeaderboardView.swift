@@ -1,12 +1,31 @@
 import SwiftUI
 
+/// Match window for the crew leaderboard. `.all` is free; `.month`/`.season`
+/// are Pro-only filters layered on top of the same free board.
+enum LeaderboardPeriod: String, CaseIterable, Identifiable {
+    case all, month, season
+
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .all:    return "All-time"
+        case .month:  return "This month"
+        case .season: return "This season"
+        }
+    }
+    /// Only the all-time view is free; narrower windows require Pro.
+    var isPro: Bool { self != .all }
+}
+
 /// Crew leaderboard: you and everyone you follow, ranked by match record. The
 /// thing the onboarding preview promised. Reachable from the Home header and the
 /// Profile dashboard.
 struct LeaderboardSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: AppStore
+    @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var loaded = false
+    @State private var period: LeaderboardPeriod = .all
 
     /// Only ranked players (those with matches) compete; winless-so-far crew are
     /// listed quietly below so the board still shows who's in.
@@ -17,6 +36,7 @@ struct LeaderboardSheet: View {
         ProfileNavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    periodPicker
                     if !loaded && store.leaderboard.isEmpty {
                         SkeletonList(rows: 6)
                     } else if ranked.isEmpty && unranked.isEmpty {
@@ -55,11 +75,45 @@ struct LeaderboardSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .task {
-                await store.loadLeaderboard()
+                await store.loadLeaderboard(period: period)
                 loaded = true
             }
-            .refreshable { await store.loadLeaderboard() }
+            .refreshable { await store.loadLeaderboard(period: period) }
         }
+    }
+
+    private var periodPicker: some View {
+        HStack(spacing: 8) {
+            ForEach(LeaderboardPeriod.allCases) { option in
+                periodChip(option)
+            }
+            Spacer()
+        }
+    }
+
+    private func periodChip(_ option: LeaderboardPeriod) -> some View {
+        let locked = option.isPro && !subscriptions.isPro
+        return Button {
+            Haptics.tap()
+            if locked {
+                subscriptions.presentPaywall(.leaderboard)
+            } else {
+                period = option
+                loaded = false
+                Task { await store.loadLeaderboard(period: period); loaded = true }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(option.label)
+                if locked { Image(systemName: "lock.fill").font(.caption2.weight(.bold)) }
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(period == option ? Theme.background : (locked ? Theme.textTertiary : Theme.textSecondary))
+            .padding(.horizontal, 14)
+            .frame(height: 32)
+            .background(period == option ? Theme.accent : Theme.surfaceElevated, in: Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     private func isYou(_ entry: LeaderboardEntry) -> Bool {
@@ -74,7 +128,7 @@ struct LeaderboardSheet: View {
             Text("No crew yet")
                 .font(.headline)
                 .foregroundStyle(Theme.textPrimary)
-            Text("Follow players and log matches — your crew's rankings show up here.")
+            Text("Follow players and log matches. Your crew's rankings show up here.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)

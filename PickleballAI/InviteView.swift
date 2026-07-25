@@ -18,7 +18,7 @@ private struct CourtPickerSheet: View {
                         HStack { ProgressView().tint(Theme.accent); Text("Finding courts…").foregroundStyle(Theme.textSecondary) }
                     } else if model.results.isEmpty {
                         Text(model.permissionDenied
-                             ? "Location is off — search below."
+                             ? "Location is off. Search below."
                              : "No courts found nearby.")
                             .foregroundStyle(Theme.textSecondary)
                     } else {

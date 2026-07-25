@@ -67,7 +67,7 @@ struct PaywallView: View {
 
     private var featureList: some View {
         VStack(alignment: .leading, spacing: 14) {
-            ProFeatureRow(icon: "sparkles", title: "AI match recaps", detail: "A recap of every session in a coach, hype, or roast voice.")
+            ProFeatureRow(icon: "chart.bar.xaxis", title: "Play insights", detail: "Clutch record, best court, best partner, and more.")
             ProFeatureRow(icon: "flame.fill", title: "Rivalry insights", detail: "Full head-to-head trends and who's heating up.")
             ProFeatureRow(icon: "square.and.arrow.up", title: "Shareable cards", detail: "Premium recap cards built to post to the group chat.")
             ProFeatureRow(icon: "infinity", title: "Unlimited history", detail: "Every session and stat, all the way back.")

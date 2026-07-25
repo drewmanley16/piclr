@@ -50,6 +50,7 @@ enum Analytics {
         case repostRequested = "repost_requested"
         case repostApproved = "repost_approved"
         case gearAdded = "gear_added"
+        case milestoneUnlocked = "milestone_unlocked"
         /// Reserved: fired by the invite-sharing flow (Agent 1) with a `source`
         /// property. Declared here so the name has a single home; don't duplicate.
         case inviteLinkShared = "invite_link_shared"
@@ -78,6 +79,7 @@ enum Analytics {
         static let trialStarted = "trial_started"
         static let quickLog = "quick_log"
         static let activityCount = "activity_count"
+        static let milestoneID = "milestone_id"
     }
 
     // MARK: - Capture
