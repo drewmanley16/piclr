@@ -25,6 +25,10 @@ final class AppStore: ObservableObject {
     @Published var isInitialFeedLoading = false
     let feedPageSize = 20
     @Published var mySessions: [FeedSession] = []
+    /// Mirrors `isInitialFeedLoading` for the Workout tab's Recent list, which
+    /// loads well after the feed and would otherwise show its "no sessions yet"
+    /// empty state to users who simply haven't been fetched yet.
+    @Published var isInitialMySessionsLoading = false
     // Directional follow graph (the `follows` table). "Friend" naming is kept
     // on a few discovery-UI hooks for compatibility, but the model is a
     // directed follow: following someone doesn't require them to follow back.

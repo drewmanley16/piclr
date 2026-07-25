@@ -165,6 +165,7 @@ extension AppStore {
         realtimeNeedsMySessionsRefresh = false
         realtimeNeedsDiscoverRefresh = false
         isInitialFeedLoading = false
+        isInitialMySessionsLoading = false
         media.clearCache()
         currentProfile = nil
         feed = []
@@ -237,6 +238,9 @@ extension AppStore {
         let startupBeganAt = Date()
         initialFeedLoadStartedAt = startupBeganAt
         isInitialFeedLoading = feed.isEmpty
+        // Set before the background task below, not inside `loadMySessions`:
+        // Recent is reachable during the gap before that task reaches it.
+        isInitialMySessionsLoading = mySessions.isEmpty
         startRealtime(userId: userId)
         setUpWatchConnectivity()
         await loadFeed()
