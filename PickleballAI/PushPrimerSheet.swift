@@ -5,7 +5,7 @@ import SwiftUI
 /// system dialog before they understand why the app wants it.
 struct PushPrimerSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
 
     var body: some View {
         VStack(spacing: 24) {

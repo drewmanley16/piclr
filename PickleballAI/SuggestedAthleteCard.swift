@@ -11,7 +11,7 @@ enum SuggestedAthleteCardLayout {
 /// reason, and a Follow button — mirrors the reference "Suggested Athletes"
 /// card (big photo, minimal chrome) rather than a small centered avatar.
 struct SuggestedAthleteCard: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     var athlete: SuggestedAthlete
 
     private var isRequested: Bool { store.requestedFollowIds.contains(athlete.profile.id) }

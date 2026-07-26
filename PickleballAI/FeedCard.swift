@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct FeedCard: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     @Environment(\.openSession) private var openSession
     var session: FeedSession
     /// False when this card is already the content of a session detail screen,

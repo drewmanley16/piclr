@@ -117,7 +117,7 @@ struct HeatingUpRow: View {
 
 struct RivalsSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var insightsRival: Rivalry?
 

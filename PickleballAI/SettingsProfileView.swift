@@ -11,7 +11,7 @@ struct SettingsProfileView: View {
     }
 
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     var onSaved: () -> Void = {}
     @State private var firstName = ""
     @State private var lastName = ""

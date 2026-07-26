@@ -83,7 +83,7 @@ private struct ProgressBar: View {
 /// progress up top, the target/reminder controls sealed behind Pro below.
 struct GoalsSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     @EnvironmentObject private var subscriptions: SubscriptionStore
     let sessionsThisWeek: Int
     let weeklyStreak: Int

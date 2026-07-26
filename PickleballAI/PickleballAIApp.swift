@@ -5,7 +5,7 @@ import SwiftUI
 struct PickleballAIApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var store = AppStore()
+    @State private var store = AppStore()
     @StateObject private var subscriptions = SubscriptionStore()
     @State private var showSplash = true
 
@@ -36,7 +36,7 @@ struct PickleballAIApp: App {
         WindowGroup {
             ZStack {
                 RootView()
-                    .environmentObject(store)
+                    .environment(store)
                     .environmentObject(subscriptions)
                     .tint(Theme.accent)
                     .preferredColorScheme(.dark)

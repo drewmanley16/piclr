@@ -37,7 +37,7 @@ enum AppLinks {
 }
 
 struct AuthView: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     @AppStorage("hasSeenOnboardingSplash") private var hasSeenOnboardingSplash = false
 
     enum Step {

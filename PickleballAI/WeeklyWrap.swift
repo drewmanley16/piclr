@@ -94,7 +94,7 @@ struct WeeklyWrapCard: View {
 struct WeeklyWrapSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var shareItem: ShareImage?
     /// Drives the board's roll-up on appear. Starts true under Reduce Motion.

@@ -254,7 +254,7 @@ struct PlayerChips: View {
 
 struct PlayerPickerSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     var exclude: Set<UUID>
     var onPick: (DraftPlayer) -> Void
 

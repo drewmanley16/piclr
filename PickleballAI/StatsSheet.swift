@@ -4,7 +4,7 @@ import SwiftUI
 
 struct StatsSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
 
     private var totalMinutes: Int { store.mySessions.reduce(0) { $0 + $1.workoutDurationMinutes } }
     private var avgMinutes: Int { store.mySessions.isEmpty ? 0 : totalMinutes / store.mySessions.count }

@@ -4,7 +4,7 @@ import SwiftUI
 
 struct MeasuresSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
 
     @State private var heightFeet = ""
     @State private var heightInches = ""

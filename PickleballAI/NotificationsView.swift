@@ -2,7 +2,7 @@ import SwiftUI
 
 struct NotificationsView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
 
     @State private var loaded = false
 
@@ -141,7 +141,7 @@ enum DeepLink: Identifiable, Hashable {
 /// since it may not be in the currently-loaded feed. When `openComments` is
 /// set, the comment thread is presented as soon as the post loads.
 struct SessionDetailView: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     let sessionId: UUID
     var openComments: Bool = false
     /// Optional pre-known session so the card can render instantly while the

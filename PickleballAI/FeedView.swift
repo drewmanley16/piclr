@@ -6,7 +6,7 @@ enum FeedMode {
 }
 
 struct HomeView: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     /// Bumped by RootView when the Home tab is re-tapped; pops the stack to root.
     var reselectSignal: Int = 0
     @State private var showFindFriends = false
@@ -226,7 +226,7 @@ struct EmptyFeedState: View {
 
 struct FindFriendsSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     @State private var searchQuery = ""
     @State private var contactStatus: String?
 

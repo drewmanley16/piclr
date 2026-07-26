@@ -4,7 +4,7 @@ import SwiftUI
 /// post: skeleton while loading, then ranked follow-suggestion cards with an
 /// "Invite a friend" action reusing the same share flow as `FindFriendsSheet`.
 struct SuggestedAthletesRow: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     var isLoading: Bool
 
     var body: some View {
