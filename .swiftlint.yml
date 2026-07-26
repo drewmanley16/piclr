@@ -3,7 +3,7 @@
 # These are TRIPWIRES, not a style linter. We intentionally run ONLY our own
 # custom regex rules (see `only_rules` below) — every default/style rule is
 # disabled so this never floods PRs with 200 cosmetic violations. Each rule
-# encodes a UI-consistency invariant from Phase 4 of CODE_REVIEW_PLAN.md and is
+# encodes a UI-consistency invariant (docs/CONVENTIONS.md) and is
 # verified to have zero violations on the day it lands (`scripts/lint.sh`).
 
 included:

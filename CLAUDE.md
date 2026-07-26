@@ -4,15 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A native SwiftUI iOS app (iOS 17+) for social pickleball tracking, backed by Supabase (Auth, PostgREST, Storage, Realtime, Edge Functions). Design is all-black + electric-lime; see `PickleballAI/DesignSystem.swift` (`Theme`, `cardStyle()`, `AppHeader`, `ProfileAvatar`, `RemoteImage`).
+A native SwiftUI iOS app (iOS 17+) for social pickleball tracking, backed by Supabase (Auth, PostgREST, Storage, Realtime, Edge Functions), plus a WidgetKit Live Activity extension and a watchOS tap-to-score companion. Design is all-black + electric-lime; see `PickleballAI/DesignSystem.swift` (`Theme`, `cardStyle()`, `AppHeader`, `ProfileAvatar`, `IdentityRow`, `RemoteImage`).
+
+Deeper docs — read the one that matches your task before diving into code:
+
+- `docs/ARCHITECTURE.md` — targets, the `AppStore` split, data-model file map, live session / watch / push / monetization flows
+- `docs/BACKEND.md` — Supabase migrations workflow, edge functions, RLS + storage conventions
+- `docs/CONVENTIONS.md` — full UI consistency contract + lint tripwires
+- `docs/RELEASE.md` — TestFlight uploads, signing, StoreKit testing
 
 ## Project generation (XcodeGen — read this first)
 
-The Xcode project is **generated** from `project.yml` by [XcodeGen](https://github.com/yonsson/XcodeGen). Do not hand-edit `PickleballAI.xcodeproj`.
+The Xcode project is **generated** from `project.yml` by [XcodeGen](https://github.com/yonaskolb/XcodeGen). Do not hand-edit `PickleballAI.xcodeproj`.
 
 - Regenerate after changing `project.yml`, adding/removing source files, or changing build settings: `xcodegen generate`
 - **All `Info.plist` keys must be declared in `project.yml`** under a target's `info.properties` — xcodegen overwrites `Info.plist` on every generate, so edits made directly to `Info.plist` are lost. (A missing `UILaunchScreen: {}` here silently letterboxes the app to a legacy size.)
 - New Swift files under `PickleballAI/` are picked up automatically (the whole dir is a source), but you still must `xcodegen generate` so they enter the target before building.
+- Three targets: `PickleballAI` (app), `PickleballAIWidget` (extension), `PickleballAIWatch` (watch app). `Shared/` is compiled into both app and watch — keep it dependency-free.
 
 ## Build & run
 
@@ -29,56 +37,33 @@ xcrun simctl install booted "$APP" && xcrun simctl launch booted com.pickleball.
 
 There is no test target. "Verification" in this repo means: build succeeds + screenshot the running simulator (`xcrun simctl io booted screenshot`). SourceKit "Cannot find type … in scope" / "No such module" diagnostics during editing are usually transient cross-file noise — trust the `xcodebuild` result.
 
-### TestFlight
+TestFlight: `ASC_KEY_ID=<key> ASC_ISSUER_ID=<issuer> scripts/testflight.sh` — **bump `CURRENT_PROJECT_VERSION` in `project.yml` first**. Details in `docs/RELEASE.md`; team/credential specifics live in the user's memory, not the repo.
 
-`ASC_KEY_ID=<key> ASC_ISSUER_ID=<issuer> scripts/testflight.sh` (archive → export with manual signing via `ExportOptions.plist` → `altool` upload). **Bump `CURRENT_PROJECT_VERSION` in `project.yml` before each upload** (build numbers can't repeat). Details (team/bundle/app IDs, provisioning) live in the user's memory, not here.
+## Configuration (gitignored plists)
 
-## Supabase setup (required to run)
+- `PickleballAI/Supabase.plist` — **required**; copy `Supabase.example.plist` and fill in URL + anon key, else the app shows a "config needed" screen. Read by `SupabaseConfig` in `SupabaseService.swift`.
+- `PickleballAI/RevenueCat.plist` — optional, paywall dev only; without it DEBUG builds use a stubbed paywall. `FeatureFlags.monetizationEnabled` compiles all payment UI out of Release until launch.
 
-`PickleballAI/Supabase.plist` is **gitignored** and holds the real project URL + anon key. Copy `Supabase.example.plist` → `Supabase.plist` and fill it in; `SupabaseConfig` (in `SupabaseService.swift`) reads it and exposes the app-wide `supabase` client. Without it the app renders a "config needed" screen.
+## Architecture (the 30-second version)
 
-Backend lives in `supabase/`: `migrations/` (timestamped SQL, applied in order — this is the schema source of truth, not `schema.sql`) and `functions/` (Deno edge functions: `complete-onboarding`, `match-contacts`, `delete-account`, `send-push`, `revenuecat-webhook`).
+Full detail: `docs/ARCHITECTURE.md`.
 
-## RevenueCat setup (optional — paywall dev only)
+- **`AppStore` is the whole app's brain**: one `@MainActor ObservableObject` injected at the root; all `@Published` state and all networking. The class declaration + every piece of stored state live in `PickleballAI/AppStore.swift`; behavior is split across `AppStore+Auth/Feed/Sessions/Comments/FollowGraph/Profile/Notifications/Realtime/Reposts/Invites/Gear/Safety/MediaHelpers.swift`. **New backend calls become methods on the matching extension, not ad-hoc calls in views.**
+- `authState` (`.unconfigured/.loading/.signedOut/.needsOnboarding/.signedIn`) is the top-level router in `RootView`. `loadSignedInData(userId:)` (`AppStore+Auth.swift`) is the post-sign-in fan-out — add new initial loads there.
+- PostgREST reads use the select-string constants in `AppStore.swift` (`selectProfileLite`, `selectWithCounts`, `selectFeedPreview`, …) with explicit FK hints. **Reuse these constants; don't hand-write new select strings.**
+- Models are split by domain (`SessionModels`, `ProfileModels`, `CommentModels`, `SocialModels`, …) with read (`Decodable`) and write (`Encodable`) structs deliberately separate. Drafts (`SessionDraft` etc.) are in `DraftModels.swift`.
+- Tabs (`RootView`): **Home** (`HomeView` in `FeedView.swift`), **Workout** (`WorkoutView` in `LogView.swift` + `SessionEditors.swift`), **Profile** (`ProfileView.swift`). A live session is `store.activeDraft`; its `didSet` drives the Live Activity.
+- The follow graph is **directional** (follows + requests), not mutual friends.
+- Backend: `supabase/migrations/` is the schema source of truth (not `schema.sql`); edge functions in `supabase/functions/`. See `docs/BACKEND.md`.
+- Analytics go through `Analytics` (`Analytics.swift`), never raw PostHog calls.
 
-`PickleballAI/RevenueCat.plist` is **gitignored**; copy `RevenueCat.example.plist` → `RevenueCat.plist` with the public SDK key (`appl_…`) from the RevenueCat dashboard to develop against real offerings. Without it, DEBUG builds fall back to a stubbed paywall (hardcoded plans, pretend purchase). `FeatureFlags.monetizationEnabled` compiles all payment UI out of Release builds until launch. The run scheme injects `PickleballAI.storekit`, so simulator purchases hit the local StoreKit test store (manage them via Xcode → Debug → StoreKit → Manage Transactions); set the scheme's StoreKit Configuration to None to test Apple sandbox on a device. Server-side entitlement state lives in the `entitlements` table, written only by the `revenuecat-webhook` edge function — clients read Pro status from the RevenueCat SDK, never that table.
+## Conventions (the always-apply subset)
 
-## Architecture
-
-### `AppStore` is the whole app's brain
-`PickleballAI/AppStore.swift` (~2000 lines) is a single `@MainActor final class AppStore: ObservableObject` injected once at the root (`PickleballAIApp` → `.environmentObject`). Nearly every view reads `@EnvironmentObject var store: AppStore`. It owns all `@Published` state (auth state, feeds, sessions, follow graph, notifications, gear, likes, the live-session `activeDraft`, etc.) and all networking. New backend calls almost always become a method on `AppStore`, not ad-hoc calls in views.
-
-- `authState` (`.unconfigured/.loading/.signedOut/.needsOnboarding/.signedIn`) is the top-level router in `RootView`.
-- `loadSignedInData(userId:)` is the post-sign-in fan-out (feed, sessions, follows, notifications, realtime, push). Add new initial loads there.
-- PostgREST reads use big embedded select strings with explicit FK hints, e.g. `selectFeedPreview` / `selectWithCounts` (`profiles!sessions_user_id_fkey(...)`). Reuse these constants rather than writing new select strings.
-
-### Data model split
-`RemoteModels.swift` holds **read** models (`Decodable`: `FeedSession`, `SessionActivity`, `ActivityParticipant`, `Profile`, `AppNotification`, …) and **write** models (`Encodable`: `NewSession`, `NewSessionActivity`, `ProfileUpdate`, …), plus the local draft types (`SessionDraft`, `DraftActivity`, `DraftPlayer`) used while composing a session. Read/write models are deliberately separate structs. `SessionStats.swift` computes head-to-head/record/streak client-side from `[FeedSession]`.
-
-### Screens
-Tabs (`RootView.mainTabs`): **Home** (`FeedView.swift` — following/discover feed, pagination, realtime), **Workout** (`LogView.swift` — quick-log + persistent live session; `SessionEditors.swift` for match/practice editors + player picker), **Profile** (`ProfileView.swift` + `ProfileSheets.swift` — stats, gear, measures, settings). `NotificationsView.swift`, `OtherProfileView.swift`, `CommentsView.swift`, `AuthView.swift` round it out.
-
-### Live session
-A session in progress is `store.activeDraft: SessionDraft?`. It persists at the store level so it survives leaving the Workout tab; `ActiveSessionView(isLive:)` binds to it. `activeDraft`'s `didSet` drives the Live Activity via `LiveActivityManager`.
-
-### Live Activity / widget
-`PickleballAIWidget/` is a separate **app-extension target** (WidgetKit/ActivityKit). `LiveActivityAttributes.swift` (`SessionActivityAttributes`) is compiled into **both** the app and the widget target (listed in both targets' `sources` in `project.yml`). The extension has its own bundle id `com.pickleball.ai.widget` and its own provisioning profile for TestFlight.
-
-### Push notifications
-`PushService` (app delegate via `UIApplicationDelegateAdaptor`) captures the APNs token and taps; `AppStore` uploads the token (`register_device_token` RPC) and routes taps into `pendingDeepLink`, which `RootView` presents. A DB trigger on `notifications` inserts calls the `send-push` edge function (which signs an ES256 APNs JWT). Function URL + shared secret are stored in **Supabase Vault** (`push_function_url` / `push_function_key`), not DB GUCs.
-
-## Conventions
+Full contract + tripwire details: `docs/CONVENTIONS.md`. `scripts/lint.sh` (SwiftLint custom rules in `.swiftlint.yml`) enforces the mechanical subset in CI.
 
 - **Storage paths must lowercase the UID**: Swift's `UUID.uuidString` is uppercase but storage RLS checks `auth.uid()::text` (lowercase). Use `uid.uuidString.lowercased()` for any Storage object path.
 - **New feature = new branch off `main`, one PR.** Verify with a simulator screenshot when there's UI. Match the surrounding SwiftUI style (small computed subviews, `Theme` tokens, `cardStyle()`).
-- When screenshot-verifying a specific screen you can't tap to, a common pattern is a temporary `TabView(selection: .constant(<tab>))` + `.tag()` hooks or an `.onAppear` seed — **always revert these temp hooks before committing.**
-
-## UI consistency contract
-
-- **Person rows use `IdentityRow`** (or `ProfileAvatar` directly when the row shape genuinely diverges — leaderboard ranks, comment replies). Models representing people carry `PersonRef`.
-- **Avatars always navigate when a profile exists.** `ProfileAvatar` links by default; `unlinked: true` is the documented opt-out and needs a reason (inside an enclosing link/tappable card, own-profile, pickers). Use `guest:`/`preview:` for profile-less avatars.
-- **Any sheet containing navigable people must use `ProfileNavigationStack`, not a bare `NavigationStack`** — otherwise `openProfile` resolves to the presenting screen's stack and pushes *behind* the sheet.
-- **Every list screen ships skeleton loading (`SkeletonList`) + an empty state + `.refreshable`.**
-- **User-initiated state changes fire `Haptics`** (impact / tap / success per `Haptics.swift`'s doc).
-- **Colors, spacing, and fonts come from `Theme`** — no hardcoded values.
-- `scripts/lint.sh` (SwiftLint custom rules in `.swiftlint.yml`) enforces the mechanical subset of the above in CI.
+- **Person rows use `IdentityRow`**; models representing people carry `PersonRef`. Avatars always navigate when a profile exists (`ProfileAvatar` links by default; `unlinked: true` needs a reason). Navigate via `ProfileLink`, never by constructing `OtherProfileView` directly.
+- **Sheets containing navigable people use `ProfileNavigationStack`**, not a bare `NavigationStack`.
+- **Every list screen ships `SkeletonList` + an empty state + `.refreshable`.** User-initiated state changes fire `Haptics`. Colors/spacing/fonts come from `Theme` — no hardcoded values.
+- When screenshot-verifying a screen you can't tap to, a temporary `TabView(selection: .constant(<tab>))` / `.onAppear` seed is fine — **always revert temp hooks before committing.**
