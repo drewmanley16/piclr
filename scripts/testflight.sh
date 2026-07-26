@@ -21,13 +21,15 @@ BUNDLE_ID="com.pickleball.ai"
 : "${ASC_KEY_ID:?Set ASC_KEY_ID to your App Store Connect API key id}"
 : "${ASC_ISSUER_ID:?Set ASC_ISSUER_ID to your App Store Connect issuer id}"
 
-# Monetization guard: while FeatureFlags.monetizationEnabled is DEBUG-gated,
-# Release archives contain no payment surface and the plist doesn't matter.
-# Once the launch flip removes the #if DEBUG, archiving without
-# RevenueCat.plist would ship a paywall whose purchases all fail — refuse.
-if ! grep -q '#if DEBUG' PickleballAI/FeatureFlags.swift; then
+# Monetization guard: if subscriptionsEnabled is true, Release builds show
+# the real paywall (see FeatureFlags.monetizationEnabled) and archiving
+# without RevenueCat.plist would ship purchases that always fail — refuse.
+# (Checking for the literal `#if DEBUG` string doesn't work here — it's a
+# permanent part of monetizationEnabled's implementation, not a marker of
+# whether the flag is currently on.)
+if grep -q 'static let subscriptionsEnabled = true' PickleballAI/FeatureFlags.swift; then
   if [ ! -f PickleballAI/RevenueCat.plist ]; then
-    echo "ERROR: monetization is enabled for Release but PickleballAI/RevenueCat.plist is missing." >&2
+    echo "ERROR: subscriptionsEnabled is true but PickleballAI/RevenueCat.plist is missing." >&2
     echo "Copy RevenueCat.example.plist -> RevenueCat.plist with the appl_ SDK key, then re-run." >&2
     exit 1
   fi

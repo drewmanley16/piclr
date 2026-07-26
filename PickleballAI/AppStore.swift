@@ -23,6 +23,17 @@ final class AppStore: ObservableObject {
     @Published var feedReachedEnd = false
     @Published var discoverReachedEnd = false
     @Published var isInitialFeedLoading = false
+    /// Mirrors `isInitialFeedLoading` for the Discover tab, which loads lazily
+    /// on first switch to it — without this it briefly shows "nothing to
+    /// discover yet" before the first page has even been requested.
+    @Published var isInitialDiscoverLoading = false
+    /// Set when the initial (non-cancelled) following-feed load fails, so the
+    /// empty state can show a real error + retry instead of "no posts yet."
+    /// Cleared on any successful load. Kept separate from the shared
+    /// `errorMessage` so an unrelated background failure elsewhere can't be
+    /// misattributed to the feed.
+    @Published var feedLoadError: String?
+    @Published var discoverLoadError: String?
     let feedPageSize = 20
     @Published var mySessions: [FeedSession] = []
     /// Mirrors `isInitialFeedLoading` for the Workout tab's Recent list, which
@@ -65,11 +76,19 @@ final class AppStore: ObservableObject {
     @Published var errorMessage: String?
     /// Set when the user taps a push notification; RootView presents the target.
     @Published var pendingDeepLink: DeepLink?
+    /// Set when the user taps the Live Activity; RootView switches to the Play
+    /// tab and WorkoutView opens the in-progress session, then clears it. A
+    /// fresh id (rather than a bool) so repeat taps always re-trigger.
+    @Published var openLiveSessionRequest: UUID?
+    /// Set on first sign-in when push permission hasn't been decided yet.
+    /// RootView shows a soft explainer sheet before the hard system prompt
+    /// fires, instead of surprising a brand-new user with it immediately.
+    @Published var showsPushPrimer = false
 
     /// The subset of profile columns embedded wherever a lightweight identity
     /// (avatar + name) is all a view needs. Hand-typed in several PostgREST
     /// select strings; kept as one constant so they can't drift apart.
-    static let selectProfileLite = "id,username,display_name,avatar_initials,avatar_url,avatar_path"
+    static let selectProfileLite = "id,username,display_name,avatar_initials,avatar_url,avatar_path,is_pro"
 
     static let selectActivityGraph = "activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(\(selectProfileLite))))"
     static let selectRepostSource = "source:repost_source(id,user_id,title,location,duration_minutes,focus,takeaway,created_at,started_at,ended_at,average_heart_rate_bpm,maximum_heart_rate_bpm,active_calories_kcal,streak_week,photo_path,author:profiles!sessions_user_id_fkey(*),\(selectActivityGraph))"
@@ -128,6 +147,10 @@ final class AppStore: ObservableObject {
     @Published var watchWorkoutStatus: WatchWorkoutStatus = .idle
     var shouldPostWhenWatchFinishes = false
     var isWaitingForWatchFinalization = false
+    /// Guards `postLiveSession()` against concurrent invocation — the phone's
+    /// "Finish" button and watch-driven `.finishSession`/`.workoutFinished`
+    /// messages can each independently trigger a post in quick succession.
+    var isPostingLiveSession = false
 
     /// An in-progress ("live") session that survives leaving the Workout tab.
     /// nil means no session is currently open. Mutations drive the Live Activity.

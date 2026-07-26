@@ -170,7 +170,10 @@ extension AppStore {
 
     /// Posts the live session and clears it on success.
     func postLiveSession() async -> Bool {
+        guard !isPostingLiveSession else { return false }
         guard let draft = activeDraft else { return false }
+        isPostingLiveSession = true
+        defer { isPostingLiveSession = false }
         let ok = await postSession(draft)
         if ok { activeDraft = nil }
         return ok

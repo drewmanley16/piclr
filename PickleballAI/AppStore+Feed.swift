@@ -44,6 +44,7 @@ extension AppStore {
                 .execute()
                 .value
             guard currentProfile?.id == uid, !Task.isCancelled else { return }
+            feedLoadError = nil
 
             // Text and activity data can render immediately. Private-media URL
             // signing and liked-state lookup are enhancements, not prerequisites
@@ -77,6 +78,9 @@ extension AppStore {
         } catch {
             isInitialFeedLoading = false
             initialFeedLoadStartedAt = nil
+            if feed.isEmpty, !(error is CancellationError), (error as? URLError)?.code != .cancelled {
+                feedLoadError = "Couldn't load your feed. Check your connection and try again."
+            }
             reportError(error)
         }
     }
@@ -91,8 +95,10 @@ extension AppStore {
         }
 
         isDiscoverRequestInFlight = true
+        if reset, discoverFeed.isEmpty { isInitialDiscoverLoading = true }
         defer {
             isDiscoverRequestInFlight = false
+            isInitialDiscoverLoading = false
             if pendingDiscoverRefresh {
                 pendingDiscoverRefresh = false
                 Task { [weak self] in await self?.loadDiscover() }
@@ -118,6 +124,7 @@ extension AppStore {
                 .execute()
                 .value
             guard currentProfile?.id == uid, !Task.isCancelled else { return }
+            discoverLoadError = nil
             if reset {
                 discoverFeed = page
             } else {
@@ -136,6 +143,9 @@ extension AppStore {
                 likedSessionIds.formUnion(likedPage)
             }
         } catch {
+            if discoverFeed.isEmpty, !(error is CancellationError), (error as? URLError)?.code != .cancelled {
+                discoverLoadError = "Couldn't load Discover. Check your connection and try again."
+            }
             reportError(error)
         }
     }

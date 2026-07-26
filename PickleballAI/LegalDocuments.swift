@@ -128,22 +128,25 @@ enum LegalText {
 
     We reserve the right, but are not obligated, to review content. When we receive a report of objectionable content or abusive behavior, we act on it, including removing the content and ejecting the user who provided it, generally within 24 hours. You can report content or users from within the App (tap the "•••" menu on a profile, post, or comment) and block users at any time.
 
-    **5. Termination**
+    **5. Subscriptions (piclr Pro)**
+    piclr Pro is an auto-renewing subscription offered in monthly and annual terms, billed through your Apple ID at the price shown on the purchase screen at the time you subscribe. Payment is charged to your Apple ID account at confirmation of purchase. Your subscription automatically renews for the same term unless you turn off auto-renew at least 24 hours before the end of the current period; your account will be charged for renewal within 24 hours prior to the end of the current period. You can manage or cancel your subscription any time in iOS Settings → [your name] → Subscriptions, or from Settings → Manage Subscription in the App. Any unused portion of a free trial period, if offered, is forfeited when you purchase a subscription. Refunds are handled by Apple in accordance with the App Store's refund policies, not by us.
+
+    **6. Termination**
     We may suspend or terminate your access to the App at any time if you violate these Terms. You may stop using the App at any time and can permanently delete your account from Settings → Account.
 
-    **6. Disclaimers**
+    **7. Disclaimers**
     The App is provided "as is" and "as available," without warranties of any kind. We do not guarantee that the App will be uninterrupted, secure, or error-free.
 
-    **7. Limitation of liability**
+    **8. Limitation of liability**
     To the fullest extent permitted by law, we will not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of data, arising from your use of the App.
 
-    **8. Changes to these Terms**
+    **9. Changes to these Terms**
     We may update these Terms from time to time. If we make material changes, we will notify you within the App or by other reasonable means. Continued use after changes take effect means you accept the updated Terms.
 
-    **9. Apple App Store**
+    **10. Apple App Store**
     These Terms are between you and us, not Apple. Apple is not responsible for the App or its content. Apple and its subsidiaries are third-party beneficiaries of these Terms and may enforce them against you. Apple has no obligation to provide support or maintenance for the App.
 
-    **10. Contact**
+    **11. Contact**
     Questions about these Terms? Contact us at drewmanley16@gmail.com.
     """
 
@@ -159,13 +162,15 @@ enum LegalText {
     • Contacts: if you choose to find friends, we match your contacts' phone numbers once to look for existing users. Contacts are matched in the moment and are not stored.
     • Device tokens: if you enable notifications, we store a push token to deliver them.
     • Apple Watch workout metrics: if you enable Watch metric sharing, your latest rounded heart rate and active-calorie total are relayed temporarily to the open iPhone app. We store average and maximum heart rate and active calories with the session you post. Raw heart-rate samples remain in Apple Health, and live readings are not stored or uploaded.
-    • Basic usage/diagnostic data needed to operate the service.
+    • Subscription status: if you subscribe to Pro, our payment provider (RevenueCat, on top of Apple's in-app purchase system) shares your subscription status and renewal dates with us. We never see or store your payment card details — Apple handles those directly.
+    • Analytics/usage data: we use PostHog to understand how the App is used (e.g. which features are opened, how often you post). This is tied to an internal user identifier and a few profile attributes (skill level, whether you have a DUPR rating, Pro status) so we can improve the App. It is not shared with advertisers and is not used to track you across other companies' apps or websites.
+    • Basic diagnostic data needed to operate the service.
 
     **2. How we use information**
-    We use your information to operate the App: to authenticate you, show your feed and profile, record workouts, display Watch workout summaries on sessions you choose to post, deliver notifications, enable social features (follows, comments, contact matching), and to keep the community safe (handling reports, blocks, and abuse). Health and fitness data is never used for advertising or analytics.
+    We use your information to operate the App: to authenticate you, show your feed and profile, record workouts, display Watch workout summaries on sessions you choose to post, deliver notifications, enable social features (follows, comments, contact matching), manage your subscription, understand feature usage, and to keep the community safe (handling reports, blocks, and abuse). Health and fitness data is never used for advertising or analytics.
 
     **3. How information is shared**
-    We share information with service providers who help us run the App, including our backend host (Supabase), our SMS provider (Twilio, to send your login code), and Apple Push Notification service (to deliver notifications). We do not sell your personal information. We may disclose information if required by law.
+    We share information with service providers who help us run the App, including our backend host (Supabase), our SMS provider (Twilio, to send your login code), Apple Push Notification service (to deliver notifications), RevenueCat (to manage subscriptions), and PostHog (analytics). We do not sell your personal information. We may disclose information if required by law.
 
     **4. Data retention and deletion**
     We keep your information for as long as your account is active. You can permanently delete your account and associated content at any time from Settings → Account → Delete Account.

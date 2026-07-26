@@ -45,9 +45,23 @@ extension AppStore {
 
     /// Routes an incoming universal/custom link. Expects `/u/{userId}` and opens
     /// that profile through the existing deep-link system (the profile sheet with
-    /// a Follow button). Returns whether the link was recognized.
+    /// a Follow button), or `pickleballai://live-session` from the Live Activity.
+    /// Returns whether the link was recognized.
     @discardableResult
     func handleInviteURL(_ url: URL) -> Bool {
+        // Live Activity tap: resume the in-progress session. Handled outside
+        // `pendingDeepLink` because the live session is a fullScreenCover owned
+        // by WorkoutView, not one of the deep-link sheets. On a cold launch the
+        // URL lands before `loadSignedInData` restores the persisted draft, so
+        // only a signed-in-and-draftless app can say for sure there's nothing to
+        // open; that stale case is also swept in `loadSignedInData`.
+        if url.scheme == SessionActivityAttributes.liveSessionURL.scheme,
+           url.host == SessionActivityAttributes.liveSessionURL.host {
+            if activeDraft != nil || authState != .signedIn {
+                openLiveSessionRequest = UUID()
+            }
+            return true
+        }
         let parts = url.pathComponents.filter { $0 != "/" }
         guard parts.count >= 2, parts[0].lowercased() == "u",
               let userId = UUID(uuidString: parts[1]) else { return false }

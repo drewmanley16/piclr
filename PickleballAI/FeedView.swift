@@ -20,6 +20,12 @@ struct HomeView: View {
     private func reachedEnd(for mode: FeedMode) -> Bool {
         mode == .following ? store.feedReachedEnd : store.discoverReachedEnd
     }
+    private func isLoading(for mode: FeedMode) -> Bool {
+        mode == .following ? store.isInitialFeedLoading : store.isInitialDiscoverLoading
+    }
+    private func loadError(for mode: FeedMode) -> String? {
+        mode == .following ? store.feedLoadError : store.discoverLoadError
+    }
 
     var body: some View {
         ProfileNavigationStack(reselectSignal: reselectSignal) {
@@ -90,8 +96,10 @@ struct HomeView: View {
         ScrollView {
             LazyVStack(spacing: 12) {
                 if sessions.isEmpty {
-                    if mode == .following && store.isInitialFeedLoading {
+                    if isLoading(for: mode) {
                         ForEach(0..<3, id: \.self) { _ in FeedCardSkeleton() }
+                    } else if let message = loadError(for: mode) {
+                        errorState(message: message, mode: mode)
                     } else {
                         emptyState(for: mode)
                     }
@@ -114,6 +122,31 @@ struct HomeView: View {
             .padding(.bottom, 24)
         }
         .refreshable { await refresh(mode: mode) }
+    }
+
+    @ViewBuilder
+    private func errorState(message: String, mode: FeedMode) -> some View {
+        VStack(spacing: 14) {
+            Image(systemName: "wifi.exclamationmark")
+                .font(.largeTitle)
+                .foregroundStyle(Theme.accent)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(Theme.textSecondary)
+                .multilineTextAlignment(.center)
+            Button("Try Again") {
+                Haptics.tap()
+                Task { await refresh(mode: mode) }
+            }
+            .font(.body.weight(.semibold))
+            .foregroundStyle(Theme.background)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
+            .background(Theme.accent, in: Capsule())
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 24)
+        .padding(.top, 80)
     }
 
     @ViewBuilder

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		00291CA924896F8E25FFC6A3 /* PushPrimerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BE6D184FFD4DE7523A9689F /* PushPrimerSheet.swift */; };
 		01FBF11CB8802B2E11882178 /* GearModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68362579BCA6AA9DB6DC88EE /* GearModels.swift */; };
 		05C1DAFD17F9A950EDFB2408 /* Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F90BCB4C6BD7BCDF83062556 /* Analytics.swift */; };
 		076565ECFC5D40E2EDE1D5E1 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC7CF99A3E687EB8A86C623F /* Models.swift */; };
@@ -14,6 +15,7 @@
 		09769653678BBE3A0E31E1CB /* PickleballAIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81B8CE679ACD5A6F4E5DCB13 /* PickleballAIApp.swift */; };
 		0B5E11A83FB5BA7AB8BAA542 /* PickleballAIWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 19B5187EB34F5664E703C43B /* PickleballAIWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		0C149EF49C81B28648ED3BA8 /* Supabase.example.plist in Resources */ = {isa = PBXBuildFile; fileRef = DD24443783672F30DD360A7A /* Supabase.example.plist */; };
+		12137FA9EDD1588C7B1641B1 /* RevenueCat.plist in Resources */ = {isa = PBXBuildFile; fileRef = AF6FF037B809FB38076632ED /* RevenueCat.plist */; };
 		13E2AFEB96A070D6E439D80C /* SessionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF61E92F5637DA5570EACB1F /* SessionModels.swift */; };
 		15CF34EA18544A33E028145B /* ScoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51D694E41512C0CE99B1C56 /* ScoreView.swift */; };
 		16DD6B39109593928B5583A3 /* ContactsImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EC4FAB3BC7409E94B9F0E1 /* ContactsImporter.swift */; };
@@ -214,6 +216,7 @@
 		53F9DEA7EC6F600A7C9DF92D /* RivalryInsights.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RivalryInsights.swift; sourceTree = "<group>"; };
 		594C30F607DCAA2E5D2E6245 /* EdgeFunctionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeFunctionModels.swift; sourceTree = "<group>"; };
 		5BC068B87E22A474B35B0E61 /* PickleballAIWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = PickleballAIWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		5BE6D184FFD4DE7523A9689F /* PushPrimerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushPrimerSheet.swift; sourceTree = "<group>"; };
 		5D656AFC1851F5D01BC4BB70 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
 		5D9CC3B49A2B1A43B0002C5D /* AppStore+Safety.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Safety.swift"; sourceTree = "<group>"; };
 		5F3DE89404F54F718B1D071B /* SessionEditors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionEditors.swift; sourceTree = "<group>"; };
@@ -243,6 +246,7 @@
 		A3C692535DA6A9EEFA9FF9D7 /* WeeklyWrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyWrap.swift; sourceTree = "<group>"; };
 		AC505C83297253D366673275 /* SuggestedAthleteCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedAthleteCard.swift; sourceTree = "<group>"; };
 		AF61E92F5637DA5570EACB1F /* SessionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionModels.swift; sourceTree = "<group>"; };
+		AF6FF037B809FB38076632ED /* RevenueCat.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = RevenueCat.plist; sourceTree = "<group>"; };
 		B054516CE1AEC6327D7AEA04 /* PickleballAIWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PickleballAIWatch.entitlements; sourceTree = "<group>"; };
 		B10025ED05CD5F456B2D1934 /* RivalsFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RivalsFeature.swift; sourceTree = "<group>"; };
 		B33C1504DA3DA204EE4A1046 /* WorkoutMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutMetrics.swift; sourceTree = "<group>"; };
@@ -411,9 +415,11 @@
 				475451E24481504893FFE7ED /* ProfileModels.swift */,
 				528729889F780FEF8B81D160 /* ProfileView.swift */,
 				D102C35019EBAFBC8A6123DF /* ProTeaser.swift */,
+				5BE6D184FFD4DE7523A9689F /* PushPrimerSheet.swift */,
 				C49D15DAFAF823EF6B673ADE /* PushService.swift */,
 				8D1FBA77BA526A6415502267 /* RealtimeSubscription.swift */,
 				C105A93AC708CD4765D2974D /* RevenueCat.example.plist */,
+				AF6FF037B809FB38076632ED /* RevenueCat.plist */,
 				DABB61C500760EEE65FB5F65 /* RevenueCatService.swift */,
 				53F9DEA7EC6F600A7C9DF92D /* RivalryInsights.swift */,
 				B10025ED05CD5F456B2D1934 /* RivalsFeature.swift */,
@@ -587,6 +593,7 @@
 				D60B10153096A64D929AE1AC /* Assets.xcassets in Resources */,
 				7DF814116828AB723F79A1E6 /* PrivacyInfo.xcprivacy in Resources */,
 				8F4F2063447038819A1AE2A3 /* RevenueCat.example.plist in Resources */,
+				12137FA9EDD1588C7B1641B1 /* RevenueCat.plist in Resources */,
 				0C149EF49C81B28648ED3BA8 /* Supabase.example.plist in Resources */,
 				F9D4FE283820E25A05692966 /* Supabase.plist in Resources */,
 			);
@@ -681,6 +688,7 @@
 				FBC5CA0F99C49D8AC902D659 /* ProfileIdentityValidation.swift in Sources */,
 				449EC4A27D19CBFFFABCB4CC /* ProfileModels.swift in Sources */,
 				C5338F649A3DC6D11AE71F0B /* ProfileView.swift in Sources */,
+				00291CA924896F8E25FFC6A3 /* PushPrimerSheet.swift in Sources */,
 				91C1312E7498D846C328A74E /* PushService.swift in Sources */,
 				67003847FAE65E98968EFA9E /* RealtimeSubscription.swift in Sources */,
 				53A4ED9BBF46A833CDCD422A /* RevenueCatService.swift in Sources */,
@@ -796,7 +804,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 125;
+				CURRENT_PROJECT_VERSION = 128;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = X9H68STU8F;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -856,7 +864,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 125;
+				CURRENT_PROJECT_VERSION = 128;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = X9H68STU8F;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

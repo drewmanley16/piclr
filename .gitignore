@@ -6,6 +6,9 @@ build/
 *.xcodeproj/xcuserdata/
 *.xcodeproj/project.xcworkspace/xcuserdata/
 .mcp.json
+.env
+.posthog-events.json
+posthog-setup-report.md
 
 # Supabase secrets (copy Supabase.example.plist -> Supabase.plist and fill in)
 PickleballAI/Supabase.plist

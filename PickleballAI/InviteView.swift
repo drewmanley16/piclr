@@ -419,7 +419,8 @@ struct InviteDetailView: View {
                                         initials: recipient.user?.initials ?? "?",
                                         avatarSize: 36,
                                         name: recipient.user?.displayName ?? "Player",
-                                        userId: recipient.user?.id
+                                        userId: recipient.user?.id,
+                                        isPro: recipient.user?.isPro ?? false
                                     ) {
                                         let status = RSVPStatus(rawValue: recipient.status) ?? .pending
                                         Text(status.label)

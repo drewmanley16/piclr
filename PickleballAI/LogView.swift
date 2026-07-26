@@ -6,6 +6,9 @@ struct WorkoutView: View {
     @EnvironmentObject private var store: AppStore
     /// Bumped by RootView when the Play tab is re-tapped; pops the stack to root.
     var reselectSignal: Int = 0
+    /// Prevents an offscreen tab from consuming a Live Activity route before
+    /// RootView has switched the paging TabView to Play.
+    var isSelected = true
     @State private var showLiveSession = false
     @State private var quickEditor: ActivityEditorRoute?
     @State private var showInviteComposer = false
@@ -76,6 +79,13 @@ struct WorkoutView: View {
         .fullScreenCover(isPresented: $showLiveSession) {
             ActiveSessionView(isLive: true)
         }
+        // Live Activity tap. On a cold launch the request can land before this
+        // view exists and before the draft is restored, so also re-check on
+        // appear, when a draft shows up, and after RootView selects this tab.
+        .onChange(of: store.openLiveSessionRequest) { _, _ in openRequestedLiveSession() }
+        .onChange(of: store.activeDraft == nil) { _, _ in openRequestedLiveSession() }
+        .onChange(of: isSelected) { _, _ in openRequestedLiveSession() }
+        .onAppear { openRequestedLiveSession() }
         .sheet(isPresented: $showInviteComposer) {
             InviteComposerSheet()
         }
@@ -137,6 +147,16 @@ struct WorkoutView: View {
 
     private func beginLiveSession(trackOnWatch: Bool) {
         store.startLiveSession(trackOnWatch: trackOnWatch)
+        showLiveSession = true
+    }
+
+    /// Honors a pending Live Activity tap by opening the in-progress session.
+    /// Consumes the request so a later tap re-triggers cleanly.
+    private func openRequestedLiveSession() {
+        guard isSelected,
+              store.openLiveSessionRequest != nil,
+              store.activeDraft != nil else { return }
+        store.openLiveSessionRequest = nil
         showLiveSession = true
     }
 
