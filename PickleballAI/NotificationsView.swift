@@ -250,15 +250,7 @@ struct NotificationRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ZStack(alignment: .bottomTrailing) {
-                ProfileAvatar(participant: notification.actor, size: 40, unlinked: true)
-                Image(systemName: notification.icon)
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(Theme.background)
-                    .frame(width: 18, height: 18)
-                    .background(Theme.accent, in: Circle())
-                    .offset(x: 4, y: 4)
-            }
+            avatar
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(notification.message)
@@ -277,5 +269,30 @@ struct NotificationRow: View {
             }
         }
         .cardStyle()
+    }
+
+    /// Someone else's notification leads with their avatar, type-badged in the
+    /// corner. Milestones/streaks/wraps have no actor, so the type glyph is the
+    /// whole mark — an avatar there could only show a "?".
+    @ViewBuilder
+    private var avatar: some View {
+        if notification.isSelfGenerated {
+            Image(systemName: notification.icon)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(Theme.accent)
+                .frame(width: 40, height: 40)
+                .background(Theme.accentSoft, in: Circle())
+                .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
+        } else {
+            ZStack(alignment: .bottomTrailing) {
+                ProfileAvatar(participant: notification.actor, size: 40, unlinked: true)
+                Image(systemName: notification.icon)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Theme.background)
+                    .frame(width: 18, height: 18)
+                    .background(Theme.accent, in: Circle())
+                    .offset(x: 4, y: 4)
+            }
+        }
     }
 }
