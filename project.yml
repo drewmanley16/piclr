@@ -89,7 +89,8 @@ targets:
         # Enable Live Activities (session lock-screen timer).
         NSSupportsLiveActivities: true
         # Required: without this iOS letterboxes the app to a legacy size.
-        UILaunchScreen: {}
+        UILaunchScreen:
+          UIColorName: LaunchBackground
         # Skip the export-compliance prompt on every TestFlight upload.
         ITSAppUsesNonExemptEncryption: false
         # Portrait-only phone app (required for App Store validation).

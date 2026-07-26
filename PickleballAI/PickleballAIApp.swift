@@ -7,6 +7,7 @@ struct PickleballAIApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var store = AppStore()
     @StateObject private var subscriptions = SubscriptionStore()
+    @State private var showSplash = true
 
     init() {
         Analytics.start()
@@ -33,14 +34,23 @@ struct PickleballAIApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environmentObject(store)
-                .environmentObject(subscriptions)
-                .tint(Theme.accent)
-                .preferredColorScheme(.dark)
-                .onChange(of: scenePhase) { _, phase in
-                    if phase == .active { store.appDidBecomeActive() }
+            ZStack {
+                RootView()
+                    .environmentObject(store)
+                    .environmentObject(subscriptions)
+                    .tint(Theme.accent)
+                    .preferredColorScheme(.dark)
+                    .allowsHitTesting(!showSplash)
+                    .accessibilityHidden(showSplash)
+                    .onChange(of: scenePhase) { _, phase in
+                        if phase == .active { store.appDidBecomeActive() }
+                    }
+
+                if showSplash {
+                    SplashView { showSplash = false }
+                        .transition(.identity)
                 }
+            }
         }
     }
 }
