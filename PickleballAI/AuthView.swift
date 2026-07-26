@@ -7,6 +7,10 @@ import SwiftUI
 enum Legal {
     static let termsURL = "https://pickleball-ai-web.vercel.app/terms"
     static let privacyURL = "https://pickleball-ai-web.vercel.app/privacy"
+    /// Published contact address for reporting concerns (App Store Review
+    /// Guideline 1.2), also referenced in the Terms' "Contact" section.
+    static let supportEmail = "drewmanley16@gmail.com"
+    static let supportMailtoURL = "mailto:\(supportEmail)"
 }
 
 /// Shared app links used in more than one screen.
