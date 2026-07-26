@@ -176,15 +176,30 @@ extension AppStore {
     }
 
     /// One-tap log: wraps a single activity in a fresh session and posts it.
-    func quickLog(_ activity: DraftActivity, postToFeed: Bool = true) async -> Bool {
+    /// `durationMinutes` comes from the editor — a quick log is entered after
+    /// play, so there is no elapsed time to measure.
+    func quickLog(
+        _ activity: DraftActivity,
+        durationMinutes: Int = defaultQuickLogDurationMinutes,
+        postToFeed: Bool = true
+    ) async -> Bool {
         var draft = SessionDraft()
         draft.startedAt = Date()
+        draft.durationMinutes = durationMinutes
         draft.activities = [activity]
         draft.postToFeed = postToFeed
         return await postSession(draft, isQuickLog: true)
     }
 
     // MARK: - Writes
+
+    /// Default length offered for a one-tap log.
+    static let defaultQuickLogDurationMinutes = 60
+
+    /// Ceiling for a duration derived from elapsed time. A live draft survives
+    /// a force-quit for up to `draftMaxAge` (24h), so without a cap a session
+    /// resumed the next morning would post as a 900-minute workout.
+    static let maxDerivedDurationMinutes = 8 * 60
 
     /// Maps on-device draft activities to the RPC payload shape shared by
     /// `create_own_session` and `update_own_session`. `position` comes from the
@@ -256,7 +271,9 @@ extension AppStore {
         defer { busyCount -= 1 }
         do {
             let now = Date()
-            let duration = max(1, Int(now.timeIntervalSince(draft.startedAt) / 60))
+            let elapsed = Int(now.timeIntervalSince(draft.startedAt) / 60)
+            let duration = draft.durationMinutes
+                ?? min(max(1, elapsed), Self.maxDerivedDurationMinutes)
             let sessionId = UUID()
 
             // Upload before the row exists — the storage path is uid-scoped, so

@@ -11,6 +11,7 @@ struct WorkoutView: View {
     @State private var showInviteComposer = false
     @State private var showHealthMetricsConsent = false
     @AppStorage(HealthMetricsSharing.defaultsKey) private var shareHealthMetrics = false
+    @State private var quickLogDuration = AppStore.defaultQuickLogDurationMinutes
 
     var body: some View {
         ProfileNavigationStack(reselectSignal: reselectSignal) {
@@ -80,9 +81,15 @@ struct WorkoutView: View {
         .sheet(item: $quickEditor) { route in
             switch route {
             case .newMatch:
-                ActivityEditorView(activity: DraftActivity(kind: .match)) { await quickLog($0) }
+                ActivityEditorView(
+                    activity: DraftActivity(kind: .match),
+                    duration: $quickLogDuration
+                ) { await quickLog($0) }
             case .newPractice:
-                ActivityEditorView(activity: DraftActivity(kind: .practice)) { await quickLog($0) }
+                ActivityEditorView(
+                    activity: DraftActivity(kind: .practice),
+                    duration: $quickLogDuration
+                ) { await quickLog($0) }
             case .edit:
                 EmptyView()
             }
@@ -105,7 +112,7 @@ struct WorkoutView: View {
     /// failure — this posts straight to the backend, with no draft to fall back
     /// on, so a silent dismissal would just lose what the user entered.
     private func quickLog(_ activity: DraftActivity) async -> Bool {
-        let posted = await store.quickLog(activity)
+        let posted = await store.quickLog(activity, durationMinutes: quickLogDuration)
         if posted { Haptics.success() }
         return posted
     }

@@ -115,6 +115,10 @@ struct SessionDraft: Codable, Equatable {
     var takeaway: String = ""
     var startedAt: Date = Date()
     var endedAt: Date?
+    /// Explicit duration, set by the quick-log editor. A live session leaves
+    /// this nil and derives its duration from elapsed time instead — a quick log
+    /// has no elapsed time to measure, since it's entered after the fact.
+    var durationMinutes: Int?
     var activities: [DraftActivity] = []
     /// The in-progress game streaming from the paired Apple Watch, if any. Set
     /// as score snapshots arrive; converted into an `activities` entry when the

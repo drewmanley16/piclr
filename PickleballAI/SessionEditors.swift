@@ -7,6 +7,10 @@ enum PlayerRole: String, Identifiable { case partner, opponent; var id: String {
 struct ActivityEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @State var activity: DraftActivity
+    /// Non-nil for a quick log, which is entered after play and so has no
+    /// elapsed time to derive a duration from. A live session leaves this nil
+    /// and times itself.
+    var duration: Binding<Int>?
     /// Return false to keep the editor open — quick log posts straight to the
     /// backend from here, and a failed post must not discard what was typed.
     var onSave: (DraftActivity) async -> Bool
@@ -22,6 +26,7 @@ struct ActivityEditorView: View {
                 } else {
                     matchFields
                 }
+                if let duration { durationField(duration) }
 
                 Section {
                     Button {
@@ -92,6 +97,26 @@ struct ActivityEditorView: View {
                 Button { picker = .opponent } label: { Label("Add opponent", systemImage: "person.badge.plus") }
             }
         }
+    }
+
+    private func durationField(_ duration: Binding<Int>) -> some View {
+        Section("Duration") {
+            Stepper(value: duration, in: 15...480, step: 15) {
+                HStack {
+                    Text("How long did you play?")
+                        .foregroundStyle(Theme.textSecondary)
+                    Spacer()
+                    Text(Self.durationLabel(duration.wrappedValue))
+                        .font(.headline.monospacedDigit())
+                        .foregroundStyle(Theme.textPrimary)
+                }
+            }
+            .frame(minHeight: 44)
+        }
+    }
+
+    static func durationLabel(_ minutes: Int) -> String {
+        minutes < 60 ? "\(minutes)m" : "\(minutes / 60)h \(minutes % 60)m"
     }
 
     private var isValid: Bool {
