@@ -54,6 +54,7 @@
 		612BCA3A3A91F6EEBBC287BF /* CommentMentions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B007A00EBC21777270E6C5C /* CommentMentions.swift */; };
 		63CF72EC30CBFEC89BF39639 /* LiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF3D5A5AC51AF989571223E /* LiveActivityAttributes.swift */; };
 		6431A39E667DF61B6E39C123 /* MediaHydrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1ADA23D176823BB8CF93823 /* MediaHydrator.swift */; };
+		6578538862C4322D39EF9F01 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6DFAC6F42E204B347470EA4 /* SplashView.swift */; };
 		664317151FD26AFB65FCFB64 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C2F55C19C493784AFEFC588 /* DesignSystem.swift */; };
 		66B2BB82985061C2DD0900CD /* SuggestedAthleteCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC505C83297253D366673275 /* SuggestedAthleteCard.swift */; };
 		67003847FAE65E98968EFA9E /* RealtimeSubscription.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D1FBA77BA526A6415502267 /* RealtimeSubscription.swift */; };
@@ -246,6 +247,7 @@
 		B10025ED05CD5F456B2D1934 /* RivalsFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RivalsFeature.swift; sourceTree = "<group>"; };
 		B33C1504DA3DA204EE4A1046 /* WorkoutMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutMetrics.swift; sourceTree = "<group>"; };
 		B3FA4363BCD03C413DB5D6C4 /* LogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogView.swift; sourceTree = "<group>"; };
+		B6DFAC6F42E204B347470EA4 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		B84E3919C44FA9AD88BF7BBB /* WatchGameStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchGameStore.swift; sourceTree = "<group>"; };
 		BC017A194C54A644C612773C /* WatchSyncMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSyncMessage.swift; sourceTree = "<group>"; };
 		BF5A9FC1A230E468254608EC /* WatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchApp.swift; sourceTree = "<group>"; };
@@ -427,6 +429,7 @@
 				43B84DB1AF26B28199D3B9F9 /* ShareCard.swift */,
 				812D44B60A7EA37D8E8F26CA /* SocialModels.swift */,
 				0482FE19F7FE0F2A6DD0872C /* SocialRequestRows.swift */,
+				B6DFAC6F42E204B347470EA4 /* SplashView.swift */,
 				CF895DB874A0AA5FBE3CB948 /* StatsSheet.swift */,
 				C3ABA2151D296CFDE399EDFD /* Subscription.swift */,
 				AC505C83297253D366673275 /* SuggestedAthleteCard.swift */,
@@ -695,6 +698,7 @@
 				079E74A9F84E8B1B2C9406BD /* ShareCard.swift in Sources */,
 				B582D55DDDCD4C2E47573059 /* SocialModels.swift in Sources */,
 				BC1C0D7301EDFE01BCAB6B78 /* SocialRequestRows.swift in Sources */,
+				6578538862C4322D39EF9F01 /* SplashView.swift in Sources */,
 				CE7E5F4369D9181C9C659C80 /* StatsSheet.swift in Sources */,
 				ADB24CAF72BB58C2CBF4D628 /* Subscription.swift in Sources */,
 				66B2BB82985061C2DD0900CD /* SuggestedAthleteCard.swift in Sources */,

@@ -39,6 +39,12 @@ enum Theme {
     static func scoreboard(_ size: CGFloat) -> Font {
         .system(size: size, weight: .heavy, design: .rounded).monospacedDigit()
     }
+
+    /// Brand wordmark: the same crisp, heavy system face used by the app's
+    /// existing "piclr" marks rather than the rounded scoreboard face.
+    static func wordmark(_ size: CGFloat) -> Font {
+        .system(size: size, weight: .heavy, design: .default)
+    }
 }
 
 extension MatchResult {
