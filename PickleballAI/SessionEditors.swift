@@ -7,9 +7,12 @@ enum PlayerRole: String, Identifiable { case partner, opponent; var id: String {
 struct ActivityEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @State var activity: DraftActivity
-    var onSave: (DraftActivity) -> Void
+    /// Return false to keep the editor open — quick log posts straight to the
+    /// backend from here, and a failed post must not discard what was typed.
+    var onSave: (DraftActivity) async -> Bool
 
     @State private var picker: PlayerRole?
+    @State private var isSaving = false
 
     var body: some View {
         NavigationStack {
@@ -22,16 +25,20 @@ struct ActivityEditorView: View {
 
                 Section {
                     Button {
-                        onSave(activity)
-                        dismiss()
+                        isSaving = true
+                        Task {
+                            let saved = await onSave(activity)
+                            isSaving = false
+                            if saved { dismiss() }
+                        }
                     } label: {
-                        Text("Save")
+                        Text(isSaving ? "Saving…" : "Save")
                             .font(.headline)
                             .foregroundStyle(Theme.background)
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
-                    .disabled(!isValid)
-                    .listRowBackground(isValid ? Theme.accent : Theme.surfaceElevated)
+                    .disabled(!isValid || isSaving)
+                    .listRowBackground(isValid && !isSaving ? Theme.accent : Theme.surfaceElevated)
                 }
             }
             .scrollContentBackground(.hidden)

@@ -84,16 +84,16 @@ struct ActiveSessionView: View {
             .sheet(item: $editor) { route in
                 switch route {
                 case .newPractice:
-                    ActivityEditorView(activity: DraftActivity(kind: .practice)) { add($0) }
+                    ActivityEditorView(activity: DraftActivity(kind: .practice)) { add($0); return true }
                 case .newMatch:
                     ActivityEditorView(
                         activity: DraftActivity(
                             kind: .match,
                             carryingPlayersFrom: draft.activities.last(where: { $0.kind == .match })
                         )
-                    ) { add($0) }
+                    ) { add($0); return true }
                 case .edit(let activity):
-                    ActivityEditorView(activity: activity) { update($0) }
+                    ActivityEditorView(activity: activity) { update($0); return true }
                 }
             }
             .sheet(isPresented: $showLocationPicker) {

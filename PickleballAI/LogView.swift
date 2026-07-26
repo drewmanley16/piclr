@@ -42,6 +42,7 @@ struct WorkoutView: View {
             .padding(.bottom, 24)
         }
         .background(Theme.background.ignoresSafeArea())
+        .appErrorAlert("Couldn't log that", store: store)
         .refreshable {
             if let uid = store.currentProfile?.id {
                 await store.loadMySessions(userId: uid)
@@ -79,13 +80,9 @@ struct WorkoutView: View {
         .sheet(item: $quickEditor) { route in
             switch route {
             case .newMatch:
-                ActivityEditorView(activity: DraftActivity(kind: .match)) { activity in
-                    Task { await store.quickLog(activity) }
-                }
+                ActivityEditorView(activity: DraftActivity(kind: .match)) { await quickLog($0) }
             case .newPractice:
-                ActivityEditorView(activity: DraftActivity(kind: .practice)) { activity in
-                    Task { await store.quickLog(activity) }
-                }
+                ActivityEditorView(activity: DraftActivity(kind: .practice)) { await quickLog($0) }
             case .edit:
                 EmptyView()
             }
@@ -102,6 +99,15 @@ struct WorkoutView: View {
         } message: {
             Text("Average heart rate, maximum heart rate, and active calories will appear publicly on sessions you post.")
         }
+    }
+
+    /// Posts a one-tap log. Reports the outcome so the editor stays open on
+    /// failure — this posts straight to the backend, with no draft to fall back
+    /// on, so a silent dismissal would just lose what the user entered.
+    private func quickLog(_ activity: DraftActivity) async -> Bool {
+        let posted = await store.quickLog(activity)
+        if posted { Haptics.success() }
+        return posted
     }
 
     private func startLive() {
