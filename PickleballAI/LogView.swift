@@ -73,6 +73,12 @@ struct WorkoutView: View {
         .fullScreenCover(isPresented: $showLiveSession) {
             ActiveSessionView(isLive: true)
         }
+        // Live Activity tap. On a cold launch the request can land before this
+        // view exists and before the draft is restored, so also re-check on
+        // appear and when a draft shows up.
+        .onChange(of: store.openLiveSessionRequest) { _, _ in openRequestedLiveSession() }
+        .onChange(of: store.activeDraft == nil) { _, _ in openRequestedLiveSession() }
+        .onAppear { openRequestedLiveSession() }
         .sheet(isPresented: $showInviteComposer) {
             InviteComposerSheet()
         }
@@ -114,6 +120,14 @@ struct WorkoutView: View {
 
     private func beginLiveSession(trackOnWatch: Bool) {
         store.startLiveSession(trackOnWatch: trackOnWatch)
+        showLiveSession = true
+    }
+
+    /// Honors a pending Live Activity tap by opening the in-progress session.
+    /// Consumes the request so a later tap re-triggers cleanly.
+    private func openRequestedLiveSession() {
+        guard store.openLiveSessionRequest != nil, store.activeDraft != nil else { return }
+        store.openLiveSessionRequest = nil
         showLiveSession = true
     }
 

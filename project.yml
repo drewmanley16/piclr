@@ -100,6 +100,12 @@ targets:
         NSLocationWhenInUseUsageDescription: "pickleball.ai uses your location to find pickleball courts near you when logging a session."
         NSHealthShareUsageDescription: "pickleball.ai reads workout heart rate and active calories so they can be included with sessions you post."
         NSHealthUpdateUsageDescription: "pickleball.ai saves pickleball workouts recorded with Apple Watch to Apple Health."
+        # Custom scheme backing the Live Activity tap target
+        # (SessionActivityAttributes.liveSessionURL → pickleballai://live-session).
+        CFBundleURLTypes:
+          - CFBundleURLName: com.pickleball.ai
+            CFBundleURLSchemes:
+              - pickleballai
 
   PickleballAIWidget:
     type: app-extension

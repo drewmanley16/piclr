@@ -58,6 +58,13 @@ struct RootView: View {
         }
     }
 
+    /// Moves to the Play tab when a Live Activity tap is waiting to be honored;
+    /// WorkoutView there consumes the request and opens the session.
+    private func showPlayTabIfRequested() {
+        guard store.openLiveSessionRequest != nil, selectedTab != 1 else { return }
+        selectedTab = 1
+    }
+
     private var mainTabs: some View {
         // Paging TabView drives the swipe; the native tab bar is hidden and
         // replaced by AppTabBar so both tap and swipe move between pages.
@@ -75,6 +82,12 @@ struct RootView: View {
             }
         }
         .onChange(of: selectedTab) { _, _ in Haptics.tap() }
+        // Live Activity tap: surface the Play tab so WorkoutView (which owns the
+        // live-session cover) can present the in-progress session. `onAppear`
+        // covers a cold launch, where the link is handled before these tabs
+        // exist and the change is therefore never observed.
+        .onChange(of: store.openLiveSessionRequest) { _, _ in showPlayTabIfRequested() }
+        .onAppear { showPlayTabIfRequested() }
         .sheet(item: Binding(
             get: { store.pendingDeepLink },
             set: { store.pendingDeepLink = $0 }

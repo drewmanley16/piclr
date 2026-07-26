@@ -65,6 +65,10 @@ final class AppStore: ObservableObject {
     @Published var errorMessage: String?
     /// Set when the user taps a push notification; RootView presents the target.
     @Published var pendingDeepLink: DeepLink?
+    /// Set when the user taps the Live Activity; RootView switches to the Play
+    /// tab and WorkoutView opens the in-progress session, then clears it. A
+    /// fresh id (rather than a bool) so repeat taps always re-trigger.
+    @Published var openLiveSessionRequest: UUID?
 
     /// The subset of profile columns embedded wherever a lightweight identity
     /// (avatar + name) is all a view needs. Hand-typed in several PostgREST
