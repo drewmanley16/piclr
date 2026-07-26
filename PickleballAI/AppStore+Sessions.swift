@@ -209,7 +209,7 @@ extension AppStore {
                 location: draft.location.isEmpty ? nil : draft.location,
                 durationMinutes: duration,
                 focus: firstFocus,
-                takeaway: nil,
+                takeaway: draft.takeaway.trimmed.isEmpty ? nil : draft.takeaway.trimmed,
                 posted: false,
                 startedAt: DateFormatting.iso.string(from: draft.startedAt),
                 endedAt: DateFormatting.iso.string(from: now),

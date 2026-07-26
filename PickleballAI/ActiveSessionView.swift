@@ -13,7 +13,10 @@ struct ActiveSessionView: View {
     /// dismissed freely to resume later.
     let isLive: Bool
 
-    @State private var draft: SessionDraft
+    /// Backing store for the edit / one-off paths. A live session is *not* kept
+    /// here — see `draft` — but this still holds the frozen copy shown while the
+    /// post celebration plays, after `store.activeDraft` has been cleared.
+    @State private var localDraft: SessionDraft
     @State private var editor: ActivityEditorRoute?
     @State private var showDiscardConfirm = false
     @State private var selectedPhoto: PhotosPickerItem?
@@ -24,10 +27,28 @@ struct ActiveSessionView: View {
     init(existingSession: FeedSession? = nil, isLive: Bool = false) {
         self.existingSession = existingSession
         self.isLive = isLive
-        _draft = State(initialValue: existingSession.map(SessionDraft.init(session:)) ?? SessionDraft())
+        _localDraft = State(initialValue: existingSession.map(SessionDraft.init(session:)) ?? SessionDraft())
     }
 
     private var isEditing: Bool { existingSession != nil }
+
+    /// A live session reads and writes `store.activeDraft` directly rather than
+    /// mirroring it into local state. Apple Watch messages mutate that same
+    /// storage while this sheet is open (a finished game becomes an activity,
+    /// HealthKit metrics arrive on finalize), so a local copy would go stale and
+    /// the next keystroke here would write it back over the watch's changes.
+    private var draft: SessionDraft {
+        get { isLive ? (store.activeDraft ?? localDraft) : localDraft }
+        nonmutating set {
+            if isLive { store.activeDraft = newValue } else { localDraft = newValue }
+        }
+    }
+
+    /// `draft` is computed, so it has no projected value; sub-bindings for the
+    /// form fields come from here instead of `$draft`.
+    private var draftBinding: Binding<SessionDraft> {
+        Binding(get: { draft }, set: { draft = $0 })
+    }
 
     var body: some View {
         NavigationStack {
@@ -76,7 +97,7 @@ struct ActiveSessionView: View {
                 }
             }
             .sheet(isPresented: $showLocationPicker) {
-                LocationPickerSheet(location: $draft.location)
+                LocationPickerSheet(location: draftBinding.location)
             }
             .confirmationDialog(
                 isEditing ? "Discard your changes?" : "Discard this session?",
@@ -99,11 +120,7 @@ struct ActiveSessionView: View {
         .interactiveDismissDisabled(!isLive && (isEditing || !draft.activities.isEmpty))
         .onAppear {
             store.errorMessage = nil
-            if isLive, let live = store.activeDraft { draft = live }
             if isLive { store.requestLiveWorkoutMetrics() }
-        }
-        .onChange(of: draft) { _, newValue in
-            if isLive { store.activeDraft = newValue }
         }
         .alert(isEditing ? "Couldn't save session" : "Couldn't post session", isPresented: postErrorBinding) {
             if isLive, store.activeDraft?.expectsWatchMetrics == true {
@@ -134,7 +151,7 @@ struct ActiveSessionView: View {
     private var detailsCard: some View {
         VStack(spacing: 0) {
             if isEditing {
-                DatePicker("Started", selection: $draft.startedAt)
+                DatePicker("Started", selection: draftBinding.startedAt)
                     .datePickerStyle(.compact)
                     .frame(minHeight: 44)
                 Divider().overlay(Theme.hairline)
@@ -204,7 +221,7 @@ struct ActiveSessionView: View {
                 .padding(.vertical, 10)
                 Divider().overlay(Theme.hairline)
             }
-            TextField(AppStore.timeOfDayTitle(for: draft.startedAt), text: $draft.title)
+            TextField(AppStore.timeOfDayTitle(for: draft.startedAt), text: draftBinding.title)
                 .font(.headline)
                 .frame(minHeight: 44)
             Divider().overlay(Theme.hairline)
@@ -225,7 +242,7 @@ struct ActiveSessionView: View {
             }
             .buttonStyle(.plain)
             Divider().overlay(Theme.hairline)
-            TextField("Takeaway (optional)", text: $draft.takeaway, axis: .vertical)
+            TextField("Takeaway (optional)", text: draftBinding.takeaway, axis: .vertical)
                 .lineLimit(1...3)
                 .frame(minHeight: 44)
             Divider().overlay(Theme.hairline)
@@ -330,7 +347,7 @@ struct ActiveSessionView: View {
                     }
                 }
 
-                Toggle("Post to feed", isOn: $draft.postToFeed)
+                Toggle("Post to feed", isOn: draftBinding.postToFeed)
                     .tint(Theme.accent)
                     .padding(.top, 4)
             }
@@ -367,7 +384,9 @@ struct ActiveSessionView: View {
             }
         } else {
             let streakBefore = SessionStats(sessions: store.mySessions).weeklyStreak
-            if isLive { store.activeDraft = draft }
+            // Posting clears `store.activeDraft`; freeze what we sent so the
+            // celebration overlay isn't drawn over an emptied-out sheet.
+            localDraft = draft
             let posted = isLive
                 ? await store.finishAndPostLiveSession()
                 : await store.postSession(draft)
@@ -378,6 +397,7 @@ struct ActiveSessionView: View {
 
     private func postWithoutMetrics() async {
         let streakBefore = SessionStats(sessions: store.mySessions).weeklyStreak
+        localDraft = draft
         guard await store.postLiveSessionWithoutMetrics() else { return }
         await finishSuccessfulPost(streakBefore: streakBefore)
     }
