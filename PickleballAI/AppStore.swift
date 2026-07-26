@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import os
 import Supabase
 
@@ -6,8 +7,14 @@ import Supabase
 // (AppStore+Auth.swift, AppStore+Feed.swift, …). This file keeps the class
 // declaration, every piece of stored state, and top-level lifecycle.
 
+// Observation is per-property: a view only re-renders when a property it
+// actually read in `body` changes. That only holds if state SwiftUI never
+// renders stays out of the graph — every stored `var` below that no view reads
+// is marked `@ObservationIgnored`. Keep that up when adding state.
+
 @MainActor
-final class AppStore: ObservableObject {
+@Observable
+final class AppStore {
     enum AuthState: Equatable {
         case unconfigured
         case loading
@@ -16,74 +23,74 @@ final class AppStore: ObservableObject {
         case signedIn
     }
 
-    @Published var authState: AuthState = .loading
-    @Published var currentProfile: Profile?
-    @Published var feed: [FeedSession] = []
-    @Published var discoverFeed: [FeedSession] = []
-    @Published var feedReachedEnd = false
-    @Published var discoverReachedEnd = false
-    @Published var isInitialFeedLoading = false
+    var authState: AuthState = .loading
+    var currentProfile: Profile?
+    var feed: [FeedSession] = []
+    var discoverFeed: [FeedSession] = []
+    var feedReachedEnd = false
+    var discoverReachedEnd = false
+    var isInitialFeedLoading = false
     /// Mirrors `isInitialFeedLoading` for the Discover tab, which loads lazily
     /// on first switch to it — without this it briefly shows "nothing to
     /// discover yet" before the first page has even been requested.
-    @Published var isInitialDiscoverLoading = false
+    var isInitialDiscoverLoading = false
     /// Set when the initial (non-cancelled) following-feed load fails, so the
     /// empty state can show a real error + retry instead of "no posts yet."
     /// Cleared on any successful load. Kept separate from the shared
     /// `errorMessage` so an unrelated background failure elsewhere can't be
     /// misattributed to the feed.
-    @Published var feedLoadError: String?
-    @Published var discoverLoadError: String?
+    var feedLoadError: String?
+    var discoverLoadError: String?
     let feedPageSize = 20
-    @Published var mySessions: [FeedSession] = []
+    var mySessions: [FeedSession] = []
     /// Mirrors `isInitialFeedLoading` for the Workout tab's Recent list, which
     /// loads well after the feed and would otherwise show its "no sessions yet"
     /// empty state to users who simply haven't been fetched yet.
-    @Published var isInitialMySessionsLoading = false
+    var isInitialMySessionsLoading = false
     // Directional follow graph (the `follows` table). "Friend" naming is kept
     // on a few discovery-UI hooks for compatibility, but the model is a
     // directed follow: following someone doesn't require them to follow back.
-    @Published var followerCount = 0
-    @Published var followingCount = 0
-    @Published var incomingFollowRequests: [FollowRequest] = []
-    @Published var followers: [FollowListEntry] = []
-    @Published var following: [FollowListEntry] = []
-    @Published var contactMatches: [ContactMatch] = []
-    @Published var suggestedAthletes: [SuggestedAthlete] = []
-    @Published var isSuggestedAthletesLoading = false
-    @Published var searchResults: [Profile] = []
-    @Published var requestedFollowIds: Set<UUID> = []
-    @Published var gear: [GearItem] = []
-    @Published var likedSessionIds: Set<UUID> = []
-    @Published var optimisticLikeCounts: [UUID: Int] = [:]
-    @Published var likedCommentIds: Set<UUID> = []
-    @Published var optimisticCommentLikeCounts: [UUID: Int] = [:]
-    @Published var notifications: [AppNotification] = []
-    @Published var blockedAccounts: [BlockedAccount] = []
+    var followerCount = 0
+    var followingCount = 0
+    var incomingFollowRequests: [FollowRequest] = []
+    var followers: [FollowListEntry] = []
+    var following: [FollowListEntry] = []
+    var contactMatches: [ContactMatch] = []
+    var suggestedAthletes: [SuggestedAthlete] = []
+    var isSuggestedAthletesLoading = false
+    var searchResults: [Profile] = []
+    var requestedFollowIds: Set<UUID> = []
+    var gear: [GearItem] = []
+    var likedSessionIds: Set<UUID> = []
+    var optimisticLikeCounts: [UUID: Int] = [:]
+    var likedCommentIds: Set<UUID> = []
+    var optimisticCommentLikeCounts: [UUID: Int] = [:]
+    var notifications: [AppNotification] = []
+    var blockedAccounts: [BlockedAccount] = []
     /// Upcoming invites you're hosting or were tagged in, newest first.
-    @Published var activeInvites: [SessionInvite] = []
+    var activeInvites: [SessionInvite] = []
     /// Crew leaderboard (you + everyone you follow), ranked. Loaded on demand.
-    @Published var leaderboard: [LeaderboardEntry] = []
+    var leaderboard: [LeaderboardEntry] = []
     /// IDs of milestones the signed-in user has unlocked (see `Milestone.catalog`).
     /// Server-authoritative — loaded on demand from `milestone_unlocks`.
-    @Published var milestoneUnlocks: Set<String> = []
+    var milestoneUnlocks: Set<String> = []
     /// Count of in-flight user-initiated operations. `isBusy` is *derived* from
     /// this so concurrent operations (e.g. saving profile fields and a photo at
     /// once) don't clobber each other — the UI reads idle only once every one of
     /// them has finished, not when the first to return flips a shared bool.
-    @Published var busyCount = 0
+    var busyCount = 0
     var isBusy: Bool { busyCount > 0 }
-    @Published var errorMessage: String?
+    var errorMessage: String?
     /// Set when the user taps a push notification; RootView presents the target.
-    @Published var pendingDeepLink: DeepLink?
+    var pendingDeepLink: DeepLink?
     /// Set when the user taps the Live Activity; RootView switches to the Play
     /// tab and WorkoutView opens the in-progress session, then clears it. A
     /// fresh id (rather than a bool) so repeat taps always re-trigger.
-    @Published var openLiveSessionRequest: UUID?
+    var openLiveSessionRequest: UUID?
     /// Set on first sign-in when push permission hasn't been decided yet.
     /// RootView shows a soft explainer sheet before the hard system prompt
     /// fires, instead of surprising a brand-new user with it immediately.
-    @Published var showsPushPrimer = false
+    var showsPushPrimer = false
 
     /// The subset of profile columns embedded wherever a lightweight identity
     /// (avatar + name) is all a view needs. Hand-typed in several PostgREST
@@ -102,22 +109,25 @@ final class AppStore: ObservableObject {
     let followsRealtime = RealtimeSubscription()
     let invitesRealtime = RealtimeSubscription()
     let commentsRealtime = RealtimeSubscription()
-    var signedInBackgroundTask: Task<Void, Never>?
-    var isFeedRequestInFlight = false
-    var pendingFeedRefresh = false
-    var isDiscoverRequestInFlight = false
-    var pendingDiscoverRefresh = false
-    var initialFeedLoadStartedAt: Date?
-    var acceptedFollowingUserIDs: Set<UUID> = []
-    var sessionRefreshDebounceTask: Task<Void, Never>?
-    var commentsRefreshDebounceTask: Task<Void, Never>?
-    var commentsRefreshPending = false
+    // Request-coalescing and debounce bookkeeping. No view reads these and they
+    // flip several times per feed load, so they stay out of the observation
+    // graph — see the note at the top of the file.
+    @ObservationIgnored var signedInBackgroundTask: Task<Void, Never>?
+    @ObservationIgnored var isFeedRequestInFlight = false
+    @ObservationIgnored var pendingFeedRefresh = false
+    @ObservationIgnored var isDiscoverRequestInFlight = false
+    @ObservationIgnored var pendingDiscoverRefresh = false
+    @ObservationIgnored var initialFeedLoadStartedAt: Date?
+    @ObservationIgnored var acceptedFollowingUserIDs: Set<UUID> = []
+    @ObservationIgnored var sessionRefreshDebounceTask: Task<Void, Never>?
+    @ObservationIgnored var commentsRefreshDebounceTask: Task<Void, Never>?
+    @ObservationIgnored var commentsRefreshPending = false
     /// Comments whose like write hasn't landed yet. A concurrent reload must not
     /// reconcile these rows or it reverts the optimistic state mid-flight.
-    var commentLikeWritesInFlight: Set<UUID> = []
-    var realtimeNeedsFeedRefresh = false
-    var realtimeNeedsMySessionsRefresh = false
-    var realtimeNeedsDiscoverRefresh = false
+    @ObservationIgnored var commentLikeWritesInFlight: Set<UUID> = []
+    @ObservationIgnored var realtimeNeedsFeedRefresh = false
+    @ObservationIgnored var realtimeNeedsMySessionsRefresh = false
+    @ObservationIgnored var realtimeNeedsDiscoverRefresh = false
 
     /// Signed-URL cache + `hydrate*` helpers for avatars and post photos.
     let media = MediaHydrator()
@@ -143,18 +153,18 @@ final class AppStore: ObservableObject {
 
     /// Latest transient sensor values from Apple Watch. Kept outside the draft
     /// so raw live samples are never written to disk or uploaded.
-    @Published var liveWorkoutMetrics: LiveWorkoutMetrics?
-    @Published var watchWorkoutStatus: WatchWorkoutStatus = .idle
-    var shouldPostWhenWatchFinishes = false
-    var isWaitingForWatchFinalization = false
+    var liveWorkoutMetrics: LiveWorkoutMetrics?
+    var watchWorkoutStatus: WatchWorkoutStatus = .idle
+    @ObservationIgnored var shouldPostWhenWatchFinishes = false
+    @ObservationIgnored var isWaitingForWatchFinalization = false
     /// Guards `postLiveSession()` against concurrent invocation — the phone's
     /// "Finish" button and watch-driven `.finishSession`/`.workoutFinished`
     /// messages can each independently trigger a post in quick succession.
-    var isPostingLiveSession = false
+    @ObservationIgnored var isPostingLiveSession = false
 
     /// An in-progress ("live") session that survives leaving the Workout tab.
     /// nil means no session is currently open. Mutations drive the Live Activity.
-    @Published var activeDraft: SessionDraft? {
+    var activeDraft: SessionDraft? {
         didSet {
             if activeDraft == nil {
                 liveWorkoutMetrics = nil
