@@ -7,6 +7,17 @@ struct FeedCard: View {
     /// False when this card is already the content of a session detail screen,
     /// so tapping it doesn't push another copy of itself onto the stack.
     var openable: Bool = true
+    /// Which surface this card stands on. `.workout` frames scores from the
+    /// viewer's side and treats a repost as credited games they can drop from
+    /// their record, rather than a post they published.
+    var context: Context = .feed
+
+    enum Context {
+        /// The public feed: the author's own framing, reposts are publications.
+        case feed
+        /// The viewer's own workout history (Recent).
+        case workout
+    }
     @State private var showComments = false
     @State private var showEditor = false
     @State private var confirmDelete = false
@@ -18,7 +29,9 @@ struct FeedCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if session.isRepost {
+            // Automatic tagged-workout credits are reposts by data shape only —
+            // the user never published them, so they get no "reposted" banner.
+            if session.isRepost && session.posted {
                 Label("\(session.author.displayName) reposted", systemImage: "arrow.2.squarepath")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(Theme.textTertiary)
@@ -64,10 +77,12 @@ struct FeedCard: View {
         .fullScreenCover(isPresented: $showEditor) {
             ActiveSessionView(existingSession: session)
         }
-        .confirmationDialog(session.isRepost ? "Remove this repost?" : "Delete this session?", isPresented: $confirmDelete, titleVisibility: .visible) {
-            Button(session.isRepost ? "Remove Repost" : "Delete Session", role: .destructive) {
+        .confirmationDialog(destructivePrompt, isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button(destructiveTitle, role: .destructive) {
                 Task {
-                    if session.isRepost {
+                    if removesWorkoutCredit {
+                        _ = await store.removeWorkoutCredit(session)
+                    } else if session.isRepost {
                         _ = await store.unrepostSession(session)
                     } else {
                         _ = await store.deleteSession(session)
@@ -76,7 +91,9 @@ struct FeedCard: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            if session.isRepost {
+            if removesWorkoutCredit {
+                Text("This removes the credited games from your Workout history and record, and removes your tag from the original post.")
+            } else if session.isRepost {
                 Text("The games stay in your private Workout history and record.")
             }
         }
@@ -132,7 +149,7 @@ struct FeedCard: View {
                     Button(role: .destructive) {
                         confirmDelete = true
                     } label: {
-                        Label(session.isRepost ? "Remove Repost" : "Delete Session", systemImage: "trash")
+                        Label(destructiveTitle, systemImage: "trash")
                     }
                 } else {
                     Button {
@@ -203,13 +220,13 @@ struct FeedCard: View {
     private var activityList: some View {
         if isMultiActivity {
             SessionMatchList(
-                activities: session.postActivities,
+                activities: displayActivities,
                 durationText: session.postCompactDuration,
-                author: session.postAuthor
+                author: displayAuthor
             )
-        } else if let solo = session.postActivities.first {
+        } else if let solo = displayActivities.first {
             if solo.isMatch {
-                MatchScorecard(activity: solo, author: session.postAuthor)
+                MatchScorecard(activity: solo, author: displayAuthor)
                     .padding(.vertical, 4)
             } else {
                 DrillRow(activity: solo)
@@ -360,7 +377,39 @@ struct FeedCard: View {
         return (parts + [playedLabel]).joined(separator: ", ")
     }
 
-    private var isMultiActivity: Bool { session.postActivities.count >= 2 }
+    /// In `.workout` a repost is credited games, so removing it drops the tag and
+    /// the record entry. `unrepostSession` would be a no-op here anyway: it bails
+    /// on `posted == false`, which is exactly what automatic credits are.
+    private var removesWorkoutCredit: Bool { context == .workout && session.isRepost }
+
+    private var destructiveTitle: String {
+        if removesWorkoutCredit { return "Remove from Workout" }
+        return session.isRepost ? "Remove Repost" : "Delete Session"
+    }
+
+    private var destructivePrompt: String {
+        if removesWorkoutCredit { return "Remove from Workout?" }
+        return session.isRepost ? "Remove this repost?" : "Delete this session?"
+    }
+
+    /// Whose side scores are framed from: the viewer in `.workout`, nobody (the
+    /// author's own framing) in `.feed`.
+    private var perspective: Profile? {
+        context == .workout ? store.currentProfile : nil
+    }
+
+    /// A repost projected onto `perspective` drops any match they weren't tagged
+    /// in, so the count can differ from the author's — derive layout from these.
+    private var displayActivities: [SessionActivity] {
+        guard let perspective else { return session.postActivities }
+        return session.workoutActivities(for: perspective.id)
+    }
+
+    /// `SessionMatchList` / `MatchScorecard` accent this profile's side, and the
+    /// projection reframes scores around the viewer, so the two must agree.
+    private var displayAuthor: Profile { perspective ?? session.postAuthor }
+
+    private var isMultiActivity: Bool { displayActivities.count >= 2 }
 
     private var isOwner: Bool { store.currentProfile?.id == session.userId }
     private var isTagged: Bool {

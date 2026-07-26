@@ -262,14 +262,20 @@ struct WorkoutView: View {
             Text("Recent")
                 .font(.headline)
                 .foregroundStyle(Theme.textPrimary)
-            if store.mySessions.isEmpty {
+            if store.isInitialMySessionsLoading && store.mySessions.isEmpty {
+                // Only while empty, so a pull-to-refresh doesn't replace the
+                // sessions already on screen with ghosts.
+                ForEach(0..<2, id: \.self) { _ in FeedCardSkeleton() }
+            } else if store.mySessions.isEmpty {
                 Text("No sessions yet. Log a match or start a session above.")
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)
                     .padding(.vertical, 8)
             } else {
                 ForEach(store.mySessions.prefix(10)) { session in
-                    SessionSummaryRow(session: session)
+                    // Recent is this user's own workout history, so reposts must
+                    // show their result rather than the original author's.
+                    FeedCard(session: session, context: .workout)
                 }
             }
         }
@@ -298,133 +304,5 @@ struct QuickLogButton: View {
             .background(filled ? Theme.accent : Theme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .buttonStyle(.plain)
-    }
-}
-
-struct SessionSummaryRow: View {
-    @EnvironmentObject private var store: AppStore
-    @Environment(\.openSession) private var openSession
-    var session: FeedSession
-    @State private var showEditor = false
-    @State private var confirmDelete = false
-
-    var body: some View {
-        HStack(spacing: 14) {
-            HStack(spacing: 14) {
-                Image(systemName: icon)
-                    .font(.headline)
-                    .foregroundStyle(Theme.accent)
-                    .frame(width: 46, height: 46)
-                    .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(session.workoutDisplayTitle)
-                        .font(.headline)
-                        .foregroundStyle(Theme.textPrimary)
-                        .lineLimit(1)
-                    Text(subtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                }
-            }
-            .contentShape(Rectangle())
-            .onTapGesture { openSession(session.id, placeholder: session) }
-
-            Spacer(minLength: 8)
-
-            VStack(alignment: .trailing, spacing: 6) {
-                if workoutMatchCount > 0 {
-                    let r = matchResults
-                    Text("\(r.wins)–\(r.losses)")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(r.wins >= r.losses ? Theme.accent : Theme.textSecondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(
-                            r.wins >= r.losses ? Theme.accentSoft : Theme.surfaceElevated,
-                            in: Capsule()
-                        )
-                }
-                Text(session.workoutDate.relativeLabel)
-                    .font(.caption)
-                    .foregroundStyle(Theme.textTertiary)
-            }
-
-            Menu {
-                if !session.isRepost {
-                    Button {
-                        showEditor = true
-                    } label: {
-                        Label("Edit Session", systemImage: "pencil")
-                    }
-                }
-                Button(role: .destructive) {
-                    confirmDelete = true
-                } label: {
-                    Label(session.isRepost ? "Remove from Workout" : "Delete Session", systemImage: "trash")
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .foregroundStyle(Theme.textTertiary)
-                    .frame(width: 28, height: 40)
-            }
-            .accessibilityLabel("Session actions")
-        }
-        .cardStyle()
-        .fullScreenCover(isPresented: $showEditor) {
-            ActiveSessionView(existingSession: session)
-        }
-        .confirmationDialog(session.isRepost ? "Remove from Workout?" : "Delete this session?", isPresented: $confirmDelete, titleVisibility: .visible) {
-            Button(session.isRepost ? "Remove from Workout" : "Delete Session", role: .destructive) {
-                Task {
-                    if session.isRepost {
-                        _ = await store.removeWorkoutCredit(session)
-                    } else {
-                        _ = await store.deleteSession(session)
-                    }
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(session.isRepost
-                 ? "This removes the credited games from your Workout history and record, and removes your tag from the original post."
-                 : "Matches, practices, comments, and likes on this post will be removed.")
-        }
-    }
-
-    private var icon: String {
-        if workoutMatchCount > 0 && workoutPracticeCount == 0 { return "flag.checkered" }
-        if workoutPracticeCount > 0 && workoutMatchCount == 0 { return "figure.cooldown" }
-        return "figure.pickleball"
-    }
-
-    private var workoutActivities: [SessionActivity] {
-        guard let playerID = store.currentProfile?.id else { return [] }
-        return session.workoutActivities(for: playerID)
-    }
-
-    private var workoutMatchCount: Int { workoutActivities.filter(\.isMatch).count }
-    private var workoutPracticeCount: Int { workoutActivities.count - workoutMatchCount }
-
-    private var matchResults: (wins: Int, losses: Int) {
-        var wins = 0, losses = 0
-        for activity in workoutActivities {
-            switch activity.matchResult {
-            case .win:  wins += 1
-            case .loss: losses += 1
-            default:    break   // tie / not a match
-            }
-        }
-        return (wins, losses)
-    }
-
-    private var subtitle: String {
-        var parts: [String] = []
-        if workoutMatchCount > 0 { parts.append("\(workoutMatchCount) match\(workoutMatchCount == 1 ? "" : "es")") }
-        if workoutPracticeCount > 0 { parts.append("\(workoutPracticeCount) practice") }
-        if session.workoutDurationMinutes > 1 { parts.append("\(session.workoutDurationMinutes) min") }
-        if parts.isEmpty { parts.append("Session") }
-        return parts.joined(separator: " · ")
     }
 }

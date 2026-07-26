@@ -148,6 +148,7 @@ extension AppStore {
     }
 
     func loadMySessions(userId: UUID) async {
+        defer { isInitialMySessionsLoading = false }
         do {
             let sessions: [FeedSession] = try await supabase
                 .from("sessions")
