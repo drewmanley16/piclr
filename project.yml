@@ -84,6 +84,13 @@ targets:
         # only happens with GENERATE_INFOPLIST_FILE=YES. The literal key here
         # is what actually lands in the compiled Info.plist.
         CFBundleDisplayName: "piclr"
+        # $(...) IS substituted by Xcode's "Process Info.plist" build phase even
+        # with a checked-in info.path — unlike INFOPLIST_KEY_* above. Without
+        # this, xcodegen bakes a literal "1" and CURRENT_PROJECT_VERSION bumps
+        # in this file are silently ignored (only Xcode's export-time
+        # auto-manage-versioning was ever setting the real build number).
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         # Enable Live Activities (session lock-screen timer).
@@ -125,6 +132,8 @@ targets:
       properties:
         # App extensions must carry an explicit display name for App Store upload.
         CFBundleDisplayName: "piclr"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
 
@@ -151,6 +160,8 @@ targets:
       path: PickleballAIWatch/Info.plist
       properties:
         CFBundleDisplayName: "piclr"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleIconName: AppIcon
         WKApplication: true
         WKCompanionAppBundleIdentifier: com.pickleball.ai
