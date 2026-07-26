@@ -94,7 +94,8 @@ struct FollowRequestRow: View {
             name: request.follower?.displayName ?? "Player",
             detail: request.follower.map { "@\($0.username)" } ?? "Wants to follow you",
             userId: request.follower?.id,
-            placeholder: request.follower
+            placeholder: request.follower,
+            isPro: request.follower?.isPro ?? false
         ) {
             AcceptDeclineButtons {
                 Task { await store.respondToFollowRequest(request, accept: false) }

@@ -11,7 +11,7 @@ enum FeatureFlags {
     /// products approved, the Paid Apps agreement active, and RevenueCat
     /// offerings live. While it's `false`, **no paid feature ships in a
     /// TestFlight or App Store build.** Flip it to `true` (one line) to launch.
-    static let subscriptionsEnabled = false
+    static let subscriptionsEnabled = true
 
     /// Whether any payment / paywall UI is shown at all. Every Pro gate reads
     /// this (directly, or via `SubscriptionStore.showsLockedFeatures` /

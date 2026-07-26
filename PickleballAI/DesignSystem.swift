@@ -476,6 +476,8 @@ struct IdentityRow<Trailing: View>: View {
     /// When set, the avatar+name block navigates to this user's profile.
     var userId: UUID? = nil
     var placeholder: Profile? = nil
+    /// Renders a Pro badge after the name when true (and monetization is live).
+    var isPro: Bool = false
     @ViewBuilder var trailing: Trailing
 
     var body: some View {
@@ -484,9 +486,12 @@ struct IdentityRow<Trailing: View>: View {
                 HStack(spacing: 12) {
                     ProfileAvatar(url: avatarURL, initials: initials, size: avatarSize, userId: userId, unlinked: true)
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(name)
-                            .font(.headline)
-                            .foregroundStyle(Theme.textPrimary)
+                        HStack(spacing: 5) {
+                            Text(name)
+                                .font(.headline)
+                                .foregroundStyle(Theme.textPrimary)
+                            ProBadge(isPro: isPro)
+                        }
                         if let detail {
                             Text(detail)
                                 .font(.subheadline)
@@ -524,6 +529,7 @@ extension IdentityRow {
             detail: detail ?? person.handle,
             userId: unlinked ? nil : person.profileId,
             placeholder: nil,
+            isPro: person.isPro,
             trailing: trailing
         )
     }

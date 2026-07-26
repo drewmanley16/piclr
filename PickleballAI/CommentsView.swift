@@ -498,6 +498,7 @@ struct CommentRow: View {
                         Text(comment.authorName)
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Theme.textPrimary)
+                        ProBadge(isPro: comment.author?.isPro ?? false)
                         if let username = comment.author?.username {
                             Text("@\(username)")
                                 .font(.caption)

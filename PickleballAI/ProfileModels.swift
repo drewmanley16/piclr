@@ -21,6 +21,8 @@ struct Profile: Identifiable, Codable, Hashable {
     var weightPounds: Double?
     var shoeSize: Double?
     var birthday: String?
+    /// Public Pro flag (from `profiles.is_pro`), safe to render on any user.
+    var isPro: Bool
     var weeklyGoal: Int?
     var streakRemindersEnabled: Bool?
     var isPrivate: Bool?
@@ -43,9 +45,36 @@ struct Profile: Identifiable, Codable, Hashable {
         case weightPounds = "weight_pounds"
         case shoeSize = "shoe_size"
         case birthday
+        case isPro = "is_pro"
         case weeklyGoal = "weekly_goal"
         case streakRemindersEnabled = "streak_reminders_enabled"
         case isPrivate = "is_private"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        username = try c.decode(String.self, forKey: .username)
+        displayName = try c.decode(String.self, forKey: .displayName)
+        firstName = try c.decodeIfPresent(String.self, forKey: .firstName)
+        lastName = try c.decodeIfPresent(String.self, forKey: .lastName)
+        avatarInitials = try c.decodeIfPresent(String.self, forKey: .avatarInitials)
+        avatarURL = try c.decodeIfPresent(String.self, forKey: .avatarURL)
+        avatarPath = try c.decodeIfPresent(String.self, forKey: .avatarPath)
+        homeCourt = try c.decodeIfPresent(String.self, forKey: .homeCourt)
+        rating = try c.decodeIfPresent(Double.self, forKey: .rating)
+        skillLevel = try c.decodeIfPresent(String.self, forKey: .skillLevel)
+        onboardingCompletedAt = try c.decodeIfPresent(String.self, forKey: .onboardingCompletedAt)
+        paddle = try c.decodeIfPresent(String.self, forKey: .paddle)
+        preferredSide = try c.decodeIfPresent(String.self, forKey: .preferredSide)
+        heightInches = try c.decodeIfPresent(Double.self, forKey: .heightInches)
+        weightPounds = try c.decodeIfPresent(Double.self, forKey: .weightPounds)
+        shoeSize = try c.decodeIfPresent(Double.self, forKey: .shoeSize)
+        birthday = try c.decodeIfPresent(String.self, forKey: .birthday)
+        // Tolerate narrow selects that omit the column (defaults to non-Pro).
+        isPro = try c.decodeIfPresent(Bool.self, forKey: .isPro) ?? false
+        weeklyGoal = try c.decodeIfPresent(Int.self, forKey: .weeklyGoal)
+        streakRemindersEnabled = try c.decodeIfPresent(Bool.self, forKey: .streakRemindersEnabled)
     }
 
     var initials: String {
@@ -66,7 +95,8 @@ struct Profile: Identifiable, Codable, Hashable {
         lastName: String? = nil,
         avatarInitials: String? = nil,
         avatarURL: String? = nil,
-        avatarPath: String? = nil
+        avatarPath: String? = nil,
+        isPro: Bool = false
     ) {
         self.id = id
         self.username = username
@@ -76,6 +106,7 @@ struct Profile: Identifiable, Codable, Hashable {
         self.avatarInitials = avatarInitials
         self.avatarURL = avatarURL
         self.avatarPath = avatarPath
+        self.isPro = isPro
         homeCourt = nil
         rating = nil
         skillLevel = nil
@@ -101,6 +132,7 @@ struct ParticipantProfile: Decodable, Hashable {
     let avatarInitials: String?
     var avatarURL: String?
     let avatarPath: String?
+    let isPro: Bool
 
     enum CodingKeys: String, CodingKey {
         case id, username
@@ -108,6 +140,18 @@ struct ParticipantProfile: Decodable, Hashable {
         case avatarInitials = "avatar_initials"
         case avatarURL = "avatar_url"
         case avatarPath = "avatar_path"
+        case isPro = "is_pro"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        username = try c.decode(String.self, forKey: .username)
+        displayName = try c.decode(String.self, forKey: .displayName)
+        avatarInitials = try c.decodeIfPresent(String.self, forKey: .avatarInitials)
+        avatarURL = try c.decodeIfPresent(String.self, forKey: .avatarURL)
+        avatarPath = try c.decodeIfPresent(String.self, forKey: .avatarPath)
+        isPro = try c.decodeIfPresent(Bool.self, forKey: .isPro) ?? false
     }
 
     var initials: String {
@@ -123,6 +167,7 @@ struct ParticipantProfile: Decodable, Hashable {
         avatarInitials = profile.avatarInitials
         avatarURL = profile.avatarURL
         avatarPath = profile.avatarPath
+        isPro = profile.isPro
     }
 }
 
@@ -137,6 +182,8 @@ struct PersonRef: Identifiable, Hashable, Codable {
     let handle: String?
     let avatarURL: String?
     let initials: String
+    /// Public Pro flag; false for guests (no account).
+    var isPro: Bool = false
 
     /// Stable `Identifiable` key: the profile id when present, else the guest's
     /// name (guests have no account to key on).
@@ -148,6 +195,7 @@ struct PersonRef: Identifiable, Hashable, Codable {
         handle = "@\(profile.username)"
         avatarURL = profile.avatarURL
         initials = profile.initials
+        isPro = profile.isPro
     }
 
     init(participant: ParticipantProfile) {
@@ -156,6 +204,7 @@ struct PersonRef: Identifiable, Hashable, Codable {
         handle = "@\(participant.username)"
         avatarURL = participant.avatarURL
         initials = participant.initials
+        isPro = participant.isPro
     }
 
     init(guestName: String) {
