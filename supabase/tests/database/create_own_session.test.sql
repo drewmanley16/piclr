@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(13);
+select plan(15);
 
 insert into auth.users (id, email) values
   ('40000001-0000-0000-0000-000000000001', 'create-owner@example.test'),
@@ -165,6 +165,31 @@ select is(
      and reposted_from = '50000000-0000-0000-0000-000000000003'),
   1,
   'a tagged mutual friend is credited, proving posted flips last'
+);
+
+-- Repeating the same client-generated id models a lost HTTP response followed
+-- by a retry. It must resolve to the committed write rather than duplicating it.
+select lives_ok(
+  $$select public.create_own_session(jsonb_build_object(
+      'id', '50000000-0000-0000-0000-000000000003',
+      'duration_minutes', 75,
+      'posted', true,
+      'activities', jsonb_build_array(jsonb_build_object(
+        'id', '60000000-0000-0000-0000-000000000003',
+        'kind', 'practice', 'position', 0
+      ))
+  ))$$,
+  'retrying a committed client id succeeds'
+);
+
+select results_eq(
+  $$select
+      (select count(*)::int from public.sessions
+       where id = '50000000-0000-0000-0000-000000000003'),
+      (select count(*)::int from public.session_activities
+       where session_id = '50000000-0000-0000-0000-000000000003')$$,
+  $$values (1, 2)$$,
+  'an idempotent retry creates neither a duplicate session nor duplicate activities'
 );
 
 -- --------------------------------------------------------------------------

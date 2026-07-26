@@ -23,6 +23,7 @@ struct ActiveSessionView: View {
     @State private var showLocationPicker = false
     @State private var showCelebration = false
     @State private var celebrationTitle = "Session posted"
+    @State private var isSubmitting = false
 
     init(existingSession: FeedSession? = nil, isLive: Bool = false) {
         self.existingSession = existingSession
@@ -78,7 +79,11 @@ struct ActiveSessionView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(isEditing ? "Save" : "Post") { Task { await save() } }
-                        .disabled(draft.activities.isEmpty || store.isBusy)
+                        .disabled(
+                            (draft.activities.isEmpty && draft.liveMatch == nil)
+                                || store.isBusy
+                                || isSubmitting
+                        )
                 }
             }
             .sheet(item: $editor) { route in
@@ -105,7 +110,12 @@ struct ActiveSessionView: View {
                 titleVisibility: .visible
             ) {
                 Button(isEditing ? "Discard Changes" : "Discard Session", role: .destructive) {
-                    if isLive { store.discardLiveSession() }
+                    if isLive {
+                        // Suppress the external-success observer: this clear is
+                        // an explicit discard, not a Watch-initiated post.
+                        isSubmitting = true
+                        store.discardLiveSession()
+                    }
                     dismiss()
                 }
                 Button("Keep Editing", role: .cancel) {}
@@ -120,7 +130,23 @@ struct ActiveSessionView: View {
         .interactiveDismissDisabled(!isLive && (isEditing || !draft.activities.isEmpty))
         .onAppear {
             store.errorMessage = nil
-            if isLive { store.requestLiveWorkoutMetrics() }
+            if isLive {
+                if let activeDraft = store.activeDraft { localDraft = activeDraft }
+                store.requestLiveWorkoutMetrics()
+            }
+        }
+        .onChange(of: store.activeDraft) { oldValue, newValue in
+            guard isLive else { return }
+            if let newValue {
+                // One-way snapshot only: never writes stale form state back into
+                // the store, but preserves the last draft for external posting.
+                localDraft = newValue
+            } else if let oldValue, !isSubmitting, !showCelebration {
+                // Watch-initiated posting bypasses save(), so the sheet itself
+                // must react when the successful post clears the live draft.
+                localDraft = oldValue
+                Task { await finishExternalPost() }
+            }
         }
         .alert(isEditing ? "Couldn't save session" : "Couldn't post session", isPresented: postErrorBinding) {
             if isLive, store.activeDraft?.expectsWatchMetrics == true {
@@ -377,6 +403,10 @@ struct ActiveSessionView: View {
     private func remove(_ activity: DraftActivity) { draft.activities.removeAll { $0.id == activity.id } }
 
     private func save() async {
+        guard !isSubmitting else { return }
+        isSubmitting = true
+        defer { isSubmitting = false }
+
         if let existingSession {
             if await store.updateSession(existingSession, draft: draft) {
                 Haptics.success()
@@ -396,6 +426,10 @@ struct ActiveSessionView: View {
     }
 
     private func postWithoutMetrics() async {
+        guard !isSubmitting else { return }
+        isSubmitting = true
+        defer { isSubmitting = false }
+
         let streakBefore = SessionStats(sessions: store.mySessions).weeklyStreak
         localDraft = draft
         guard await store.postLiveSessionWithoutMetrics() else { return }
@@ -412,6 +446,14 @@ struct ActiveSessionView: View {
         celebrationTitle = (streakAfter > streakBefore && milestones.contains(streakAfter))
             ? "\(streakAfter)-week streak!"
             : "Session posted"
+        withAnimation { showCelebration = true }
+        try? await Task.sleep(nanoseconds: 1_050_000_000)
+        dismiss()
+    }
+
+    private func finishExternalPost() async {
+        Haptics.success()
+        celebrationTitle = "Session posted"
         withAnimation { showCelebration = true }
         try? await Task.sleep(nanoseconds: 1_050_000_000)
         dismiss()

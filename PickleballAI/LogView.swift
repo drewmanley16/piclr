@@ -12,6 +12,7 @@ struct WorkoutView: View {
     @State private var showHealthMetricsConsent = false
     @AppStorage(HealthMetricsSharing.defaultsKey) private var shareHealthMetrics = false
     @State private var quickLogDuration = AppStore.defaultQuickLogDurationMinutes
+    @State private var quickLogSessionID = UUID()
 
     var body: some View {
         ProfileNavigationStack(reselectSignal: reselectSignal) {
@@ -59,12 +60,12 @@ struct WorkoutView: View {
                         Label("Start live session", systemImage: "play.fill")
                     }
                     Button {
-                        quickEditor = .newMatch
+                        beginQuickLog(.newMatch)
                     } label: {
                         Label("Log a match", systemImage: "flag.checkered")
                     }
                     Button {
-                        quickEditor = .newPractice
+                        beginQuickLog(.newPractice)
                     } label: {
                         Label("Log practice", systemImage: "figure.cooldown")
                     }
@@ -112,9 +113,18 @@ struct WorkoutView: View {
     /// failure — this posts straight to the backend, with no draft to fall back
     /// on, so a silent dismissal would just lose what the user entered.
     private func quickLog(_ activity: DraftActivity) async -> Bool {
-        let posted = await store.quickLog(activity, durationMinutes: quickLogDuration)
+        let posted = await store.quickLog(
+            activity,
+            durationMinutes: quickLogDuration,
+            sessionId: quickLogSessionID
+        )
         if posted { Haptics.success() }
         return posted
+    }
+
+    private func beginQuickLog(_ route: ActivityEditorRoute) {
+        quickLogSessionID = UUID()
+        quickEditor = route
     }
 
     private func startLive() {
@@ -183,10 +193,10 @@ struct WorkoutView: View {
     private var quickLog: some View {
         HStack(spacing: 12) {
             QuickLogButton(title: "Log a Match", systemImage: "flag.checkered", filled: true) {
-                quickEditor = .newMatch
+                beginQuickLog(.newMatch)
             }
             QuickLogButton(title: "Log Practice", systemImage: "figure.cooldown", filled: false) {
-                quickEditor = .newPractice
+                beginQuickLog(.newPractice)
             }
         }
     }

@@ -46,12 +46,13 @@ extension AppStore {
         guard activeDraft == nil,
               let url = draftFileURL,
               let data = try? Data(contentsOf: url),
-              let draft = try? JSONDecoder().decode(SessionDraft.self, from: data)
+              var draft = try? JSONDecoder().decode(SessionDraft.self, from: data)
         else { return }
         guard Date().timeIntervalSince(draft.startedAt) < Self.draftMaxAge else {
             deletePersistedDraft()
             return
         }
+        if draft.createID == nil { draft.createID = UUID() }
         activeDraft = draft
         if draft.expectsWatchMetrics == true, draft.workoutMetrics == nil {
             watchWorkoutStatus = .disconnected
@@ -181,11 +182,16 @@ extension AppStore {
     func quickLog(
         _ activity: DraftActivity,
         durationMinutes: Int = defaultQuickLogDurationMinutes,
+        sessionId: UUID = UUID(),
         postToFeed: Bool = true
     ) async -> Bool {
+        let duration = max(1, durationMinutes)
+        let endedAt = Date()
         var draft = SessionDraft()
-        draft.startedAt = Date()
-        draft.durationMinutes = durationMinutes
+        draft.createID = sessionId
+        draft.startedAt = endedAt.addingTimeInterval(-TimeInterval(duration * 60))
+        draft.endedAt = endedAt
+        draft.durationMinutes = duration
         draft.activities = [activity]
         draft.postToFeed = postToFeed
         return await postSession(draft, isQuickLog: true)
@@ -269,12 +275,16 @@ extension AppStore {
         busyCount += 1
         errorMessage = nil
         defer { busyCount -= 1 }
+        var uploadedPhotoPath: String?
         do {
             let now = Date()
             let elapsed = Int(now.timeIntervalSince(draft.startedAt) / 60)
             let duration = draft.durationMinutes
                 ?? min(max(1, elapsed), Self.maxDerivedDurationMinutes)
-            let sessionId = UUID()
+            let endedAt = draft.durationMinutes == nil
+                ? now
+                : draft.startedAt.addingTimeInterval(TimeInterval(duration * 60))
+            let sessionId = draft.createID ?? UUID()
 
             // Upload before the row exists — the storage path is uid-scoped, so
             // it doesn't depend on the session. A failure aborts the post rather
@@ -285,6 +295,7 @@ extension AppStore {
                     return false
                 }
                 photoPath = uploaded
+                uploadedPhotoPath = uploaded
             }
 
             let payload = SessionCreatePayload(
@@ -295,7 +306,7 @@ extension AppStore {
                 durationMinutes: duration,
                 posted: draft.postToFeed,
                 startedAt: DateFormatting.iso.string(from: draft.startedAt),
-                endedAt: DateFormatting.iso.string(from: now),
+                endedAt: DateFormatting.iso.string(from: endedAt),
                 photoPath: photoPath,
                 averageHeartRateBPM: draft.workoutMetrics?.averageHeartRateBPM,
                 maximumHeartRateBPM: draft.workoutMetrics?.maximumHeartRateBPM,
@@ -320,6 +331,13 @@ extension AppStore {
             await unlockNewlyCrossedMilestones(previouslySatisfied: milestonesBefore, playerID: uid)
             return true
         } catch {
+            // A PostgREST error is a definitive database rejection, so no row
+            // can reference the pre-uploaded object. Transport errors are
+            // ambiguous: the transaction may have committed before its response
+            // was lost, so retain the stable-path upload for an idempotent retry.
+            if error is PostgrestError, let uploadedPhotoPath {
+                try? await supabase.storage.from("post-photos").remove(paths: [uploadedPhotoPath])
+            }
             reportError(error)
             return false
         }

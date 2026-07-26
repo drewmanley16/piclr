@@ -110,6 +110,10 @@ struct DraftActivity: Identifiable, Codable, Hashable {
 }
 
 struct SessionDraft: Codable, Equatable {
+    /// Stable id for create retries. Storage uploads use this id in their object
+    /// path, and `create_own_session` treats a repeated id from the same owner as
+    /// the same write. Optional so older persisted drafts still decode.
+    var createID: UUID? = UUID()
     var title: String = ""
     var location: String = ""
     var takeaway: String = ""
