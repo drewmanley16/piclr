@@ -33,20 +33,26 @@ struct ProfileView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     profileRow
-                    if !store.incomingFollowRequests.isEmpty { followRequestsBanner }
-                    // Once real locked numbers render in the Insights card, it's the
-                    // better ad — the standalone banner alongside it is redundant noise.
-                    if subscriptions.showsLockedFeatures && !playInsights.isReady { proBanner }
-                    if completion < 1 && !dismissedCompletion { completionBanner }
-                    recordCard
-                    rivalsCard
-                    insightsCard
-                    weeklyWrapCard
-                    milestonesCard
-                    activityCard
-                    WorkoutCalendarCard(sessions: store.mySessions)
-                    dashboard
-                    goalsCard
+                    if store.isInitialMySessionsLoading && store.mySessions.isEmpty {
+                        // Only while empty, so a pull-to-refresh doesn't replace
+                        // cards already on screen with ghosts.
+                        SkeletonList(rows: 4)
+                    } else {
+                        if !store.incomingFollowRequests.isEmpty { followRequestsBanner }
+                        // Once real locked numbers render in the Insights card, it's the
+                        // better ad — the standalone banner alongside it is redundant noise.
+                        if subscriptions.showsLockedFeatures && !playInsights.isReady { proBanner }
+                        if completion < 1 && !dismissedCompletion { completionBanner }
+                        recordCard
+                        rivalsCard
+                        insightsCard
+                        weeklyWrapCard
+                        milestonesCard
+                        activityCard
+                        WorkoutCalendarCard(sessions: store.mySessions)
+                        dashboard
+                        goalsCard
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 24)

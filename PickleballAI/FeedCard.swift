@@ -282,6 +282,7 @@ struct FeedCard: View {
                 SocialLabel(icon: "bubble.right", count: session.commentCount)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Comments")
 
             Button {
                 if let image = renderShareImage(for: session) {
