@@ -98,7 +98,8 @@ struct OtherProfileView: View {
                 } else if isLoading {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Sessions").font(.headline).foregroundStyle(Theme.textPrimary)
-                        SkeletonList(rows: 3)
+                        FeedCardSkeleton()
+                        FeedCardSkeleton()
                     }
                 }
             }
@@ -292,7 +293,7 @@ struct OtherProfileView: View {
                     .foregroundStyle(Theme.textSecondary)
             } else {
                 ForEach(sessions) { session in
-                    PostingRow(session: session)
+                    FeedCard(session: session, context: .feed)
                 }
             }
         }
