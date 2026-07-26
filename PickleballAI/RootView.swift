@@ -70,7 +70,11 @@ struct RootView: View {
         // replaced by AppTabBar so both tap and swipe move between pages.
         TabView(selection: $selectedTab) {
             HomeView(reselectSignal: reselectTokens[0]).tag(0)
-            WorkoutView(reselectSignal: reselectTokens[1]).tag(1)
+            WorkoutView(
+                reselectSignal: reselectTokens[1],
+                isSelected: selectedTab == 1
+            )
+            .tag(1)
             ProfileView(reselectSignal: reselectTokens[2]).tag(2)
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
