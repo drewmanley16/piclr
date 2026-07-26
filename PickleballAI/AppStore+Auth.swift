@@ -235,6 +235,9 @@ extension AppStore {
         // live draft persisted before a kill (the sign-out path deletes the file,
         // so a leftover file always belongs to this user).
         restorePersistedDraft()
+        // A Live Activity tap that arrived during launch has nothing to open if
+        // no draft survived; drop it so it can't fire against a later session.
+        if activeDraft == nil { openLiveSessionRequest = nil }
         let startupBeganAt = Date()
         initialFeedLoadStartedAt = startupBeganAt
         isInitialFeedLoading = feed.isEmpty

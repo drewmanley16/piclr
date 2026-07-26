@@ -12,6 +12,7 @@ struct SessionLiveActivity: Widget {
             LockScreenView(context: context)
                 .padding(16)
                 .background(background)
+                .widgetURL(SessionActivityAttributes.liveSessionURL)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
@@ -57,6 +58,8 @@ struct SessionLiveActivity: Widget {
             } minimal: {
                 Image(systemName: "figure.pickleball").foregroundStyle(accent)
             }
+            // Covers the expanded regions, both compact slots and minimal.
+            .widgetURL(SessionActivityAttributes.liveSessionURL)
         }
     }
 }

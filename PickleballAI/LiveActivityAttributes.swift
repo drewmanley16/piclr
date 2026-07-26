@@ -22,3 +22,10 @@ struct SessionActivityAttributes: ActivityAttributes {
     /// When the session started — drives the auto-updating on-screen timer.
     var startedAt: Date
 }
+
+extension SessionActivityAttributes {
+    /// Deep link the Live Activity opens: resumes the in-progress session in the
+    /// app. The scheme is registered under `CFBundleURLTypes` in `project.yml`
+    /// and routed by `AppStore.handleInviteURL`.
+    static let liveSessionURL = URL(string: "pickleballai://live-session")!
+}
