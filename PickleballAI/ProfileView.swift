@@ -52,6 +52,7 @@ struct ProfileView: View {
                 .padding(.bottom, 24)
             }
             .background(Theme.background.ignoresSafeArea())
+            .refreshable { await refresh() }
             .safeAreaInset(edge: .top) {
                 AppHeader(title: profile?.username ?? "Profile", titleFont: .title2.weight(.bold)) {
                     HeaderPill {
@@ -109,6 +110,20 @@ struct ProfileView: View {
                 guard subscriptions.monetizationEnabled else { return }
                 await store.loadMilestoneUnlocks()
             }
+        }
+    }
+
+    /// Pull-to-refresh: re-fetches everything on-screen that's server-backed.
+    /// (Rivals/insights/weekly-wrap/records are computed client-side from
+    /// `mySessions`, so refreshing that covers them too.)
+    private func refresh() async {
+        guard let uid = profile?.id else { return }
+        async let profileLoad: AppStore.ProfileLoad = store.loadProfile(userId: uid)
+        async let sessions: Void = store.loadMySessions(userId: uid)
+        async let gear: Void = store.loadGear(userId: uid)
+        _ = await (profileLoad, sessions, gear)
+        if subscriptions.monetizationEnabled {
+            await store.loadMilestoneUnlocks()
         }
     }
 

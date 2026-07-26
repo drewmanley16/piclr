@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		00291CA924896F8E25FFC6A3 /* PushPrimerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BE6D184FFD4DE7523A9689F /* PushPrimerSheet.swift */; };
 		01FBF11CB8802B2E11882178 /* GearModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68362579BCA6AA9DB6DC88EE /* GearModels.swift */; };
 		05C1DAFD17F9A950EDFB2408 /* Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F90BCB4C6BD7BCDF83062556 /* Analytics.swift */; };
 		076565ECFC5D40E2EDE1D5E1 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC7CF99A3E687EB8A86C623F /* Models.swift */; };
@@ -215,6 +216,7 @@
 		53F9DEA7EC6F600A7C9DF92D /* RivalryInsights.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RivalryInsights.swift; sourceTree = "<group>"; };
 		594C30F607DCAA2E5D2E6245 /* EdgeFunctionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeFunctionModels.swift; sourceTree = "<group>"; };
 		5BC068B87E22A474B35B0E61 /* PickleballAIWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = PickleballAIWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		5BE6D184FFD4DE7523A9689F /* PushPrimerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushPrimerSheet.swift; sourceTree = "<group>"; };
 		5D656AFC1851F5D01BC4BB70 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
 		5D9CC3B49A2B1A43B0002C5D /* AppStore+Safety.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Safety.swift"; sourceTree = "<group>"; };
 		5F3DE89404F54F718B1D071B /* SessionEditors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionEditors.swift; sourceTree = "<group>"; };
@@ -413,6 +415,7 @@
 				475451E24481504893FFE7ED /* ProfileModels.swift */,
 				528729889F780FEF8B81D160 /* ProfileView.swift */,
 				D102C35019EBAFBC8A6123DF /* ProTeaser.swift */,
+				5BE6D184FFD4DE7523A9689F /* PushPrimerSheet.swift */,
 				C49D15DAFAF823EF6B673ADE /* PushService.swift */,
 				8D1FBA77BA526A6415502267 /* RealtimeSubscription.swift */,
 				C105A93AC708CD4765D2974D /* RevenueCat.example.plist */,
@@ -685,6 +688,7 @@
 				FBC5CA0F99C49D8AC902D659 /* ProfileIdentityValidation.swift in Sources */,
 				449EC4A27D19CBFFFABCB4CC /* ProfileModels.swift in Sources */,
 				C5338F649A3DC6D11AE71F0B /* ProfileView.swift in Sources */,
+				00291CA924896F8E25FFC6A3 /* PushPrimerSheet.swift in Sources */,
 				91C1312E7498D846C328A74E /* PushService.swift in Sources */,
 				67003847FAE65E98968EFA9E /* RealtimeSubscription.swift in Sources */,
 				53A4ED9BBF46A833CDCD422A /* RevenueCatService.swift in Sources */,

@@ -161,9 +161,9 @@ struct PaywallView: View {
             .buttonStyle(.plain)
 
             HStack(spacing: 16) {
-                Link("Terms", destination: URL(string: "https://pickleball.ai/terms")!)
+                Link("Terms", destination: URL(string: Legal.termsURL)!)
                 Text("·").foregroundStyle(Theme.textTertiary)
-                Link("Privacy", destination: URL(string: "https://pickleball.ai/privacy")!)
+                Link("Privacy", destination: URL(string: Legal.privacyURL)!)
             }
             .font(.caption)
             .foregroundStyle(Theme.textTertiary)

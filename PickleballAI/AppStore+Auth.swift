@@ -410,9 +410,7 @@ extension AppStore {
             self?.handlePushTap(userInfo)
         }
         if await PushService.shared.authorizationStatus() == .notDetermined {
-            if await PushService.shared.requestAuthorizationAndRegister() {
-                Analytics.capture(.pushNotificationsEnabled)
-            }
+            showsPushPrimer = true
         } else {
             await PushService.shared.registerIfAuthorized()
         }

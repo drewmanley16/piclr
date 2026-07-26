@@ -23,6 +23,17 @@ final class AppStore: ObservableObject {
     @Published var feedReachedEnd = false
     @Published var discoverReachedEnd = false
     @Published var isInitialFeedLoading = false
+    /// Mirrors `isInitialFeedLoading` for the Discover tab, which loads lazily
+    /// on first switch to it — without this it briefly shows "nothing to
+    /// discover yet" before the first page has even been requested.
+    @Published var isInitialDiscoverLoading = false
+    /// Set when the initial (non-cancelled) following-feed load fails, so the
+    /// empty state can show a real error + retry instead of "no posts yet."
+    /// Cleared on any successful load. Kept separate from the shared
+    /// `errorMessage` so an unrelated background failure elsewhere can't be
+    /// misattributed to the feed.
+    @Published var feedLoadError: String?
+    @Published var discoverLoadError: String?
     let feedPageSize = 20
     @Published var mySessions: [FeedSession] = []
     /// Mirrors `isInitialFeedLoading` for the Workout tab's Recent list, which
@@ -69,6 +80,10 @@ final class AppStore: ObservableObject {
     /// tab and WorkoutView opens the in-progress session, then clears it. A
     /// fresh id (rather than a bool) so repeat taps always re-trigger.
     @Published var openLiveSessionRequest: UUID?
+    /// Set on first sign-in when push permission hasn't been decided yet.
+    /// RootView shows a soft explainer sheet before the hard system prompt
+    /// fires, instead of surprising a brand-new user with it immediately.
+    @Published var showsPushPrimer = false
 
     /// The subset of profile columns embedded wherever a lightweight identity
     /// (avatar + name) is all a view needs. Hand-typed in several PostgREST
@@ -132,6 +147,10 @@ final class AppStore: ObservableObject {
     @Published var watchWorkoutStatus: WatchWorkoutStatus = .idle
     var shouldPostWhenWatchFinishes = false
     var isWaitingForWatchFinalization = false
+    /// Guards `postLiveSession()` against concurrent invocation — the phone's
+    /// "Finish" button and watch-driven `.finishSession`/`.workoutFinished`
+    /// messages can each independently trigger a post in quick succession.
+    var isPostingLiveSession = false
 
     /// An in-progress ("live") session that survives leaving the Workout tab.
     /// nil means no session is currently open. Mutations drive the Live Activity.

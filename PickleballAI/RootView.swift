@@ -56,6 +56,9 @@ struct RootView: View {
         .sheet(item: $subscriptions.paywallContext) { context in
             PaywallView(context: context)
         }
+        .sheet(isPresented: $store.showsPushPrimer) {
+            PushPrimerSheet()
+        }
     }
 
     /// Moves to the Play tab when a Live Activity tap is waiting to be honored;
