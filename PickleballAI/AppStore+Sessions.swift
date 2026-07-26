@@ -46,12 +46,13 @@ extension AppStore {
         guard activeDraft == nil,
               let url = draftFileURL,
               let data = try? Data(contentsOf: url),
-              let draft = try? JSONDecoder().decode(SessionDraft.self, from: data)
+              var draft = try? JSONDecoder().decode(SessionDraft.self, from: data)
         else { return }
         guard Date().timeIntervalSince(draft.startedAt) < Self.draftMaxAge else {
             deletePersistedDraft()
             return
         }
+        if draft.createID == nil { draft.createID = UUID() }
         activeDraft = draft
         if draft.expectsWatchMetrics == true, draft.workoutMetrics == nil {
             watchWorkoutStatus = .disconnected
@@ -179,9 +180,21 @@ extension AppStore {
     }
 
     /// One-tap log: wraps a single activity in a fresh session and posts it.
-    func quickLog(_ activity: DraftActivity, postToFeed: Bool = true) async -> Bool {
+    /// `durationMinutes` comes from the editor — a quick log is entered after
+    /// play, so there is no elapsed time to measure.
+    func quickLog(
+        _ activity: DraftActivity,
+        durationMinutes: Int = defaultQuickLogDurationMinutes,
+        sessionId: UUID = UUID(),
+        postToFeed: Bool = true
+    ) async -> Bool {
+        let duration = max(1, durationMinutes)
+        let endedAt = Date()
         var draft = SessionDraft()
-        draft.startedAt = Date()
+        draft.createID = sessionId
+        draft.startedAt = endedAt.addingTimeInterval(-TimeInterval(duration * 60))
+        draft.endedAt = endedAt
+        draft.durationMinutes = duration
         draft.activities = [activity]
         draft.postToFeed = postToFeed
         return await postSession(draft, isQuickLog: true)
@@ -189,11 +202,75 @@ extension AppStore {
 
     // MARK: - Writes
 
-    /// Write a full multi-activity session built on-device. Inserts the session
-    /// unposted, writes activities + tagged participants, then flips `posted`
-    /// last so realtime subscribers only see the completed post.
+    /// Default length offered for a one-tap log.
+    static let defaultQuickLogDurationMinutes = 60
+
+    /// Ceiling for a duration derived from elapsed time. A live draft survives
+    /// a force-quit for up to `draftMaxAge` (24h), so without a cap a session
+    /// resumed the next morning would post as a 900-minute workout.
+    static let maxDerivedDurationMinutes = 8 * 60
+
+    /// Maps on-device draft activities to the RPC payload shape shared by
+    /// `create_own_session` and `update_own_session`. `position` comes from the
+    /// array order, and participant ids are carried through — the update RPC
+    /// upserts participants by id and deletes the ones missing from the payload.
+    static func writeActivities(from activities: [DraftActivity]) -> [SessionWriteActivity] {
+        activities.enumerated().map { index, activity in
+            let participants =
+                activity.partners.map {
+                    SessionWriteParticipant(
+                        id: $0.id,
+                        profileId: $0.profile?.id,
+                        guestName: $0.profile == nil ? $0.guestName : nil,
+                        role: "partner"
+                    )
+                }
+                + activity.opponents.map {
+                    SessionWriteParticipant(
+                        id: $0.id,
+                        profileId: $0.profile?.id,
+                        guestName: $0.profile == nil ? $0.guestName : nil,
+                        role: "opponent"
+                    )
+                }
+            let isMatch = activity.kind == .match
+            return SessionWriteActivity(
+                id: activity.id,
+                kind: activity.kind.rawValue,
+                position: index,
+                focus: activity.focus.isEmpty ? nil : activity.focus,
+                reps: activity.reps.isEmpty ? nil : activity.reps,
+                notes: activity.notes.isEmpty ? nil : activity.notes,
+                teamScore: isMatch ? activity.teamScore : nil,
+                opponentScore: isMatch ? activity.opponentScore : nil,
+                won: activity.wonValue,
+                participants: participants
+            )
+        }
+    }
+
+    /// Write a full multi-activity session built on-device, in one transaction
+    /// (`create_own_session`). The RPC inserts unposted, writes activities +
+    /// tagged participants, and flips `posted` last, so realtime subscribers
+    /// only see the completed post and a failure leaves nothing behind.
     func postSession(_ draft: SessionDraft, isQuickLog: Bool = false) async -> Bool {
         guard let uid = currentProfile?.id else { return false }
+
+        // A game still in progress on the watch lives in `liveMatch`, not in
+        // `activities` — it only moves across when the watch sends `endGame`.
+        // Finishing from the phone mid-game must not throw that score away.
+        var activities = draft.activities
+        if let liveMatch = draft.liveMatch {
+            activities.append(DraftActivity(liveMatch: liveMatch))
+        }
+        // The editor disables Post while this is empty, but the watch's
+        // `finishSession` command reaches postLiveSession() without passing
+        // through it, and an activity-less session renders as a bare "Session".
+        guard !activities.isEmpty else {
+            errorMessage = "Add a match or practice before posting."
+            return false
+        }
+
         // Derive "first-ever session" from state we already have: no network call
         // just for analytics. `mySessions` is empty before the user's first post.
         let isFirstSession = mySessions.isEmpty
@@ -201,73 +278,53 @@ extension AppStore {
         busyCount += 1
         errorMessage = nil
         defer { busyCount -= 1 }
+        var uploadedPhotoPath: String?
         do {
             let now = Date()
-            let duration = max(1, Int(now.timeIntervalSince(draft.startedAt) / 60))
-            let firstFocus = draft.activities.first(where: { $0.kind == .practice && !$0.focus.isEmpty })?.focus
+            let elapsed = Int(now.timeIntervalSince(draft.startedAt) / 60)
+            let duration = draft.durationMinutes
+                ?? min(max(1, elapsed), Self.maxDerivedDurationMinutes)
+            let endedAt = draft.durationMinutes == nil
+                ? now
+                : draft.startedAt.addingTimeInterval(TimeInterval(duration * 60))
+            let sessionId = draft.createID ?? UUID()
 
-            let session = NewSession(
-                userId: uid,
+            // Upload before the row exists — the storage path is uid-scoped, so
+            // it doesn't depend on the session. A failure aborts the post rather
+            // than silently publishing a session without its photo.
+            var photoPath = ""
+            if let photoData = draft.photoData {
+                guard let uploaded = await uploadPostPhoto(photoData, sessionId: sessionId, uid: uid) else {
+                    return false
+                }
+                photoPath = uploaded
+                uploadedPhotoPath = uploaded
+            }
+
+            let payload = SessionCreatePayload(
+                id: sessionId,
                 title: draft.title.isEmpty ? Self.timeOfDayTitle(for: draft.startedAt) : draft.title,
-                location: draft.location.isEmpty ? nil : draft.location,
+                location: draft.location,
+                takeaway: draft.takeaway,
                 durationMinutes: duration,
-                focus: firstFocus,
-                takeaway: nil,
-                posted: false,
+                posted: draft.postToFeed,
                 startedAt: DateFormatting.iso.string(from: draft.startedAt),
-                endedAt: DateFormatting.iso.string(from: now),
+                endedAt: DateFormatting.iso.string(from: endedAt),
+                photoPath: photoPath,
                 averageHeartRateBPM: draft.workoutMetrics?.averageHeartRateBPM,
                 maximumHeartRateBPM: draft.workoutMetrics?.maximumHeartRateBPM,
-                activeCaloriesKcal: draft.workoutMetrics?.activeCaloriesKcal
+                activeCaloriesKcal: draft.workoutMetrics?.activeCaloriesKcal,
+                activities: Self.writeActivities(from: activities)
             )
-            try await supabase.from("sessions").insert(session).execute()
-
-            for (index, activity) in draft.activities.enumerated() {
-                let isMatch = activity.kind == .match
-                let newActivity = NewSessionActivity(
-                    sessionId: session.id,
-                    kind: activity.kind.rawValue,
-                    position: index,
-                    focus: activity.focus.isEmpty ? nil : activity.focus,
-                    reps: activity.reps.isEmpty ? nil : activity.reps,
-                    notes: activity.notes.isEmpty ? nil : activity.notes,
-                    teamScore: isMatch ? activity.teamScore : nil,
-                    opponentScore: isMatch ? activity.opponentScore : nil,
-                    won: activity.wonValue
-                )
-                try await supabase.from("session_activities").insert(newActivity).execute()
-
-                let participants =
-                    activity.partners.map { player in
-                        NewActivityParticipant(activityId: newActivity.id, sessionId: session.id,
-                                               profileId: player.profile?.id, guestName: player.profile == nil ? player.guestName : nil, role: "partner")
-                    } +
-                    activity.opponents.map { player in
-                        NewActivityParticipant(activityId: newActivity.id, sessionId: session.id,
-                                               profileId: player.profile?.id, guestName: player.profile == nil ? player.guestName : nil, role: "opponent")
-                    }
-                if !participants.isEmpty {
-                    try await supabase.from("activity_participants").insert(participants).execute()
-                }
-            }
-
-            if let photoData = draft.photoData,
-               let photoPath = await uploadPostPhoto(photoData, sessionId: session.id, uid: uid) {
-                try await supabase.from("sessions")
-                    .update(["photo_path": photoPath])
-                    .eq("id", value: session.id.uuidString)
-                    .execute()
-            }
-
-            try await supabase.from("sessions")
-                .update(["posted": draft.postToFeed])
-                .eq("id", value: session.id.uuidString)
-                .execute()
+            try await supabase.rpc(
+                "create_own_session",
+                params: CreateSessionRPCParams(payload: payload)
+            ).execute()
 
             await loadMySessions(userId: uid)
             await loadFeed()
             let properties: [String: Any] = [
-                Analytics.Property.activityCount: draft.activities.count,
+                Analytics.Property.activityCount: activities.count,
                 Analytics.Property.quickLog: isQuickLog
             ]
             Analytics.capture(.sessionLogged, properties)
@@ -277,6 +334,13 @@ extension AppStore {
             await unlockNewlyCrossedMilestones(previouslySatisfied: milestonesBefore, playerID: uid)
             return true
         } catch {
+            // A PostgREST error is a definitive database rejection, so no row
+            // can reference the pre-uploaded object. Transport errors are
+            // ambiguous: the transaction may have committed before its response
+            // was lost, so retain the stable-path upload for an idempotent retry.
+            if error is PostgrestError, let uploadedPhotoPath {
+                try? await supabase.storage.from("post-photos").remove(paths: [uploadedPhotoPath])
+            }
             reportError(error)
             return false
         }
@@ -298,38 +362,7 @@ extension AppStore {
             }
 
             let endedAt = max(draft.endedAt ?? Date(), draft.startedAt.addingTimeInterval(60))
-            let activities = draft.activities.enumerated().map { index, activity in
-                let participants =
-                    activity.partners.map {
-                        SessionUpdateParticipant(
-                            id: $0.id,
-                            profileId: $0.profile?.id,
-                            guestName: $0.profile == nil ? $0.guestName : nil,
-                            role: "partner"
-                        )
-                    }
-                    + activity.opponents.map {
-                        SessionUpdateParticipant(
-                            id: $0.id,
-                            profileId: $0.profile?.id,
-                            guestName: $0.profile == nil ? $0.guestName : nil,
-                            role: "opponent"
-                        )
-                    }
-                let isMatch = activity.kind == .match
-                return SessionUpdateActivity(
-                    id: activity.id,
-                    kind: activity.kind.rawValue,
-                    position: index,
-                    focus: activity.focus.isEmpty ? nil : activity.focus,
-                    reps: activity.reps.isEmpty ? nil : activity.reps,
-                    notes: activity.notes.isEmpty ? nil : activity.notes,
-                    teamScore: isMatch ? activity.teamScore : nil,
-                    opponentScore: isMatch ? activity.opponentScore : nil,
-                    won: activity.wonValue,
-                    participants: participants
-                )
-            }
+            let activities = Self.writeActivities(from: draft.activities)
             let payload = SessionUpdatePayload(
                 title: draft.title,
                 location: draft.location,

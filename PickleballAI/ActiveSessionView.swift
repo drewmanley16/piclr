@@ -13,21 +13,43 @@ struct ActiveSessionView: View {
     /// dismissed freely to resume later.
     let isLive: Bool
 
-    @State private var draft: SessionDraft
+    /// Backing store for the edit / one-off paths. A live session is *not* kept
+    /// here — see `draft` — but this still holds the frozen copy shown while the
+    /// post celebration plays, after `store.activeDraft` has been cleared.
+    @State private var localDraft: SessionDraft
     @State private var editor: ActivityEditorRoute?
     @State private var showDiscardConfirm = false
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var showLocationPicker = false
     @State private var showCelebration = false
     @State private var celebrationTitle = "Session posted"
+    @State private var isSubmitting = false
 
     init(existingSession: FeedSession? = nil, isLive: Bool = false) {
         self.existingSession = existingSession
         self.isLive = isLive
-        _draft = State(initialValue: existingSession.map(SessionDraft.init(session:)) ?? SessionDraft())
+        _localDraft = State(initialValue: existingSession.map(SessionDraft.init(session:)) ?? SessionDraft())
     }
 
     private var isEditing: Bool { existingSession != nil }
+
+    /// A live session reads and writes `store.activeDraft` directly rather than
+    /// mirroring it into local state. Apple Watch messages mutate that same
+    /// storage while this sheet is open (a finished game becomes an activity,
+    /// HealthKit metrics arrive on finalize), so a local copy would go stale and
+    /// the next keystroke here would write it back over the watch's changes.
+    private var draft: SessionDraft {
+        get { isLive ? (store.activeDraft ?? localDraft) : localDraft }
+        nonmutating set {
+            if isLive { store.activeDraft = newValue } else { localDraft = newValue }
+        }
+    }
+
+    /// `draft` is computed, so it has no projected value; sub-bindings for the
+    /// form fields come from here instead of `$draft`.
+    private var draftBinding: Binding<SessionDraft> {
+        Binding(get: { draft }, set: { draft = $0 })
+    }
 
     var body: some View {
         NavigationStack {
@@ -57,26 +79,30 @@ struct ActiveSessionView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(isEditing ? "Save" : "Post") { Task { await save() } }
-                        .disabled(draft.activities.isEmpty || store.isBusy)
+                        .disabled(
+                            (draft.activities.isEmpty && draft.liveMatch == nil)
+                                || store.isBusy
+                                || isSubmitting
+                        )
                 }
             }
             .sheet(item: $editor) { route in
                 switch route {
                 case .newPractice:
-                    ActivityEditorView(activity: DraftActivity(kind: .practice)) { add($0) }
+                    ActivityEditorView(activity: DraftActivity(kind: .practice)) { add($0); return true }
                 case .newMatch:
                     ActivityEditorView(
                         activity: DraftActivity(
                             kind: .match,
                             carryingPlayersFrom: draft.activities.last(where: { $0.kind == .match })
                         )
-                    ) { add($0) }
+                    ) { add($0); return true }
                 case .edit(let activity):
-                    ActivityEditorView(activity: activity) { update($0) }
+                    ActivityEditorView(activity: activity) { update($0); return true }
                 }
             }
             .sheet(isPresented: $showLocationPicker) {
-                LocationPickerSheet(location: $draft.location)
+                LocationPickerSheet(location: draftBinding.location)
             }
             .confirmationDialog(
                 isEditing ? "Discard your changes?" : "Discard this session?",
@@ -84,7 +110,12 @@ struct ActiveSessionView: View {
                 titleVisibility: .visible
             ) {
                 Button(isEditing ? "Discard Changes" : "Discard Session", role: .destructive) {
-                    if isLive { store.discardLiveSession() }
+                    if isLive {
+                        // Suppress the external-success observer: this clear is
+                        // an explicit discard, not a Watch-initiated post.
+                        isSubmitting = true
+                        store.discardLiveSession()
+                    }
                     dismiss()
                 }
                 Button("Keep Editing", role: .cancel) {}
@@ -99,11 +130,23 @@ struct ActiveSessionView: View {
         .interactiveDismissDisabled(!isLive && (isEditing || !draft.activities.isEmpty))
         .onAppear {
             store.errorMessage = nil
-            if isLive, let live = store.activeDraft { draft = live }
-            if isLive { store.requestLiveWorkoutMetrics() }
+            if isLive {
+                if let activeDraft = store.activeDraft { localDraft = activeDraft }
+                store.requestLiveWorkoutMetrics()
+            }
         }
-        .onChange(of: draft) { _, newValue in
-            if isLive { store.activeDraft = newValue }
+        .onChange(of: store.activeDraft) { oldValue, newValue in
+            guard isLive else { return }
+            if let newValue {
+                // One-way snapshot only: never writes stale form state back into
+                // the store, but preserves the last draft for external posting.
+                localDraft = newValue
+            } else if let oldValue, !isSubmitting, !showCelebration {
+                // Watch-initiated posting bypasses save(), so the sheet itself
+                // must react when the successful post clears the live draft.
+                localDraft = oldValue
+                Task { await finishExternalPost() }
+            }
         }
         .alert(isEditing ? "Couldn't save session" : "Couldn't post session", isPresented: postErrorBinding) {
             if isLive, store.activeDraft?.expectsWatchMetrics == true {
@@ -134,7 +177,7 @@ struct ActiveSessionView: View {
     private var detailsCard: some View {
         VStack(spacing: 0) {
             if isEditing {
-                DatePicker("Started", selection: $draft.startedAt)
+                DatePicker("Started", selection: draftBinding.startedAt)
                     .datePickerStyle(.compact)
                     .frame(minHeight: 44)
                 Divider().overlay(Theme.hairline)
@@ -204,7 +247,7 @@ struct ActiveSessionView: View {
                 .padding(.vertical, 10)
                 Divider().overlay(Theme.hairline)
             }
-            TextField(AppStore.timeOfDayTitle(for: draft.startedAt), text: $draft.title)
+            TextField(AppStore.timeOfDayTitle(for: draft.startedAt), text: draftBinding.title)
                 .font(.headline)
                 .frame(minHeight: 44)
             Divider().overlay(Theme.hairline)
@@ -225,7 +268,7 @@ struct ActiveSessionView: View {
             }
             .buttonStyle(.plain)
             Divider().overlay(Theme.hairline)
-            TextField("Takeaway (optional)", text: $draft.takeaway, axis: .vertical)
+            TextField("Takeaway (optional)", text: draftBinding.takeaway, axis: .vertical)
                 .lineLimit(1...3)
                 .frame(minHeight: 44)
             Divider().overlay(Theme.hairline)
@@ -330,7 +373,7 @@ struct ActiveSessionView: View {
                     }
                 }
 
-                Toggle("Post to feed", isOn: $draft.postToFeed)
+                Toggle("Post to feed", isOn: draftBinding.postToFeed)
                     .tint(Theme.accent)
                     .padding(.top, 4)
             }
@@ -360,6 +403,10 @@ struct ActiveSessionView: View {
     private func remove(_ activity: DraftActivity) { draft.activities.removeAll { $0.id == activity.id } }
 
     private func save() async {
+        guard !isSubmitting else { return }
+        isSubmitting = true
+        defer { isSubmitting = false }
+
         if let existingSession {
             if await store.updateSession(existingSession, draft: draft) {
                 Haptics.success()
@@ -367,7 +414,9 @@ struct ActiveSessionView: View {
             }
         } else {
             let streakBefore = SessionStats(sessions: store.mySessions).weeklyStreak
-            if isLive { store.activeDraft = draft }
+            // Posting clears `store.activeDraft`; freeze what we sent so the
+            // celebration overlay isn't drawn over an emptied-out sheet.
+            localDraft = draft
             let posted = isLive
                 ? await store.finishAndPostLiveSession()
                 : await store.postSession(draft)
@@ -377,7 +426,12 @@ struct ActiveSessionView: View {
     }
 
     private func postWithoutMetrics() async {
+        guard !isSubmitting else { return }
+        isSubmitting = true
+        defer { isSubmitting = false }
+
         let streakBefore = SessionStats(sessions: store.mySessions).weeklyStreak
+        localDraft = draft
         guard await store.postLiveSessionWithoutMetrics() else { return }
         await finishSuccessfulPost(streakBefore: streakBefore)
     }
@@ -392,6 +446,14 @@ struct ActiveSessionView: View {
         celebrationTitle = (streakAfter > streakBefore && milestones.contains(streakAfter))
             ? "\(streakAfter)-week streak!"
             : "Session posted"
+        withAnimation { showCelebration = true }
+        try? await Task.sleep(nanoseconds: 1_050_000_000)
+        dismiss()
+    }
+
+    private func finishExternalPost() async {
+        Haptics.success()
+        celebrationTitle = "Session posted"
         withAnimation { showCelebration = true }
         try? await Task.sleep(nanoseconds: 1_050_000_000)
         dismiss()

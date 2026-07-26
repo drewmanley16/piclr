@@ -110,11 +110,19 @@ struct DraftActivity: Identifiable, Codable, Hashable {
 }
 
 struct SessionDraft: Codable, Equatable {
+    /// Stable id for create retries. Storage uploads use this id in their object
+    /// path, and `create_own_session` treats a repeated id from the same owner as
+    /// the same write. Optional so older persisted drafts still decode.
+    var createID: UUID? = UUID()
     var title: String = ""
     var location: String = ""
     var takeaway: String = ""
     var startedAt: Date = Date()
     var endedAt: Date?
+    /// Explicit duration, set by the quick-log editor. A live session leaves
+    /// this nil and derives its duration from elapsed time instead — a quick log
+    /// has no elapsed time to measure, since it's entered after the fact.
+    var durationMinutes: Int?
     var activities: [DraftActivity] = []
     /// The in-progress game streaming from the paired Apple Watch, if any. Set
     /// as score snapshots arrive; converted into an `activities` entry when the
