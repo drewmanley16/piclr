@@ -377,3 +377,22 @@ struct SettingsProfileView: View {
         return (String(first), parts.dropFirst().joined(separator: " "))
     }
 }
+
+// MARK: - Standalone presentation
+
+/// `SettingsProfileView` pushed inside Settings normally; this presents it on
+/// its own for callers that need to land straight on the editor.
+struct EditProfileSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            SettingsProfileView()
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        HeaderCircleButton(systemImage: "xmark", accessibilityTitle: "Close") { dismiss() }
+                    }
+                }
+        }
+    }
+}
