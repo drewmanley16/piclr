@@ -213,7 +213,7 @@ struct FeedCard: View {
             }
             if let subtitle = metaSubtitleText {
                 subtitle
-                    .font(.caption)
+                    .font(.caption.monospacedDigit())
                     .foregroundStyle(Theme.textTertiary)
                     .accessibilityLabel(metaSubtitleAccessibilityLabel ?? "")
             }
@@ -229,7 +229,6 @@ struct FeedCard: View {
         if isMultiActivity {
             SessionMatchList(
                 activities: displayActivities,
-                durationText: session.postCompactDuration,
                 author: displayAuthor,
                 noteLineLimit: expanded ? nil : 1
             )
@@ -357,34 +356,46 @@ struct FeedCard: View {
         }
     }
 
-    /// Focus · location · duration — duration folds into the quiet context when
-    /// there is no aggregate multi-activity summary. The duration is prefixed
-    /// with a clock glyph so it can't be misread as a relative timestamp
-    /// (e.g. "Austin, TX · 1m" reading like "1 minute ago" under the post's
-    /// "2d ago" header timestamp).
+    /// Focus · location · duration · record — one context line for every card,
+    /// so nothing migrates between lines card-to-card. A multi-game session
+    /// trails with its record (the only thing its list of box scores can't say
+    /// for itself); a single match doesn't need one, since its scorecard is the
+    /// record. The duration is prefixed with a clock glyph so it can't be
+    /// misread as a relative timestamp (e.g. "Austin, TX · 1m" reading like
+    /// "1 minute ago" under the post's "2d ago" header timestamp).
     private var metaSubtitleText: Text? {
-        let parts = [session.postFocus, session.postLocation]
-            .compactMap { $0 }
-            .filter { !$0.isEmpty }
-        let leading = parts.isEmpty ? nil : Text(parts.joined(separator: " · "))
-        guard !isMultiActivity else { return leading }
-
-        let durationText = Text(Image(systemName: "clock")) + Text(" " + session.postCompactDuration)
-        if let leading {
-            return leading + Text(" · ") + durationText
+        var line: Text?
+        func append(_ next: Text) {
+            line = line.map { $0 + Text(" · ") + next } ?? next
         }
-        return durationText
+
+        for part in metaContextParts { append(Text(part)) }
+        append(Text(Image(systemName: "clock")) + Text(" " + session.postCompactDuration))
+        if isMultiActivity {
+            let record = SessionRecord(activities: displayActivities)
+            if record.hasMatches {
+                append(Text(record.text).fontWeight(.bold).foregroundColor(record.color))
+            }
+            if let drills = record.drillsText { append(Text(drills)) }
+        }
+        return line
     }
 
     private var metaSubtitleAccessibilityLabel: String? {
-        let parts = [session.postFocus, session.postLocation]
+        var parts = metaContextParts
+        parts.append("\(session.postCompactDuration) played")
+        if isMultiActivity {
+            let record = SessionRecord(activities: displayActivities)
+            if record.hasMatches { parts.append(record.accessibilityText) }
+            if let drills = record.drillsText { parts.append(drills) }
+        }
+        return parts.joined(separator: ", ")
+    }
+
+    private var metaContextParts: [String] {
+        [session.postFocus, session.postLocation]
             .compactMap { $0 }
             .filter { !$0.isEmpty }
-        guard !isMultiActivity else {
-            return parts.isEmpty ? nil : parts.joined(separator: ", ")
-        }
-        let playedLabel = "\(session.postCompactDuration) played"
-        return (parts + [playedLabel]).joined(separator: ", ")
     }
 
     /// In `.workout` a repost is credited games, so removing it drops the tag and
@@ -528,71 +539,75 @@ struct InlineCommentRow: View {
     }
 }
 
-/// A multi-game session: one quiet summary line over a list where every match
-/// uses the same head-to-head presentation as a single-match post.
+/// A session's aggregate result. It lives outside `SessionMatchList` because
+/// the card's context line renders the record while the list renders the games
+/// the record summarizes.
+struct SessionRecord {
+    let matchCount: Int
+    let wins: Int
+    let losses: Int
+    let ties: Int
+    let drills: Int
+
+    init(activities: [SessionActivity]) {
+        let matches = activities.filter(\.isMatch)
+        matchCount = matches.count
+        wins = matches.filter { $0.matchResult == .win }.count
+        losses = matches.filter { $0.matchResult == .loss }.count
+        ties = matches.filter { $0.matchResult == .tie }.count
+        drills = activities.count - matches.count
+    }
+
+    /// Unscored matches still count, so a session of them reads "0–0" rather
+    /// than dropping its record line entirely.
+    var hasMatches: Bool { matchCount > 0 }
+    var text: String { ties > 0 ? "\(wins)–\(losses)–\(ties)" : "\(wins)–\(losses)" }
+
+    var color: Color {
+        if wins > losses { return Theme.win }
+        if losses > wins { return Theme.loss }
+        return Theme.textPrimary
+    }
+
+    var drillsText: String? {
+        guard drills > 0 else { return nil }
+        return "\(drills) drill\(drills == 1 ? "" : "s")"
+    }
+
+    /// "0–2" is read aloud as a date otherwise.
+    var accessibilityText: String {
+        let base = "\(wins) won, \(losses) lost"
+        return ties > 0 ? base + ", \(ties) tied" : base
+    }
+}
+
+/// A multi-game session: every match uses the same head-to-head presentation as
+/// a single-match post, with the aggregate record carried by the card's context
+/// line above.
 struct SessionMatchList: View {
     let activities: [SessionActivity]
-    let durationText: String
     let author: Profile
     /// nil renders notes in full; a preview clamps them to keep the list of box
     /// scores reading as a list rather than a block of text.
     var noteLineLimit: Int?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            summaryLine
-            VStack(spacing: 0) {
-                ForEach(Array(activities.enumerated()), id: \.element.id) { index, activity in
-                    if index > 0 {
-                        Divider().overlay(Theme.hairline)
-                    }
-                    Group {
-                        if activity.isMatch {
-                            MatchScorecard(activity: activity, author: author, noteLineLimit: noteLineLimit)
-                        } else {
-                            DrillRow(activity: activity, noteLineLimit: noteLineLimit)
-                        }
-                    }
-                    .padding(.vertical, 10)
+        VStack(spacing: 0) {
+            ForEach(Array(activities.enumerated()), id: \.element.id) { index, activity in
+                if index > 0 {
+                    Divider().overlay(Theme.hairline)
                 }
+                Group {
+                    if activity.isMatch {
+                        MatchScorecard(activity: activity, author: author, noteLineLimit: noteLineLimit)
+                    } else {
+                        DrillRow(activity: activity, noteLineLimit: noteLineLimit)
+                    }
+                }
+                .padding(.vertical, 10)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var summaryLine: some View {
-        Group {
-            if matches.isEmpty {
-                Text(countsLine).foregroundColor(Theme.textSecondary)
-            } else {
-                Text(record).fontWeight(.bold).foregroundColor(recordColor)
-                    + Text(" · \(countsLine)").foregroundColor(Theme.textSecondary)
-            }
-        }
-        .font(.subheadline)
-        .monospacedDigit()
-    }
-
-    private var matches: [SessionActivity] { activities.filter(\.isMatch) }
-    private var wins: Int { matches.filter { $0.matchResult == .win }.count }
-    private var losses: Int { matches.filter { $0.matchResult == .loss }.count }
-    private var ties: Int { matches.filter { $0.matchResult == .tie }.count }
-    private var record: String { ties > 0 ? "\(wins)–\(losses)–\(ties)" : "\(wins)–\(losses)" }
-
-    private var recordColor: Color {
-        if wins > losses { return Theme.win }
-        if losses > wins { return Theme.loss }
-        return Theme.textPrimary
-    }
-
-    private var countsLine: String {
-        var parts: [String] = []
-        let matchCount = matches.count
-        if matchCount > 0 { parts.append("\(matchCount) game\(matchCount == 1 ? "" : "s")") }
-        let drillCount = activities.count - matchCount
-        if drillCount > 0 { parts.append("\(drillCount) drill\(drillCount == 1 ? "" : "s")") }
-        parts.append(durationText)
-        return parts.joined(separator: " · ")
     }
 }
 
