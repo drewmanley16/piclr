@@ -156,7 +156,12 @@ final class AppStore {
     var liveWorkoutMetrics: LiveWorkoutMetrics?
     var watchWorkoutStatus: WatchWorkoutStatus = .idle
     @ObservationIgnored var shouldPostWhenWatchFinishes = false
-    @ObservationIgnored var isWaitingForWatchFinalization = false
+    /// Observed so the editor can keep Post live while the finalization window
+    /// runs — waiting is the user's choice, and they must be able to take it back.
+    var isWaitingForWatchFinalization = false
+    /// Set by `stopWaitingForWatchAndPost()` to break the finalization poll early
+    /// so the abort posts, rather than racing the loop to it.
+    @ObservationIgnored var abortWatchFinalization = false
     /// Guards `postLiveSession()` against concurrent invocation — the phone's
     /// "Finish" button and watch-driven `.finishSession`/`.workoutFinished`
     /// messages can each independently trigger a post in quick succession.

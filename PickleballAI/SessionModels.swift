@@ -315,6 +315,12 @@ struct SessionActivity: Identifiable, Decodable, Hashable {
         if let focus, !focus.isEmpty { return "\(focus) practice" }
         return "Practice"
     }
+    /// The note to render, or nil when there's nothing worth a line. Collapses
+    /// the empty and whitespace-only cases so views can plain `if let` it.
+    var note: String? {
+        let trimmed = notes?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
 
     /// Reframe one canonical activity for a tagged player's workout record.
     /// The feed continues to render this activity unchanged from the author.
@@ -359,7 +365,11 @@ struct SessionActivity: Identifiable, Decodable, Hashable {
             position: position,
             focus: focus,
             reps: reps,
-            notes: notes,
+            // The note is the author's own read on the game ("my drops were on")
+            // and doesn't survive being reframed from the tagged player's side,
+            // so their workout record carries the score but not the commentary.
+            // The original post still shows it — the feed never projects.
+            notes: nil,
             teamScore: projectedTeamScore,
             opponentScore: projectedOpponentScore,
             won: projectedWon,
@@ -389,51 +399,13 @@ struct ActivityParticipant: Identifiable, Decodable, Hashable {
     }
 }
 
-// MARK: - Session activities (write models)
+// MARK: - Session write models
+//
+// Both writes go through an RPC that takes the whole session as one JSON
+// payload (`create_own_session` / `update_own_session`), so activities and
+// participants are shared between them.
 
-struct NewSessionActivity: Encodable {
-    var id: UUID = UUID()
-    let sessionId: UUID
-    let kind: String
-    let position: Int
-    let focus: String?
-    let reps: String?
-    let notes: String?
-    let teamScore: Int?
-    let opponentScore: Int?
-    let won: Bool?
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case sessionId = "session_id"
-        case kind, position, focus, reps, notes
-        case teamScore = "team_score"
-        case opponentScore = "opponent_score"
-        case won
-    }
-}
-
-struct NewActivityParticipant: Encodable {
-    var id: UUID = UUID()
-    let activityId: UUID
-    let sessionId: UUID
-    let profileId: UUID?
-    let guestName: String?
-    let role: String
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case activityId = "activity_id"
-        case sessionId = "session_id"
-        case profileId = "profile_id"
-        case guestName = "guest_name"
-        case role
-    }
-}
-
-// MARK: - Session update (write models)
-
-struct SessionUpdateParticipant: Encodable {
+struct SessionWriteParticipant: Encodable {
     let id: UUID
     let profileId: UUID?
     let guestName: String?
@@ -447,7 +419,7 @@ struct SessionUpdateParticipant: Encodable {
     }
 }
 
-struct SessionUpdateActivity: Encodable {
+struct SessionWriteActivity: Encodable {
     let id: UUID
     let kind: String
     let position: Int
@@ -457,7 +429,7 @@ struct SessionUpdateActivity: Encodable {
     let teamScore: Int?
     let opponentScore: Int?
     let won: Bool?
-    let participants: [SessionUpdateParticipant]
+    let participants: [SessionWriteParticipant]
 
     enum CodingKeys: String, CodingKey {
         case id, kind, position, focus, reps, notes, won, participants
@@ -475,7 +447,7 @@ struct SessionUpdatePayload: Encodable {
     let startedAt: String
     let endedAt: String
     let photoPath: String
-    let activities: [SessionUpdateActivity]
+    let activities: [SessionWriteActivity]
 
     enum CodingKeys: String, CodingKey {
         case title, location, takeaway, posted, activities
@@ -496,36 +468,41 @@ struct UpdateSessionRPCParams: Encodable {
     }
 }
 
-// MARK: - Session / like write models
-
-struct NewSession: Encodable {
-    var id: UUID = UUID()
-    let userId: UUID
-    let title: String?
-    let location: String?
+/// Create payload. Carries the session id so the photo can be uploaded to its
+/// final path before the row exists, and the Watch metrics the edit path has no
+/// way to change.
+struct SessionCreatePayload: Encodable {
+    let id: UUID
+    let title: String
+    let location: String
+    let takeaway: String
     let durationMinutes: Int
-    let focus: String?
-    let takeaway: String?
     let posted: Bool
-    var startedAt: String? = nil
-    var endedAt: String? = nil
+    let startedAt: String
+    let endedAt: String
+    let photoPath: String
     let averageHeartRateBPM: Int?
     let maximumHeartRateBPM: Int?
     let activeCaloriesKcal: Int?
+    let activities: [SessionWriteActivity]
 
     enum CodingKeys: String, CodingKey {
-        case id
-        case userId = "user_id"
-        case title, location
+        case id, title, location, takeaway, posted, activities
         case durationMinutes = "duration_minutes"
-        case focus, takeaway, posted
         case startedAt = "started_at"
         case endedAt = "ended_at"
+        case photoPath = "photo_path"
         case averageHeartRateBPM = "average_heart_rate_bpm"
         case maximumHeartRateBPM = "maximum_heart_rate_bpm"
         case activeCaloriesKcal = "active_calories_kcal"
     }
 }
+
+struct CreateSessionRPCParams: Encodable {
+    let payload: SessionCreatePayload
+}
+
+// MARK: - Like write model
 
 struct NewLike: Encodable {
     let userId: UUID

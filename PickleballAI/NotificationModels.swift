@@ -23,11 +23,11 @@ struct AppNotification: Identifiable, Decodable, Hashable {
 
     var date: Date { FeedSession.parse(createdAt) }
 
-    var actorInitials: String {
-        if let a = actor?.avatarInitials, !a.isEmpty { return a }
-        let letters = (actor?.displayName ?? "?").split(separator: " ").prefix(2).compactMap { $0.first }
-        return letters.isEmpty ? "?" : String(letters).uppercased()
-    }
+    /// True for notifications the app raises about you, to you — milestones,
+    /// streak nudges, the weekly wrap. They carry no actor, so there is no
+    /// avatar to draw: the row shows `icon` in an accent circle instead of an
+    /// initials fallback, which would render a meaningless "?".
+    var isSelfGenerated: Bool { actor == nil }
 
     private var handle: String { actor.map { "@\($0.username)" } ?? "Someone" }
 
@@ -60,12 +60,13 @@ struct AppNotification: Identifiable, Decodable, Hashable {
         case "mention": return "at"
         case "follow":  return "person.fill.badge.plus"
         case "tag":     return "flag.checkered"
-        case "repost":  return "arrow.2.squarepath"
+        case "repost", "repost_approved": return "arrow.2.squarepath"
         case "invite_received", "invite_response": return "figure.pickleball"
         case "invite_cancelled": return "xmark.circle.fill"
         case "rivalry": return "flame.fill"
         case "streak":  return "circle.hexagongrid.fill"
         case "weekly_wrap": return "sparkles"
+        case "milestone_unlocked": return "medal.fill"
         default:        return "bell.fill"
         }
     }

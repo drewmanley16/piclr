@@ -7,6 +7,11 @@ struct FeedCard: View {
     /// False when this card is already the content of a session detail screen,
     /// so tapping it doesn't push another copy of itself onto the stack.
     var openable: Bool = true
+    /// True on the session detail screen, where activity notes render in full.
+    /// On a preview card they're clamped, and the trailing "…" is what invites
+    /// the tap through to here — so this is deliberately not `!openable`, which
+    /// only says whether tapping does anything.
+    var expanded: Bool = false
     /// Which surface this card stands on. `.workout` frames scores from the
     /// viewer's side and treats a repost as credited games they can drop from
     /// their record, rather than a post they published.
@@ -208,7 +213,7 @@ struct FeedCard: View {
             }
             if let subtitle = metaSubtitleText {
                 subtitle
-                    .font(.caption)
+                    .font(.caption.monospacedDigit())
                     .foregroundStyle(Theme.textTertiary)
                     .accessibilityLabel(metaSubtitleAccessibilityLabel ?? "")
             }
@@ -224,15 +229,16 @@ struct FeedCard: View {
         if isMultiActivity {
             SessionMatchList(
                 activities: displayActivities,
-                durationText: session.postCompactDuration,
-                author: displayAuthor
+                author: displayAuthor,
+                noteLineLimit: expanded ? nil : 1
             )
         } else if let solo = displayActivities.first {
+            let noteLineLimit: Int? = expanded ? nil : 2
             if solo.isMatch {
-                MatchScorecard(activity: solo, author: displayAuthor)
+                MatchScorecard(activity: solo, author: displayAuthor, noteLineLimit: noteLineLimit)
                     .padding(.vertical, 4)
             } else {
-                DrillRow(activity: solo)
+                DrillRow(activity: solo, noteLineLimit: noteLineLimit)
                     .padding(.vertical, 4)
             }
         }
@@ -350,34 +356,46 @@ struct FeedCard: View {
         }
     }
 
-    /// Focus · location · duration — duration folds into the quiet context when
-    /// there is no aggregate multi-activity summary. The duration is prefixed
-    /// with a clock glyph so it can't be misread as a relative timestamp
-    /// (e.g. "Austin, TX · 1m" reading like "1 minute ago" under the post's
-    /// "2d ago" header timestamp).
+    /// Focus · location · duration · record — one context line for every card,
+    /// so nothing migrates between lines card-to-card. A multi-game session
+    /// trails with its record (the only thing its list of box scores can't say
+    /// for itself); a single match doesn't need one, since its scorecard is the
+    /// record. The duration is prefixed with a clock glyph so it can't be
+    /// misread as a relative timestamp (e.g. "Austin, TX · 1m" reading like
+    /// "1 minute ago" under the post's "2d ago" header timestamp).
     private var metaSubtitleText: Text? {
-        let parts = [session.postFocus, session.postLocation]
-            .compactMap { $0 }
-            .filter { !$0.isEmpty }
-        let leading = parts.isEmpty ? nil : Text(parts.joined(separator: " · "))
-        guard !isMultiActivity else { return leading }
-
-        let durationText = Text(Image(systemName: "clock")) + Text(" " + session.postCompactDuration)
-        if let leading {
-            return leading + Text(" · ") + durationText
+        var line: Text?
+        func append(_ next: Text) {
+            line = line.map { $0 + Text(" · ") + next } ?? next
         }
-        return durationText
+
+        for part in metaContextParts { append(Text(part)) }
+        append(Text(Image(systemName: "clock")) + Text(" " + session.postCompactDuration))
+        if isMultiActivity {
+            let record = SessionRecord(activities: displayActivities)
+            if record.hasMatches {
+                append(Text(record.text).fontWeight(.bold).foregroundColor(record.color))
+            }
+            if let drills = record.drillsText { append(Text(drills)) }
+        }
+        return line
     }
 
     private var metaSubtitleAccessibilityLabel: String? {
-        let parts = [session.postFocus, session.postLocation]
+        var parts = metaContextParts
+        parts.append("\(session.postCompactDuration) played")
+        if isMultiActivity {
+            let record = SessionRecord(activities: displayActivities)
+            if record.hasMatches { parts.append(record.accessibilityText) }
+            if let drills = record.drillsText { parts.append(drills) }
+        }
+        return parts.joined(separator: ", ")
+    }
+
+    private var metaContextParts: [String] {
+        [session.postFocus, session.postLocation]
             .compactMap { $0 }
             .filter { !$0.isEmpty }
-        guard !isMultiActivity else {
-            return parts.isEmpty ? nil : parts.joined(separator: ", ")
-        }
-        let playedLabel = "\(session.postCompactDuration) played"
-        return (parts + [playedLabel]).joined(separator: ", ")
     }
 
     /// In `.workout` a repost is credited games, so removing it drops the tag and
@@ -521,68 +539,75 @@ struct InlineCommentRow: View {
     }
 }
 
-/// A multi-game session: one quiet summary line over a list where every match
-/// uses the same head-to-head presentation as a single-match post.
-struct SessionMatchList: View {
-    let activities: [SessionActivity]
-    let durationText: String
-    let author: Profile
+/// A session's aggregate result. It lives outside `SessionMatchList` because
+/// the card's context line renders the record while the list renders the games
+/// the record summarizes.
+struct SessionRecord {
+    let matchCount: Int
+    let wins: Int
+    let losses: Int
+    let ties: Int
+    let drills: Int
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            summaryLine
-            VStack(spacing: 0) {
-                ForEach(Array(activities.enumerated()), id: \.element.id) { index, activity in
-                    if index > 0 {
-                        Divider().overlay(Theme.hairline)
-                    }
-                    Group {
-                        if activity.isMatch {
-                            MatchScorecard(activity: activity, author: author)
-                        } else {
-                            DrillRow(activity: activity)
-                        }
-                    }
-                    .padding(.vertical, 10)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    init(activities: [SessionActivity]) {
+        let matches = activities.filter(\.isMatch)
+        matchCount = matches.count
+        wins = matches.filter { $0.matchResult == .win }.count
+        losses = matches.filter { $0.matchResult == .loss }.count
+        ties = matches.filter { $0.matchResult == .tie }.count
+        drills = activities.count - matches.count
     }
 
-    private var summaryLine: some View {
-        Group {
-            if matches.isEmpty {
-                Text(countsLine).foregroundColor(Theme.textSecondary)
-            } else {
-                Text(record).fontWeight(.bold).foregroundColor(recordColor)
-                    + Text(" · \(countsLine)").foregroundColor(Theme.textSecondary)
-            }
-        }
-        .font(.subheadline)
-        .monospacedDigit()
-    }
+    /// Unscored matches still count, so a session of them reads "0–0" rather
+    /// than dropping its record line entirely.
+    var hasMatches: Bool { matchCount > 0 }
+    var text: String { ties > 0 ? "\(wins)–\(losses)–\(ties)" : "\(wins)–\(losses)" }
 
-    private var matches: [SessionActivity] { activities.filter(\.isMatch) }
-    private var wins: Int { matches.filter { $0.matchResult == .win }.count }
-    private var losses: Int { matches.filter { $0.matchResult == .loss }.count }
-    private var ties: Int { matches.filter { $0.matchResult == .tie }.count }
-    private var record: String { ties > 0 ? "\(wins)–\(losses)–\(ties)" : "\(wins)–\(losses)" }
-
-    private var recordColor: Color {
+    var color: Color {
         if wins > losses { return Theme.win }
         if losses > wins { return Theme.loss }
         return Theme.textPrimary
     }
 
-    private var countsLine: String {
-        var parts: [String] = []
-        let matchCount = matches.count
-        if matchCount > 0 { parts.append("\(matchCount) game\(matchCount == 1 ? "" : "s")") }
-        let drillCount = activities.count - matchCount
-        if drillCount > 0 { parts.append("\(drillCount) drill\(drillCount == 1 ? "" : "s")") }
-        parts.append(durationText)
-        return parts.joined(separator: " · ")
+    var drillsText: String? {
+        guard drills > 0 else { return nil }
+        return "\(drills) drill\(drills == 1 ? "" : "s")"
+    }
+
+    /// "0–2" is read aloud as a date otherwise.
+    var accessibilityText: String {
+        let base = "\(wins) won, \(losses) lost"
+        return ties > 0 ? base + ", \(ties) tied" : base
+    }
+}
+
+/// A multi-game session: every match uses the same head-to-head presentation as
+/// a single-match post, with the aggregate record carried by the card's context
+/// line above.
+struct SessionMatchList: View {
+    let activities: [SessionActivity]
+    let author: Profile
+    /// nil renders notes in full; a preview clamps them to keep the list of box
+    /// scores reading as a list rather than a block of text.
+    var noteLineLimit: Int?
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(activities.enumerated()), id: \.element.id) { index, activity in
+                if index > 0 {
+                    Divider().overlay(Theme.hairline)
+                }
+                Group {
+                    if activity.isMatch {
+                        MatchScorecard(activity: activity, author: author, noteLineLimit: noteLineLimit)
+                    } else {
+                        DrillRow(activity: activity, noteLineLimit: noteLineLimit)
+                    }
+                }
+                .padding(.vertical, 10)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -592,9 +617,15 @@ struct SessionMatchList: View {
 struct MatchScorecard: View {
     let activity: SessionActivity
     let author: Profile
+    /// nil shows the note in full (session detail); a preview clamps it, and the
+    /// trailing "…" is what invites the tap through to the full text.
+    var noteLineLimit: Int?
 
     private let avatarSize: CGFloat = 28
     private let railHeight: CGFloat = 24
+    /// Indents the note past the result rail + its spacing, so it hangs under
+    /// the names rather than under the rail.
+    private let noteInset: CGFloat = 13
 
     var body: some View {
         VStack(spacing: 4) {
@@ -613,6 +644,13 @@ struct MatchScorecard: View {
                 score: activity.opponentScore,
                 accent: nil
             )
+
+            // Instantiated only when there is a note, so a noteless scorecard
+            // gets no extra subview and no VStack spacing around it.
+            if let note = activity.note {
+                ActivityNote(text: note, lineLimit: noteLineLimit)
+                    .padding(.leading, noteInset)
+            }
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
@@ -694,12 +732,33 @@ extension ActivityParticipant {
     }
 }
 
+/// The free-text note a player attached to one game or drill. One presentation
+/// for both activity kinds: a quiet line under the row, clamped on a preview
+/// card and rendered in full on the session detail screen.
+struct ActivityNote: View {
+    let text: String
+    var lineLimit: Int?
+
+    var body: some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(Theme.textSecondary)
+            .lineLimit(lineLimit)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 /// A drill/practice entry has no score or opponent, so it stays a quiet row.
 struct DrillRow: View {
     let activity: SessionActivity
+    /// nil shows the note in full (session detail); a preview clamps it.
+    var noteLineLimit: Int?
 
     var body: some View {
-        HStack(spacing: 12) {
+        // Top-aligned so the glyph stays anchored to the title: reps and a note
+        // can make the text stack twice the glyph's height, and centering would
+        // leave the title floating above it.
+        HStack(alignment: .top, spacing: 12) {
             Image(systemName: "figure.pickleball")
                 .font(.footnote.weight(.bold))
                 .foregroundStyle(Theme.textSecondary)
@@ -710,22 +769,22 @@ struct DrillRow: View {
                 Text(activity.title)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Theme.textPrimary)
-                if let detail {
-                    Text(detail)
+                if let reps = activity.reps, !reps.isEmpty {
+                    Text(reps)
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
                         .lineLimit(1)
+                }
+                // Notes used to share the subtitle with reps; they now get their
+                // own line so practice and match notes read identically.
+                if let note = activity.note {
+                    ActivityNote(text: note, lineLimit: noteLineLimit)
                 }
             }
 
             Spacer(minLength: 8)
         }
         .accessibilityElement(children: .combine)
-    }
-
-    private var detail: String? {
-        let bits = [activity.reps, activity.notes].compactMap { $0 }.filter { !$0.isEmpty }
-        return bits.isEmpty ? nil : bits.joined(separator: " · ")
     }
 }
 

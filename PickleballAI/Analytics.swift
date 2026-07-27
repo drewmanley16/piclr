@@ -80,6 +80,7 @@ enum Analytics {
         static let trialStarted = "trial_started"
         static let quickLog = "quick_log"
         static let activityCount = "activity_count"
+        static let hasNote = "has_note"
         static let milestoneID = "milestone_id"
     }
 
