@@ -315,6 +315,12 @@ struct SessionActivity: Identifiable, Decodable, Hashable {
         if let focus, !focus.isEmpty { return "\(focus) practice" }
         return "Practice"
     }
+    /// The note to render, or nil when there's nothing worth a line. Collapses
+    /// the empty and whitespace-only cases so views can plain `if let` it.
+    var note: String? {
+        let trimmed = notes?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
 
     /// Reframe one canonical activity for a tagged player's workout record.
     /// The feed continues to render this activity unchanged from the author.
@@ -359,7 +365,11 @@ struct SessionActivity: Identifiable, Decodable, Hashable {
             position: position,
             focus: focus,
             reps: reps,
-            notes: notes,
+            // The note is the author's own read on the game ("my drops were on")
+            // and doesn't survive being reframed from the tagged player's side,
+            // so their workout record carries the score but not the commentary.
+            // The original post still shows it — the feed never projects.
+            notes: nil,
             teamScore: projectedTeamScore,
             opponentScore: projectedOpponentScore,
             won: projectedWon,

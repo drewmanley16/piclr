@@ -122,6 +122,16 @@ extension AppStore {
         activeDraft = nil
     }
 
+    /// Why finalizing would probably come back empty, or nil when the Watch is
+    /// in a state that can still deliver. Checked *before* posting so the user is
+    /// asked up front rather than after sitting through the finalization window —
+    /// which, in both of these states, is time spent waiting for nothing.
+    var watchMetricsGap: WatchMetricsGap? {
+        guard activeDraft?.expectsWatchMetrics == true, activeDraft?.workoutMetrics == nil else { return nil }
+        if activeDraft?.watchWorkoutStartedAt == nil { return .neverStarted }
+        return WatchConnectivityManager.shared.isReachable ? nil : .unreachable
+    }
+
     /// Waits briefly for Apple Watch to finalize HealthKit so its aggregate
     /// values are part of the same insert. If tracking never started, posts now.
     func finishAndPostLiveSession() async -> Bool {
@@ -132,10 +142,14 @@ extension AppStore {
 
         shouldPostWhenWatchFinishes = true
         isWaitingForWatchFinalization = true
+        abortWatchFinalization = false
         defer { isWaitingForWatchFinalization = false }
         watchWorkoutStatus = .finalizing
         WatchConnectivityManager.shared.sendCommand(.requestFinishWorkout)
         for _ in 0..<80 {
+            // The user gave up on the Watch and Post now owns the write; bail
+            // without an error so the abort's own post is the only one.
+            if abortWatchFinalization { return false }
             if let metrics = activeDraft?.workoutMetrics {
                 guard metrics.averageHeartRateBPM != nil else {
                     watchWorkoutStatus = .failed(
@@ -154,6 +168,14 @@ extension AppStore {
         watchWorkoutStatus = WatchConnectivityManager.shared.isReachable ? .finalizing : .disconnected
         errorMessage = "Apple Watch metrics have not finished syncing. Retry, or choose Post Without Metrics."
         return false
+    }
+
+    /// Abandons an in-flight finalization wait and posts immediately. Breaking
+    /// the poll first means the waiting call returns false without touching
+    /// `errorMessage`, so giving up never surfaces as a failure.
+    func stopWaitingForWatchAndPost() async -> Bool {
+        abortWatchFinalization = true
+        return await postLiveSessionWithoutMetrics()
     }
 
     /// Explicit escape hatch after a failed sync. This is never selected
@@ -325,7 +347,8 @@ extension AppStore {
             await loadFeed()
             let properties: [String: Any] = [
                 Analytics.Property.activityCount: activities.count,
-                Analytics.Property.quickLog: isQuickLog
+                Analytics.Property.quickLog: isQuickLog,
+                Analytics.Property.hasNote: activities.contains { !$0.notes.isEmpty }
             ]
             Analytics.capture(.sessionLogged, properties)
             if isFirstSession {

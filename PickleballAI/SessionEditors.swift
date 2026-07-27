@@ -96,6 +96,10 @@ struct ActivityEditorView: View {
                 PlayerChips(players: $activity.opponents)
                 Button { picker = .opponent } label: { Label("Add opponent", systemImage: "person.badge.plus") }
             }
+            Section("Notes") {
+                TextField("How did the game go?", text: $activity.notes, axis: .vertical)
+                    .lineLimit(2...5)
+            }
         }
     }
 

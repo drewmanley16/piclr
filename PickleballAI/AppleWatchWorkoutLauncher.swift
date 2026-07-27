@@ -29,6 +29,34 @@ enum WatchWorkoutStatus: Equatable {
     }
 }
 
+/// Why a live session that expected Apple Watch metrics has none to finalize at
+/// post time. Both cases mean waiting out the finalization window would most
+/// likely just burn the user's time, so posting asks up front instead.
+enum WatchMetricsGap: Equatable {
+    /// The Watch never confirmed it was collecting, so there is no workout to
+    /// finalize and no metrics can ever arrive for this session.
+    case neverStarted
+    /// The Watch tracked the session but isn't reachable now, so its aggregates
+    /// can't be requested until it reconnects.
+    case unreachable
+
+    var title: String {
+        switch self {
+        case .neverStarted: return "Apple Watch never started tracking"
+        case .unreachable:  return "Apple Watch isn't connected"
+        }
+    }
+
+    var message: String {
+        switch self {
+        case .neverStarted:
+            return "This session has no Apple Watch workout to finalize, so it will post without heart rate or calories."
+        case .unreachable:
+            return "Your Watch tracked this session but can't be reached right now. Waiting only helps if it reconnects."
+        }
+    }
+}
+
 enum AppleWatchWorkoutLaunchError: LocalizedError {
     case unavailable
 
