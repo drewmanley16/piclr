@@ -24,6 +24,9 @@ struct ActiveSessionView: View {
     @State private var showCelebration = false
     @State private var celebrationTitle = "Session posted"
     @State private var isSubmitting = false
+    /// Non-nil while asking whether to post without Apple Watch metrics, set at
+    /// the moment Post is tapped rather than after a finalization timeout.
+    @State private var metricsGap: WatchMetricsGap?
 
     init(existingSession: FeedSession? = nil, isLive: Bool = false) {
         self.existingSession = existingSession
@@ -78,12 +81,19 @@ struct ActiveSessionView: View {
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(isEditing ? "Save" : "Post") { Task { await save() } }
-                        .disabled(
-                            (draft.activities.isEmpty && draft.liveMatch == nil)
-                                || store.isBusy
-                                || isSubmitting
-                        )
+                    Button(confirmActionTitle) {
+                        // While waiting on the Watch, this button is the way out
+                        // of the wait rather than a second post.
+                        Task { isWaitingOnWatch ? await stopWaitingAndPost() : await save() }
+                    }
+                    .disabled(
+                        (draft.activities.isEmpty && draft.liveMatch == nil)
+                            || store.isBusy
+                            // Waiting keeps Post live: the user chose to wait and
+                            // must be able to change their mind without sitting
+                            // out the whole finalization window.
+                            || (isSubmitting && !isWaitingOnWatch)
+                    )
                 }
             }
             .sheet(item: $editor) { route in
@@ -119,6 +129,23 @@ struct ActiveSessionView: View {
                     dismiss()
                 }
                 Button("Keep Editing", role: .cancel) {}
+            }
+            .confirmationDialog(
+                metricsGap?.title ?? "",
+                isPresented: metricsGapBinding,
+                titleVisibility: .visible
+            ) {
+                Button("Post Without Metrics") {
+                    metricsGap = nil
+                    Task { await postWithoutMetrics() }
+                }
+                Button("Wait for Apple Watch") {
+                    metricsGap = nil
+                    Task { await save(waitForWatch: true) }
+                }
+                Button("Cancel", role: .cancel) { metricsGap = nil }
+            } message: {
+                Text(metricsGap?.message ?? "")
             }
         }
         .overlay {
@@ -163,6 +190,27 @@ struct ActiveSessionView: View {
         } message: {
             Text(store.errorMessage ?? "Please try again.")
         }
+    }
+
+    /// True only while the Watch finalization window is running, which is the one
+    /// state where Post means "stop waiting" instead of "post".
+    private var isWaitingOnWatch: Bool { isLive && store.isWaitingForWatchFinalization }
+
+    private var confirmActionTitle: String {
+        if isWaitingOnWatch { return "Post Now" }
+        return isEditing ? "Save" : "Post"
+    }
+
+    /// The dialog needs its title and message from `metricsGap`, so presentation
+    /// is driven off that same optional rather than a separate flag that could
+    /// drift out of step with it.
+    private var metricsGapBinding: Binding<Bool> {
+        Binding(
+            get: { metricsGap != nil },
+            set: { isPresented in
+                if !isPresented { metricsGap = nil }
+            }
+        )
     }
 
     private var postErrorBinding: Binding<Bool> {
@@ -402,8 +450,19 @@ struct ActiveSessionView: View {
     }
     private func remove(_ activity: DraftActivity) { draft.activities.removeAll { $0.id == activity.id } }
 
-    private func save() async {
+    /// `waitForWatch` is set only by the "Wait for Apple Watch" button on the
+    /// gap prompt, so the finalization window is entered deliberately instead of
+    /// being the default cost of every post.
+    private func save(waitForWatch: Bool = false) async {
         guard !isSubmitting else { return }
+
+        // Ask before finalizing, not after it times out: in both gap states the
+        // Watch has nothing to hand over right now.
+        if isLive, !waitForWatch, let gap = store.watchMetricsGap {
+            metricsGap = gap
+            return
+        }
+
         isSubmitting = true
         defer { isSubmitting = false }
 
@@ -433,6 +492,16 @@ struct ActiveSessionView: View {
         let streakBefore = SessionStats(sessions: store.mySessions).weeklyStreak
         localDraft = draft
         guard await store.postLiveSessionWithoutMetrics() else { return }
+        await finishSuccessfulPost(streakBefore: streakBefore)
+    }
+
+    /// Post tapped during the finalization wait. Deliberately skips the
+    /// `isSubmitting` guard — that flag is held by the waiting `save()` call
+    /// this is meant to cut short, so honouring it would make the button inert.
+    private func stopWaitingAndPost() async {
+        let streakBefore = SessionStats(sessions: store.mySessions).weeklyStreak
+        localDraft = draft
+        guard await store.stopWaitingForWatchAndPost() else { return }
         await finishSuccessfulPost(streakBefore: streakBefore)
     }
 

@@ -162,7 +162,7 @@ struct SessionDetailView: View {
     var body: some View {
         ScrollView {
             if let session {
-                FeedCard(session: session, openable: false)
+                FeedCard(session: session, openable: false, expanded: true)
                     .padding(16)
                 guestInvites(for: session)
             } else if isLoading {
