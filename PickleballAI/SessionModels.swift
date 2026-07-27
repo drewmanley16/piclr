@@ -261,6 +261,14 @@ struct FeedSession: Identifiable, Decodable, Hashable {
 
 // MARK: - Session activities (read models)
 
+enum MatchFormat: String, Codable, CaseIterable, Identifiable, Hashable {
+    case singles
+    case doubles
+
+    var id: String { rawValue }
+    var title: String { rawValue.capitalized }
+}
+
 /// The outcome of a match, from the logging user's perspective.
 enum MatchResult {
     case win, loss, tie
@@ -285,6 +293,7 @@ struct SessionActivity: Identifiable, Decodable, Hashable {
     let notes: String?
     let teamScore: Int?
     let opponentScore: Int?
+    let matchFormat: MatchFormat?
     let won: Bool?
     var participants: [ActivityParticipant]?
 
@@ -292,10 +301,12 @@ struct SessionActivity: Identifiable, Decodable, Hashable {
         case id, kind, position, focus, reps, notes
         case teamScore = "team_score"
         case opponentScore = "opponent_score"
+        case matchFormat = "match_format"
         case won, participants
     }
 
     var isMatch: Bool { kind == "match" }
+    var resolvedMatchFormat: MatchFormat { matchFormat ?? .doubles }
     var partners: [ActivityParticipant] { (participants ?? []).filter { $0.role == "partner" } }
     var opponents: [ActivityParticipant] { (participants ?? []).filter { $0.role == "opponent" } }
     var scoreLine: String? {
@@ -372,6 +383,7 @@ struct SessionActivity: Identifiable, Decodable, Hashable {
             notes: nil,
             teamScore: projectedTeamScore,
             opponentScore: projectedOpponentScore,
+            matchFormat: matchFormat,
             won: projectedWon,
             participants: projectedParticipants
         )
@@ -428,6 +440,7 @@ struct SessionWriteActivity: Encodable {
     let notes: String?
     let teamScore: Int?
     let opponentScore: Int?
+    let matchFormat: MatchFormat?
     let won: Bool?
     let participants: [SessionWriteParticipant]
 
@@ -435,6 +448,7 @@ struct SessionWriteActivity: Encodable {
         case id, kind, position, focus, reps, notes, won, participants
         case teamScore = "team_score"
         case opponentScore = "opponent_score"
+        case matchFormat = "match_format"
     }
 }
 

@@ -15,6 +15,18 @@ struct PlayerRecord: Identifiable {
     var recordLine: String { "\(wins)–\(losses)" }
 }
 
+/// Win/loss record for one match format. Stored separately from player records
+/// so Statistics can compare singles and doubles without changing rivalries.
+struct MatchFormatRecord {
+    let format: MatchFormat
+    let wins: Int
+    let losses: Int
+
+    var matches: Int { wins + losses }
+    var winRate: Int { matches == 0 ? 0 : Int((Double(wins) / Double(matches) * 100).rounded()) }
+    var recordLine: String { "\(wins)–\(losses)" }
+}
+
 /// One meeting in a head-to-head history, for the Rivalry Insights timeline.
 struct RivalryGame: Identifiable {
     let id = UUID()
@@ -67,6 +79,8 @@ struct SessionStats {
     let wins: Int
     let losses: Int
     let winRate: Int
+    let singles: MatchFormatRecord
+    let doubles: MatchFormatRecord
     /// Positive = current win streak, negative = current loss streak, 0 = none.
     let currentStreak: Int
     /// Opponents you've faced, most-played first.
@@ -89,7 +103,7 @@ struct SessionStats {
         let weekly = Self.weeklyStreaks(from: sessions.map(\.workoutDate))
         weeklyStreak = weekly.current
         longestWeeklyStreak = weekly.longest
-        var results: [(won: Bool, date: Date, position: Int)] = []
+        var results: [(won: Bool, date: Date, position: Int, format: MatchFormat)] = []
         var opp: [String: PlayerRecord] = [:]
         var part: [String: PlayerRecord] = [:]
         // Per-opponent match log for streak/recency, keyed the same way as `opp`.
@@ -101,7 +115,7 @@ struct SessionStats {
                 // Derive from the score so ties are excluded, not counted as losses.
                 guard let result = activity.matchResult, result != .tie else { continue }
                 let won = result == .win
-                results.append((won, session.workoutDate, activity.position))
+                results.append((won, session.workoutDate, activity.position, activity.resolvedMatchFormat))
                 for p in activity.opponents {
                     Self.bump(&opp, p, won: won)
                     let key = Self.key(for: p)
@@ -117,6 +131,8 @@ struct SessionStats {
         wins = results.filter(\.won).count
         losses = matches - wins
         winRate = matches == 0 ? 0 : Int((Double(wins) / Double(matches) * 100).rounded())
+        singles = Self.formatRecord(.singles, from: results)
+        doubles = Self.formatRecord(.doubles, from: results)
 
         // Streak: walk matches newest-first, counting consecutive same results.
         let ordered = results.sorted {
@@ -158,6 +174,18 @@ struct SessionStats {
 
     private static func key(for p: ActivityParticipant) -> String {
         p.profile?.id.uuidString ?? "guest:\(p.guestName ?? p.id.uuidString)"
+    }
+
+    private static func formatRecord(
+        _ format: MatchFormat,
+        from results: [(won: Bool, date: Date, position: Int, format: MatchFormat)]
+    ) -> MatchFormatRecord {
+        let matches = results.filter { $0.format == format }
+        return MatchFormatRecord(
+            format: format,
+            wins: matches.filter(\.won).count,
+            losses: matches.filter { !$0.won }.count
+        )
     }
 
     /// Win/loss streak label (a performance stat — labeled "Win streak" in UI).

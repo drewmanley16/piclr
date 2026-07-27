@@ -183,7 +183,7 @@ struct WorkoutView: View {
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)
                 HStack {
-                    Text("Tap to resume")
+                    Text("Tap to return")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Theme.accent)
                     Spacer()

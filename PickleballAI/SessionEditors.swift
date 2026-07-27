@@ -57,8 +57,12 @@ struct ActivityEditorView: View {
             .sheet(item: $picker) { role in
                 PlayerPickerSheet(exclude: excludedMemberIds) { player in
                     switch role {
-                    case .partner: activity.partners.append(player)
-                    case .opponent: activity.opponents.append(player)
+                    case .partner:
+                        guard canAddPartner else { return }
+                        activity.partners.append(player)
+                    case .opponent:
+                        guard canAddOpponent else { return }
+                        activity.opponents.append(player)
                     }
                 }
             }
@@ -83,18 +87,46 @@ struct ActivityEditorView: View {
 
     private var matchFields: some View {
         Group {
+            Section("Format") {
+                Picker("Match format", selection: $activity.matchFormat) {
+                    ForEach(MatchFormat.allCases) { format in
+                        Text(format.title).tag(format)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: activity.matchFormat) { _, _ in
+                    Haptics.tap()
+                    activity.normalizeRosterForFormat()
+                }
+            }
             Section {
                 ScorePad(teamScore: $activity.teamScore, opponentScore: $activity.opponentScore)
                     .listRowInsets(EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12))
                     .listRowBackground(Theme.surface)
             }
-            Section("Partners") {
-                PlayerChips(players: $activity.partners)
-                Button { picker = .partner } label: { Label("Add partner", systemImage: "person.badge.plus") }
+            if activity.matchFormat == .doubles {
+                Section("Partner") {
+                    PlayerChips(players: $activity.partners)
+                    Button { picker = .partner } label: {
+                        Label(
+                            canAddPartner ? "Add partner" : "Your side is full",
+                            systemImage: canAddPartner ? "person.badge.plus" : "person.2.fill"
+                        )
+                    }
+                    .disabled(!canAddPartner)
+                }
             }
-            Section("Opponents") {
+            Section(activity.matchFormat == .singles ? "Opponent" : "Opponents") {
                 PlayerChips(players: $activity.opponents)
-                Button { picker = .opponent } label: { Label("Add opponent", systemImage: "person.badge.plus") }
+                Button { picker = .opponent } label: {
+                    Label(
+                        canAddOpponent ? "Add opponent" : "Opponent side is full",
+                        systemImage: canAddOpponent
+                            ? "person.badge.plus"
+                            : (activity.matchFormat == .singles ? "person.fill" : "person.2.fill")
+                    )
+                }
+                .disabled(!canAddOpponent)
             }
             Section("Notes") {
                 TextField("How did the game go?", text: $activity.notes, axis: .vertical)
@@ -125,6 +157,14 @@ struct ActivityEditorView: View {
 
     private var isValid: Bool {
         activity.kind == .match || !activity.focus.isEmpty || !activity.reps.isEmpty || !activity.notes.isEmpty
+    }
+
+    private var canAddPartner: Bool {
+        activity.partners.count < activity.maxPartners
+    }
+
+    private var canAddOpponent: Bool {
+        activity.opponents.count < activity.maxOpponents
     }
 
     private var excludedMemberIds: Set<UUID> {
