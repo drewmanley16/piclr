@@ -68,7 +68,7 @@ struct ProfileNavigationStack<Root: View>: View {
 /// which case they're gated behind an accepted follow (`PublicProfile.contentVisible`).
 struct OtherProfileView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
 
     let userId: UUID
     /// Optional pre-known profile so the header can render instantly while the

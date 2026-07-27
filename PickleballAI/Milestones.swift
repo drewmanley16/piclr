@@ -116,7 +116,7 @@ struct MilestonesCard: View {
 /// on ones the player has already crossed but can't claim yet.
 struct MilestonesSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var loaded = false
 

@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Workout Tab
 
 struct WorkoutView: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     /// Bumped by RootView when the Play tab is re-tapped; pops the stack to root.
     var reselectSignal: Int = 0
     /// Prevents an offscreen tab from consuming a Live Activity route before

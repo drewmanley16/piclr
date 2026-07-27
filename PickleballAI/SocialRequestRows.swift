@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct PostingRow: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     @Environment(\.openSession) private var openSession
     var session: FeedSession
     @State private var showEditor = false
@@ -83,7 +83,7 @@ struct PostingRow: View {
 }
 
 struct FollowRequestRow: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     var request: FollowRequest
 
     var body: some View {

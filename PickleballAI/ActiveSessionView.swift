@@ -5,7 +5,7 @@ import PhotosUI
 
 struct ActiveSessionView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
 
     let existingSession: FeedSession?
     /// When true, this is the persistent "live" session — changes sync back to
@@ -214,8 +214,12 @@ struct ActiveSessionView: View {
     }
 
     private var postErrorBinding: Binding<Bool> {
-        Binding(
-            get: { store.errorMessage != nil },
+        // Read the flag here rather than inside the getter: this property is
+        // evaluated from `body`, so the read registers as an observation
+        // dependency. A read deferred into the escaping closure would not.
+        let hasError = store.errorMessage != nil
+        return Binding(
+            get: { hasError },
             set: { isPresented in
                 if !isPresented { store.errorMessage = nil }
             }

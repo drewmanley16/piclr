@@ -21,7 +21,7 @@ private struct ReplyTarget: Equatable {
 private struct CommentsScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openProfile) private var openProfile
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     let session: FeedSession
 
     @State private var comments: [Comment] = []
@@ -433,7 +433,7 @@ private struct CommentThreadRow: View {
 }
 
 struct CommentRow: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     let comment: Comment
     let sessionOwnerId: UUID
     var resolver: [String: UUID] = [:]

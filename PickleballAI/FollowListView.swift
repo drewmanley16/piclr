@@ -23,7 +23,7 @@ enum FollowListKind: Equatable {
 /// A simple list of names with a follow-back indicator (Instagram-style).
 /// Read-only for now — no follow/unfollow actions here.
 struct FollowListView: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     let kind: FollowListKind
 
     @State private var loaded = false
@@ -64,7 +64,7 @@ struct FollowListView: View {
 }
 
 struct FollowEntryRow: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     var entry: FollowListEntry
     var allowsFollowerRemoval = false
     @State private var confirmRemove = false
@@ -126,7 +126,7 @@ struct FollowEntryRow: View {
 ///   • Follow     — no edge yet → tap to send a follow request.
 /// Renders nothing for users hidden by RLS (no profile to act on).
 struct FollowActionButton: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     var entry: FollowListEntry
     @State private var confirmUnfollow = false
     @State private var confirmCancelRequest = false
@@ -201,7 +201,7 @@ struct FollowActionButton: View {
 /// on demand (the store's own `followers`/`following` remain the signed-in
 /// user's). Each row's follow-back button is relative to me.
 struct UserFollowListView: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     let userId: UUID
     let kind: FollowListKind
 

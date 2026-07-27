@@ -69,7 +69,7 @@ private struct CourtPickerSheet: View {
 /// tags every selected friend as a recipient.
 struct InviteComposerSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
 
     @State private var selectedPlace: LocationSearchModel.Place?
     @State private var showCourtPicker = false
@@ -183,7 +183,7 @@ private extension Date {
 }
 
 struct InviteCard: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     let invite: SessionInvite
     var showsInlineCancel = true
     /// Set false when this card is already the content of `InviteDetailView` —
@@ -334,7 +334,7 @@ func rsvpColor(_ status: RSVPStatus) -> Color {
 }
 
 private struct RSVPButtons: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     let invite: SessionInvite
     let current: RSVPStatus?
 
@@ -363,7 +363,7 @@ private struct RSVPButtons: View {
 }
 
 struct InviteDetailView: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     let inviteId: UUID
     var preloaded: SessionInvite?
 

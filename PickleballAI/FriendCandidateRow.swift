@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct FriendCandidateRow: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     var profile: Profile
     /// When true, tapping the name/avatar area pushes the player's profile
     /// (Instagram-style). Only enable within a NavigationStack.

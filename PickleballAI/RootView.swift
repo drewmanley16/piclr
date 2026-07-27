@@ -15,7 +15,7 @@ struct RootView: View {
         UINavigationBar.appearance().compactAppearance = nav
     }
 
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var selectedTab = 0
     /// One counter per tab; re-tapping the active tab bumps its counter, which
@@ -23,6 +23,7 @@ struct RootView: View {
     @State private var reselectTokens = [0, 0, 0]
 
     var body: some View {
+        @Bindable var store = store
         Group {
             switch store.authState {
             case .loading:
@@ -68,7 +69,9 @@ struct RootView: View {
         selectedTab = 1
     }
 
+    @ViewBuilder
     private var mainTabs: some View {
+        @Bindable var store = store
         // Paging TabView drives the swipe; the native tab bar is hidden and
         // replaced by AppTabBar so both tap and swipe move between pages.
         TabView(selection: $selectedTab) {
@@ -95,10 +98,7 @@ struct RootView: View {
         // exist and the change is therefore never observed.
         .onChange(of: store.openLiveSessionRequest) { _, _ in showPlayTabIfRequested() }
         .onAppear { showPlayTabIfRequested() }
-        .sheet(item: Binding(
-            get: { store.pendingDeepLink },
-            set: { store.pendingDeepLink = $0 }
-        )) { link in
+        .sheet(item: $store.pendingDeepLink) { link in
             // Rivals / weekly wrap bring their own navigation + Done, so present
             // them directly; the id-based targets get a wrapping NavigationStack.
             switch link {

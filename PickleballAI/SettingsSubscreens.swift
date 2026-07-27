@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Settings: Preferences
 
 struct SettingsPreferencesView: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     @AppStorage("notificationsEnabled") private var notifications = true
     @AppStorage(HealthMetricsSharing.defaultsKey) private var shareHealthMetrics = false
     @State private var showBlockedAccounts = false
@@ -101,7 +101,7 @@ struct SettingsPreferencesView: View {
 // MARK: - Settings: Account
 
 struct SettingsAccountView: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     var onDismissAll: () -> Void
 
     @State private var showDeleteAccount = false

@@ -3,7 +3,7 @@ import Charts
 import PhotosUI
 
 struct ProfileView: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     @EnvironmentObject private var subscriptions: SubscriptionStore
     /// Bumped by RootView when the Profile tab is re-tapped; pops to root.
     var reselectSignal: Int = 0
