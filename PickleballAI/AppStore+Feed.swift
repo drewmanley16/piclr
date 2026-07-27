@@ -150,6 +150,44 @@ extension AppStore {
         }
     }
 
+    /// Signed-out preview feed (see `PublicBrowseView`) — no `currentProfile`
+    /// gate, no personalized exclusion, backed by the narrow
+    /// `public_feed_preview` RPC rather than direct table reads.
+    func loadPublicPreviewFeed(reset: Bool = true) async {
+        if reset { publicPreviewReachedEnd = false } else if publicPreviewReachedEnd { return }
+        if isPublicPreviewRequestInFlight { return }
+
+        isPublicPreviewRequestInFlight = true
+        if reset, publicPreviewFeed.isEmpty { isPublicPreviewLoading = true }
+        defer {
+            isPublicPreviewRequestInFlight = false
+            isPublicPreviewLoading = false
+        }
+
+        do {
+            let before = reset ? nil : publicPreviewFeed.last?.createdAt
+            var params: [String: AnyJSON] = ["p_limit": .integer(feedPageSize)]
+            if let before { params["p_before"] = .string(before) }
+            let page: [PublicFeedPreviewItem] = try await supabase
+                .rpc("public_feed_preview", params: params)
+                .execute()
+                .value
+            guard !Task.isCancelled else { return }
+            publicPreviewLoadError = nil
+            if reset {
+                publicPreviewFeed = page
+            } else {
+                let existingIDs = Set(publicPreviewFeed.map(\.id))
+                publicPreviewFeed.append(contentsOf: page.filter { !existingIDs.contains($0.id) })
+            }
+            publicPreviewReachedEnd = page.count < feedPageSize
+        } catch {
+            if publicPreviewFeed.isEmpty, !(error is CancellationError), (error as? URLError)?.code != .cancelled {
+                publicPreviewLoadError = "Couldn't load the preview. Check your connection and try again."
+            }
+        }
+    }
+
     private func refreshLikedState(for sessions: [FeedSession], uid: UUID) async {
         guard !sessions.isEmpty else { return }
         if let liked = try? await likedSessionIds(for: uid, sessionIds: sessions.map(\.id)) {

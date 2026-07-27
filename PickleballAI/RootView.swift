@@ -33,7 +33,7 @@ struct RootView: View {
             case .unconfigured:
                 ConfigNeededView()
             case .signedOut:
-                AuthView()
+                PublicBrowseView()
             case .needsOnboarding:
                 AuthView(startsAtProfile: true)
             case .signedIn:
@@ -136,7 +136,9 @@ struct RootView: View {
 /// Custom bottom tab bar replacing the native `UITabBar`, so the app pages can
 /// live in a paging `TabView` (swipeable) while still tapping between Home /
 /// Play / Profile. Styled with `Theme` to match the all-black canvas.
-private struct AppTabBar: View {
+/// Not private: reused by `PublicBrowseView` for the signed-out tab bar, where
+/// tapping anything but Home opens the sign-up sheet.
+struct AppTabBar: View {
     @Binding var selection: Int
     /// Called when the already-active tab is tapped again (native "tap active
     /// tab" behavior). Switching to a different tab goes through `selection`.

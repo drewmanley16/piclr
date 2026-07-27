@@ -35,6 +35,14 @@ final class AppStore: ObservableObject {
     @Published var feedLoadError: String?
     @Published var discoverLoadError: String?
     let feedPageSize = 20
+    /// Signed-out browsing preview (see `PublicBrowseView`) — loaded before
+    /// any auth session exists, so it can't reuse `feed`/`discoverFeed` or
+    /// their `currentProfile`-gated load methods.
+    @Published var publicPreviewFeed: [PublicFeedPreviewItem] = []
+    @Published var isPublicPreviewLoading = false
+    @Published var publicPreviewReachedEnd = false
+    @Published var publicPreviewLoadError: String?
+    var isPublicPreviewRequestInFlight = false
     @Published var mySessions: [FeedSession] = []
     /// Mirrors `isInitialFeedLoading` for the Workout tab's Recent list, which
     /// loads well after the feed and would otherwise show its "no sessions yet"
