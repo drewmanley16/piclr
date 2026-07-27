@@ -565,11 +565,25 @@ struct AddActivityButton: View {
 }
 
 struct DraftActivityRow: View {
+    @Environment(AppStore.self) private var store
     var activity: DraftActivity
 
+    private let avatarSize: CGFloat = 28
+
     var body: some View {
+        Group {
+            if activity.kind == .match {
+                matchScorecard
+            } else {
+                practiceRow
+            }
+        }
+        .cardStyle()
+    }
+
+    private var practiceRow: some View {
         HStack(spacing: 14) {
-            Image(systemName: activity.kind == .match ? "flag.checkered" : "figure.cooldown")
+            Image(systemName: "figure.cooldown")
                 .font(.title3)
                 .foregroundStyle(Theme.accent)
                 .frame(width: 44, height: 44)
@@ -579,22 +593,99 @@ struct DraftActivityRow: View {
                 Text(activity.summary)
                     .font(.headline)
                     .foregroundStyle(Theme.textPrimary)
-                if let detail { Text(detail).font(.subheadline).foregroundStyle(Theme.textSecondary).lineLimit(1) }
+                if let practiceDetail {
+                    Text(practiceDetail)
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                }
             }
             Spacer()
             Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Theme.textTertiary)
         }
-        .cardStyle()
     }
 
-    private var detail: String? {
-        switch activity.kind {
-        case .practice:
-            return activity.reps.isEmpty ? (activity.notes.isEmpty ? nil : activity.notes) : activity.reps
-        case .match:
-            let names = (activity.partners + activity.opponents).map(\.displayName)
-            let outcome = activity.isTie ? "Tied" : (activity.won ? "Won" : "Lost")
-            return names.isEmpty ? outcome : names.joined(separator: ", ")
+    private var matchScorecard: some View {
+        MatchScorecardLayout(
+            teamAvatars: teamAvatars,
+            teamNames: teamNames,
+            teamScore: activity.teamScore,
+            teamAccent: teamAccent,
+            opponentAvatars: opponentAvatars,
+            opponentNames: opponentNames,
+            opponentScore: activity.opponentScore,
+            note: matchNote,
+            noteLineLimit: 2
+        )
+    }
+
+    private var teamAccent: Color? {
+        activity.isTie ? nil : (activity.won ? Theme.win : Theme.loss)
+    }
+
+    private var teamAvatars: [ProfileAvatar] {
+        let ownerAvatar = store.currentProfile.map {
+            ProfileAvatar(profile: $0, size: avatarSize, unlinked: true)
+        } ?? ProfileAvatar(preview: "Y", size: avatarSize)
+        guard activity.matchFormat == .doubles else { return [ownerAvatar] }
+        let partnerAvatar = playerAvatar(
+            activity.partners.first,
+            placeholderInitials: "P"
+        )
+        return [ownerAvatar, partnerAvatar]
+    }
+
+    private var opponentAvatars: [ProfileAvatar] {
+        opponentSlots.enumerated().map { index, player in
+            playerAvatar(
+                player,
+                placeholderInitials: activity.matchFormat == .singles ? "O" : "O\(index + 1)"
+            )
         }
+    }
+
+    private var teamNames: String {
+        let ownerName = store.currentProfile.map { shortName($0.displayName) } ?? "You"
+        guard activity.matchFormat == .doubles else { return ownerName }
+        let partnerName = activity.partners.first.map { shortName($0.displayName) } ?? "Partner"
+        return "\(ownerName), \(partnerName)"
+    }
+
+    private var opponentNames: String {
+        opponentSlots.enumerated().map { index, player in
+            player.map { shortName($0.displayName) }
+                ?? (activity.matchFormat == .singles ? "Opponent" : "Opponent \(index + 1)")
+        }.joined(separator: ", ")
+    }
+
+    private var opponentSlots: [DraftPlayer?] {
+        let selected = activity.opponents.prefix(activity.maxOpponents).map(Optional.some)
+        return selected + Array(
+            repeating: nil,
+            count: activity.maxOpponents - selected.count
+        )
+    }
+
+    private var matchNote: String? {
+        let trimmed = activity.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private var practiceDetail: String? {
+        activity.reps.isEmpty ? (activity.notes.isEmpty ? nil : activity.notes) : activity.reps
+    }
+
+    private func playerAvatar(_ player: DraftPlayer?, placeholderInitials: String) -> ProfileAvatar {
+        guard let player else {
+            return ProfileAvatar(preview: placeholderInitials, size: avatarSize)
+        }
+        if let profile = player.profile {
+            return ProfileAvatar(profile: profile, size: avatarSize, unlinked: true)
+        }
+        return ProfileAvatar(guest: player.initials, size: avatarSize)
+    }
+
+    private func shortName(_ displayName: String) -> String {
+        displayName.split(separator: " ").first.map(String.init) ?? displayName
     }
 }

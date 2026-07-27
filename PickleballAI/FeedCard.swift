@@ -622,6 +622,60 @@ struct MatchScorecard: View {
     var noteLineLimit: Int?
 
     private let avatarSize: CGFloat = 28
+
+    var body: some View {
+        MatchScorecardLayout(
+            teamAvatars: teamAvatars,
+            teamNames: teamNames,
+            teamScore: activity.teamScore,
+            teamAccent: posterAccent,
+            opponentAvatars: opponentAvatars,
+            opponentNames: opponentNames.isEmpty ? "Opponent" : opponentNames,
+            opponentScore: activity.opponentScore,
+            note: activity.note,
+            noteLineLimit: noteLineLimit
+        )
+    }
+
+    private var posterAccent: Color? {
+        switch activity.matchResult {
+        case .win: Theme.win
+        case .loss: Theme.loss
+        case .tie, .none: nil
+        }
+    }
+
+    private var teamAvatars: [ProfileAvatar] {
+        [ProfileAvatar(profile: author, size: avatarSize)]
+            + activity.partners.map { $0.avatarView(size: avatarSize) }
+    }
+    private var opponentAvatars: [ProfileAvatar] {
+        activity.opponents.map { $0.avatarView(size: avatarSize) }
+    }
+    private var teamNames: String {
+        ([authorShortName] + activity.partners.map(\.shortName)).joined(separator: ", ")
+    }
+    private var opponentNames: String {
+        activity.opponents.map(\.shortName).joined(separator: ", ")
+    }
+    private var authorShortName: String {
+        author.displayName.split(separator: " ").first.map(String.init) ?? author.displayName
+    }
+}
+
+/// Shared presentation for posted and in-progress matches, so the session
+/// builder previews the exact scorecard that will appear in the feed.
+struct MatchScorecardLayout: View {
+    let teamAvatars: [ProfileAvatar]
+    let teamNames: String
+    let teamScore: Int?
+    let teamAccent: Color?
+    let opponentAvatars: [ProfileAvatar]
+    let opponentNames: String
+    let opponentScore: Int?
+    let note: String?
+    var noteLineLimit: Int?
+
     private let railHeight: CGFloat = 24
     /// Indents the note past the result rail + its spacing, so it hangs under
     /// the names rather than under the rail.
@@ -635,33 +689,25 @@ struct MatchScorecard: View {
             teamRow(
                 avatars: teamAvatars,
                 names: teamNames,
-                score: activity.teamScore,
-                accent: posterAccent
+                score: teamScore,
+                accent: teamAccent
             )
             teamRow(
                 avatars: opponentAvatars,
-                names: opponentNames.isEmpty ? "Opponent" : opponentNames,
-                score: activity.opponentScore,
+                names: opponentNames,
+                score: opponentScore,
                 accent: nil
             )
 
             // Instantiated only when there is a note, so a noteless scorecard
             // gets no extra subview and no VStack spacing around it.
-            if let note = activity.note {
+            if let note {
                 ActivityNote(text: note, lineLimit: noteLineLimit)
                     .padding(.leading, noteInset)
             }
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
-    }
-
-    private var posterAccent: Color? {
-        switch activity.matchResult {
-        case .win: Theme.win
-        case .loss: Theme.loss
-        case .tie, .none: nil
-        }
     }
 
     private func teamRow(avatars: [ProfileAvatar], names: String, score: Int?, accent: Color?) -> some View {
@@ -685,23 +731,6 @@ struct MatchScorecard: View {
                 .font(.title3.weight(.bold).monospacedDigit())
                 .foregroundStyle(accent ?? Theme.textSecondary)
         }
-    }
-
-    private var teamAvatars: [ProfileAvatar] {
-        [ProfileAvatar(profile: author, size: avatarSize)]
-            + activity.partners.map { $0.avatarView(size: avatarSize) }
-    }
-    private var opponentAvatars: [ProfileAvatar] {
-        activity.opponents.map { $0.avatarView(size: avatarSize) }
-    }
-    private var teamNames: String {
-        ([authorShortName] + activity.partners.map(\.shortName)).joined(separator: ", ")
-    }
-    private var opponentNames: String {
-        activity.opponents.map(\.shortName).joined(separator: ", ")
-    }
-    private var authorShortName: String {
-        author.displayName.split(separator: " ").first.map(String.init) ?? author.displayName
     }
 }
 

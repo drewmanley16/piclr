@@ -1,3 +1,5 @@
+-- Re-timestamped after the linked database revealed that 20260726130000 was
+-- already used by the waitlist RLS migration.
 -- Make the crew leaderboard agree with the profile stats.
 --
 -- Being tagged in a mutual friend's match creates a credit wrapper session

@@ -265,6 +265,7 @@ extension AppStore {
                 notes: activity.notes.isEmpty ? nil : activity.notes,
                 teamScore: isMatch ? activity.teamScore : nil,
                 opponentScore: isMatch ? activity.opponentScore : nil,
+                matchFormat: isMatch ? activity.matchFormat : nil,
                 won: activity.wonValue,
                 participants: participants
             )
