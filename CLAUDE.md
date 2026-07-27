@@ -11,6 +11,8 @@ Deeper docs — read the one that matches your task before diving into code:
 - `docs/ARCHITECTURE.md` — targets, the `AppStore` split, data-model file map, live session / watch / push / monetization flows
 - `docs/BACKEND.md` — Supabase migrations workflow, edge functions, RLS + storage conventions
 - `docs/CONVENTIONS.md` — full UI consistency contract + lint tripwires
+- `docs/VERIFICATION.md` — **how to prove a change works**: the XcodeBuildMCP loop, rules, known limitations
+- `docs/XCODEBUILDMCP_SETUP.md` — one-time machine setup for the above
 - `docs/RELEASE.md` — TestFlight uploads, signing, StoreKit testing
 
 ## Project generation (XcodeGen — read this first)
@@ -24,6 +26,17 @@ The Xcode project is **generated** from `project.yml` by [XcodeGen](https://gith
 
 ## Build & run
 
+Build, launch, and UI automation go through **XcodeBuildMCP** — `build_run_sim` builds,
+boots, installs, and launches in one call, and `snapshot_ui`/`tap` drive the app against
+the accessibility tree. Project defaults live in `.xcodebuildmcp/config.yaml`, so most
+calls take no arguments.
+
+There is no test target. **Verification means driving the running app**, not just a green
+build — read `docs/VERIFICATION.md` before verifying a change. Machine setup:
+`docs/XCODEBUILDMCP_SETUP.md`.
+
+Raw fallback when the MCP tools aren't loaded:
+
 ```sh
 # Regenerate + build for simulator
 xcodegen generate
@@ -35,7 +48,7 @@ APP=$(find ~/Library/Developer/Xcode/DerivedData -path "*Debug-iphonesimulator/P
 xcrun simctl install booted "$APP" && xcrun simctl launch booted com.pickleball.ai
 ```
 
-There is no test target. "Verification" in this repo means: build succeeds + screenshot the running simulator (`xcrun simctl io booted screenshot`). SourceKit "Cannot find type … in scope" / "No such module" diagnostics during editing are usually transient cross-file noise — trust the `xcodebuild` result.
+SourceKit "Cannot find type … in scope" / "No such module" diagnostics during editing are usually transient cross-file noise — trust the build result.
 
 TestFlight: `ASC_KEY_ID=<key> ASC_ISSUER_ID=<issuer> scripts/testflight.sh` — **bump `CURRENT_PROJECT_VERSION` in `project.yml` first**. Details in `docs/RELEASE.md`; team/credential specifics live in the user's memory, not the repo.
 
