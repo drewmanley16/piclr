@@ -1,0 +1,11 @@
+schemaVersion: 1
+enabledWorkflows:
+  - simulator
+  - ui-automation
+  - debugging
+  - project-discovery
+sessionDefaults:
+  projectPath: ./PickleballAI.xcodeproj
+  scheme: PickleballAI
+  simulatorName: iPhone 17 Pro
+  bundleId: com.pickleball.ai
