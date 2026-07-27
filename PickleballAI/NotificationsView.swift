@@ -124,6 +124,7 @@ enum DeepLink: Identifiable, Hashable {
     case invite(UUID)
     case rivals       // a rivalry / heating-up push opens the Rivals sheet
     case weeklyWrap   // a weekly-wrap push opens the wrap sheet
+    case squadInvite(code: String)  // a squad join-code link opens JoinSquadSheet
 
     var id: String {
         switch self {
@@ -133,6 +134,7 @@ enum DeepLink: Identifiable, Hashable {
         case .invite(let id):   return "invite-\(id)"
         case .rivals:           return "rivals"
         case .weeklyWrap:       return "weekly-wrap"
+        case .squadInvite(let code): return "squad-\(code)"
         }
     }
 }

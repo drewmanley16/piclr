@@ -307,8 +307,9 @@ extension AppStore {
     }
 
     /// Fetches profiles for the given ids in one query, keyed by id. Ids that
-    /// aren't visible (RLS) are simply absent from the result.
-    private func profilesByID(for ids: [UUID]) async throws -> [UUID: Profile] {
+    /// aren't visible (RLS) are simply absent from the result. Internal (not
+    /// private) so `AppStore+Squads.swift` can reuse it for roster hydration.
+    func profilesByID(for ids: [UUID]) async throws -> [UUID: Profile] {
         let unique = Array(Set(ids)).map(\.uuidString)
         guard !unique.isEmpty else { return [:] }
         let profiles: [Profile] = try await supabase

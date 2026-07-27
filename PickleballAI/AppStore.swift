@@ -72,6 +72,13 @@ final class AppStore: ObservableObject {
     @Published var activeInvites: [SessionInvite] = []
     /// Crew leaderboard (you + everyone you follow), ranked. Loaded on demand.
     @Published var leaderboard: [LeaderboardEntry] = []
+    // Squads: formal named groups, distinct from the follow-graph crew
+    // leaderboard above. A user may belong to multiple. See AppStore+Squads.swift.
+    @Published var mySquads: [Squad] = []
+    @Published var isMySquadsLoading = false
+    @Published var activeSquad: Squad?
+    @Published var squadRoster: [SquadMember] = []
+    @Published var squadLeaderboard: [SquadLeaderboardEntry] = []
     /// IDs of milestones the signed-in user has unlocked (see `Milestone.catalog`).
     /// Server-authoritative — loaded on demand from `milestone_unlocks`.
     @Published var milestoneUnlocks: Set<String> = []

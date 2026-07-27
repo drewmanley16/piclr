@@ -106,6 +106,8 @@ struct RootView: View {
                 RivalsSheet()
             case .weeklyWrap:
                 WeeklyWrapSheet()
+            case .squadInvite(let code):
+                JoinSquadSheet(prefilledCode: code)
             default:
                 NavigationStack {
                     Group {

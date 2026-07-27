@@ -20,6 +20,7 @@
 		15CF34EA18544A33E028145B /* ScoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51D694E41512C0CE99B1C56 /* ScoreView.swift */; };
 		16DD6B39109593928B5583A3 /* ContactsImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EC4FAB3BC7409E94B9F0E1 /* ContactsImporter.swift */; };
 		182BCA3925FD2E77C836B44D /* NotificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0385A0D1A212395E5B9D2720 /* NotificationModels.swift */; };
+		1B5BAC17185887733D7334EA /* AppStore+Squads.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFD89735E41DB0AF07D563E7 /* AppStore+Squads.swift */; };
 		1D2A4331D84FC6558543C122 /* Milestones.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05187D44C417C58F81C97619 /* Milestones.swift */; };
 		1DE50B08C3685F46E9394C4E /* CommentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B4FA8570E3F58A7BED6E97F /* CommentModels.swift */; };
 		1E410D96F3A0FA1A4836A8D2 /* WatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF5A9FC1A230E468254608EC /* WatchApp.swift */; };
@@ -36,6 +37,7 @@
 		3A2C5420A1C5759EFA0BF794 /* RivalryInsights.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53F9DEA7EC6F600A7C9DF92D /* RivalryInsights.swift */; };
 		3B46F82532DA139D31A550D8 /* AppleWatchWorkoutLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40894D3797C7D56547B9FDF2 /* AppleWatchWorkoutLauncher.swift */; };
 		3C079EEC453B813B1EB1752C /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 192E99F8896BE798A879F57E /* PaywallView.swift */; };
+		3C42B759A4BE74DE16CF70FC /* SquadDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71F9D59F2198ECCB1CF60A3 /* SquadDetailView.swift */; };
 		3D6C3B86141C26738F80B2A1 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BCD8F33D0E442DCBB8E637F /* LeaderboardView.swift */; };
 		3E53197B3ACF8315533AA7C2 /* AppStore+Reposts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19CC43FBB53DAF94FA9E78D3 /* AppStore+Reposts.swift */; };
 		4021BD23A165270D556A2FA3 /* ActiveSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12CAF21561DAF374E9A5348A /* ActiveSessionView.swift */; };
@@ -45,6 +47,7 @@
 		455E4344C365F0E80B739EA3 /* WeeklyWrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3C692535DA6A9EEFA9FF9D7 /* WeeklyWrap.swift */; };
 		47BE162BED8AB1033B9D7F8A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 26A5AD74AFBAB08E7BB33698 /* Assets.xcassets */; };
 		47D67C0BEA142E3C53143B14 /* AppStore+Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 417ED5579B58CC67197FFB16 /* AppStore+Notifications.swift */; };
+		485E1272DCD77840331A830E /* SquadModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B573A55DA5EAEA55E43252C4 /* SquadModels.swift */; };
 		496643F409765F3DCE496F80 /* WorkoutCalendarCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 323771872266981FD4A95C19 /* WorkoutCalendarCard.swift */; };
 		49CE65D8F627CAD2C793DA9C /* InsightsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AC6FBEEB80B18537D16C67A /* InsightsCard.swift */; };
 		4A8C0B26C66CA2BCA86EFF37 /* SettingsSubscreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 612A1DDA53F21DD025421CC8 /* SettingsSubscreens.swift */; };
@@ -52,10 +55,13 @@
 		4CD5BF0B95A969D397E3038D /* PickleballAIWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EE4100E53AC518E09293CA1 /* PickleballAIWidget.swift */; };
 		53A4ED9BBF46A833CDCD422A /* RevenueCatService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DABB61C500760EEE65FB5F65 /* RevenueCatService.swift */; };
 		5871B4D2606B7AC392C95451 /* OtherProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72609C0E290C1E3683A88921 /* OtherProfileView.swift */; };
+		5E89F1E126EB6B05851DD689 /* JoinSquadSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23A52EC22CFEFCA3D16BA8C7 /* JoinSquadSheet.swift */; };
 		5E9F8ED09A2B926B38FFE0C8 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC1B8FB7392D5C5FC8C4D640 /* LiveActivityManager.swift */; };
 		612BCA3A3A91F6EEBBC287BF /* CommentMentions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B007A00EBC21777270E6C5C /* CommentMentions.swift */; };
 		63CF72EC30CBFEC89BF39639 /* LiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF3D5A5AC51AF989571223E /* LiveActivityAttributes.swift */; };
+		63D07A14993161FBCB105FB9 /* SquadsListSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 148E7BD8EAAF94CD256898A0 /* SquadsListSheet.swift */; };
 		6431A39E667DF61B6E39C123 /* MediaHydrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1ADA23D176823BB8CF93823 /* MediaHydrator.swift */; };
+		65311B32D981D4486C8FAE84 /* CreateSquadSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA414C1FA453E183664C4008 /* CreateSquadSheet.swift */; };
 		6578538862C4322D39EF9F01 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6DFAC6F42E204B347470EA4 /* SplashView.swift */; };
 		664317151FD26AFB65FCFB64 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C2F55C19C493784AFEFC588 /* DesignSystem.swift */; };
 		66B2BB82985061C2DD0900CD /* SuggestedAthleteCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC505C83297253D366673275 /* SuggestedAthleteCard.swift */; };
@@ -105,9 +111,11 @@
 		C5338F649A3DC6D11AE71F0B /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528729889F780FEF8B81D160 /* ProfileView.swift */; };
 		CE7E5F4369D9181C9C659C80 /* StatsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF895DB874A0AA5FBE3CB948 /* StatsSheet.swift */; };
 		CF090BAFE2AE992E3217EBCF /* AppStore+Gear.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99DE6EB174F4713D18400199 /* AppStore+Gear.swift */; };
+		CF800B0CD13114A52F07BD0B /* PublicBrowseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD9CE41059F47EAA30BF6F7 /* PublicBrowseView.swift */; };
 		D055B2C456A4F9F242877547 /* WatchWorkoutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC8EB7A24D77C231E0A66684 /* WatchWorkoutManager.swift */; };
 		D60B10153096A64D929AE1AC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */; };
 		D7F2EE361D4137FD7E546EB4 /* InviteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9848E60F27125A620DA0B90 /* InviteView.swift */; };
+		D8057A6D4CB67CE50A219402 /* PublicPreviewModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 217D9EF2C8D659596EF6F219 /* PublicPreviewModels.swift */; };
 		DE6F84AD2314939D4E8C317C /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65F9240942A799CF19EF40AC /* Haptics.swift */; };
 		E31424AEC6D64816D7DFF5ED /* AppStore+FollowGraph.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4660717F1902F691074520D /* AppStore+FollowGraph.swift */; };
 		E3FC19388F40E67148FDF37C /* AvatarCropEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 510CA9D8BA7B5FC01722045F /* AvatarCropEditor.swift */; };
@@ -176,6 +184,7 @@
 		05187D44C417C58F81C97619 /* Milestones.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Milestones.swift; sourceTree = "<group>"; };
 		110EB1A0604D9D68DD50D886 /* Supabase.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Supabase.plist; sourceTree = "<group>"; };
 		12CAF21561DAF374E9A5348A /* ActiveSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveSessionView.swift; sourceTree = "<group>"; };
+		148E7BD8EAAF94CD256898A0 /* SquadsListSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SquadsListSheet.swift; sourceTree = "<group>"; };
 		14EC4FAB3BC7409E94B9F0E1 /* ContactsImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsImporter.swift; sourceTree = "<group>"; };
 		192E99F8896BE798A879F57E /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		19B5187EB34F5664E703C43B /* PickleballAIWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PickleballAIWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -186,6 +195,8 @@
 		1E1748736F7435B3CB977DC7 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
 		212C7D515516C3E07230F457 /* PickleballAI.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PickleballAI.entitlements; sourceTree = "<group>"; };
 		214162C6EFF74362BE3772CD /* InviteModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteModels.swift; sourceTree = "<group>"; };
+		217D9EF2C8D659596EF6F219 /* PublicPreviewModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicPreviewModels.swift; sourceTree = "<group>"; };
+		23A52EC22CFEFCA3D16BA8C7 /* JoinSquadSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinSquadSheet.swift; sourceTree = "<group>"; };
 		26A5AD74AFBAB08E7BB33698 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		28C2EBB810FDA81F4A0B4C04 /* AppStore+Auth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Auth.swift"; sourceTree = "<group>"; };
 		29384586246A643B30C868F6 /* InviteSharing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteSharing.swift; sourceTree = "<group>"; };
@@ -244,6 +255,7 @@
 		A1ADA23D176823BB8CF93823 /* MediaHydrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaHydrator.swift; sourceTree = "<group>"; };
 		A26F3CB239971947B6371E26 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		A3C692535DA6A9EEFA9FF9D7 /* WeeklyWrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyWrap.swift; sourceTree = "<group>"; };
+		A71F9D59F2198ECCB1CF60A3 /* SquadDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SquadDetailView.swift; sourceTree = "<group>"; };
 		AC505C83297253D366673275 /* SuggestedAthleteCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedAthleteCard.swift; sourceTree = "<group>"; };
 		AF61E92F5637DA5570EACB1F /* SessionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionModels.swift; sourceTree = "<group>"; };
 		AF6FF037B809FB38076632ED /* RevenueCat.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = RevenueCat.plist; sourceTree = "<group>"; };
@@ -251,10 +263,12 @@
 		B10025ED05CD5F456B2D1934 /* RivalsFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RivalsFeature.swift; sourceTree = "<group>"; };
 		B33C1504DA3DA204EE4A1046 /* WorkoutMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutMetrics.swift; sourceTree = "<group>"; };
 		B3FA4363BCD03C413DB5D6C4 /* LogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogView.swift; sourceTree = "<group>"; };
+		B573A55DA5EAEA55E43252C4 /* SquadModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SquadModels.swift; sourceTree = "<group>"; };
 		B6DFAC6F42E204B347470EA4 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		B84E3919C44FA9AD88BF7BBB /* WatchGameStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchGameStore.swift; sourceTree = "<group>"; };
 		BC017A194C54A644C612773C /* WatchSyncMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSyncMessage.swift; sourceTree = "<group>"; };
 		BF5A9FC1A230E468254608EC /* WatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchApp.swift; sourceTree = "<group>"; };
+		BFD89735E41DB0AF07D563E7 /* AppStore+Squads.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Squads.swift"; sourceTree = "<group>"; };
 		C05392786FD78DD414FD73AF /* InsightsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsSheet.swift; sourceTree = "<group>"; };
 		C105A93AC708CD4765D2974D /* RevenueCat.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = RevenueCat.example.plist; sourceTree = "<group>"; };
 		C3ABA2151D296CFDE399EDFD /* Subscription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Subscription.swift; sourceTree = "<group>"; };
@@ -262,6 +276,7 @@
 		C49D15DAFAF823EF6B673ADE /* PushService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushService.swift; sourceTree = "<group>"; };
 		C60A7FE208AB50A6DC053231 /* LocationPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPicker.swift; sourceTree = "<group>"; };
 		C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		CBD9CE41059F47EAA30BF6F7 /* PublicBrowseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicBrowseView.swift; sourceTree = "<group>"; };
 		CF895DB874A0AA5FBE3CB948 /* StatsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsSheet.swift; sourceTree = "<group>"; };
 		D0E6F8C2B52FA6E47498094F /* PlayInsights.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayInsights.swift; sourceTree = "<group>"; };
 		D102C35019EBAFBC8A6123DF /* ProTeaser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProTeaser.swift; sourceTree = "<group>"; };
@@ -269,6 +284,7 @@
 		D1DA9EA8FD022D18FABEBD5A /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		D27DDC2F5BDF963F1B298D8A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		D4ABDD948BF6204089C4CACF /* SessionStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStats.swift; sourceTree = "<group>"; };
+		DA414C1FA453E183664C4008 /* CreateSquadSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateSquadSheet.swift; sourceTree = "<group>"; };
 		DABB61C500760EEE65FB5F65 /* RevenueCatService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevenueCatService.swift; sourceTree = "<group>"; };
 		DBC7525B8F6249F516308D94 /* SafetyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyModels.swift; sourceTree = "<group>"; };
 		DC1B8FB7392D5C5FC8C4D640 /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
@@ -363,6 +379,7 @@
 				19CC43FBB53DAF94FA9E78D3 /* AppStore+Reposts.swift */,
 				5D9CC3B49A2B1A43B0002C5D /* AppStore+Safety.swift */,
 				EFC6DF5FC7D2408F3EF6DC31 /* AppStore+Sessions.swift */,
+				BFD89735E41DB0AF07D563E7 /* AppStore+Squads.swift */,
 				C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */,
 				524C92C8AF8A9C6D3ADE7AC4 /* AuthComponents.swift */,
 				38D466C6F8E7D2FD8E302914 /* AuthView.swift */,
@@ -372,6 +389,7 @@
 				2B4FA8570E3F58A7BED6E97F /* CommentModels.swift */,
 				4F6C03EC3ED4D2A8C098B84F /* CommentsView.swift */,
 				14EC4FAB3BC7409E94B9F0E1 /* ContactsImporter.swift */,
+				DA414C1FA453E183664C4008 /* CreateSquadSheet.swift */,
 				2C2F55C19C493784AFEFC588 /* DesignSystem.swift */,
 				2C792A7AC8B56AE02E63F640 /* DraftModels.swift */,
 				594C30F607DCAA2E5D2E6245 /* EdgeFunctionModels.swift */,
@@ -390,6 +408,7 @@
 				214162C6EFF74362BE3772CD /* InviteModels.swift */,
 				29384586246A643B30C868F6 /* InviteSharing.swift */,
 				E9848E60F27125A620DA0B90 /* InviteView.swift */,
+				23A52EC22CFEFCA3D16BA8C7 /* JoinSquadSheet.swift */,
 				2BCD8F33D0E442DCBB8E637F /* LeaderboardView.swift */,
 				32CF1AA306E5F578AA3022F7 /* LegalDocuments.swift */,
 				1DF3D5A5AC51AF989571223E /* LiveActivityAttributes.swift */,
@@ -415,6 +434,8 @@
 				475451E24481504893FFE7ED /* ProfileModels.swift */,
 				528729889F780FEF8B81D160 /* ProfileView.swift */,
 				D102C35019EBAFBC8A6123DF /* ProTeaser.swift */,
+				CBD9CE41059F47EAA30BF6F7 /* PublicBrowseView.swift */,
+				217D9EF2C8D659596EF6F219 /* PublicPreviewModels.swift */,
 				5BE6D184FFD4DE7523A9689F /* PushPrimerSheet.swift */,
 				C49D15DAFAF823EF6B673ADE /* PushService.swift */,
 				8D1FBA77BA526A6415502267 /* RealtimeSubscription.swift */,
@@ -436,6 +457,9 @@
 				812D44B60A7EA37D8E8F26CA /* SocialModels.swift */,
 				0482FE19F7FE0F2A6DD0872C /* SocialRequestRows.swift */,
 				B6DFAC6F42E204B347470EA4 /* SplashView.swift */,
+				A71F9D59F2198ECCB1CF60A3 /* SquadDetailView.swift */,
+				B573A55DA5EAEA55E43252C4 /* SquadModels.swift */,
+				148E7BD8EAAF94CD256898A0 /* SquadsListSheet.swift */,
 				CF895DB874A0AA5FBE3CB948 /* StatsSheet.swift */,
 				C3ABA2151D296CFDE399EDFD /* Subscription.swift */,
 				AC505C83297253D366673275 /* SuggestedAthleteCard.swift */,
@@ -638,6 +662,7 @@
 				3E53197B3ACF8315533AA7C2 /* AppStore+Reposts.swift in Sources */,
 				7BE71A2B865DA409C8734967 /* AppStore+Safety.swift in Sources */,
 				BBB0B68BD14F2D4AAD57073A /* AppStore+Sessions.swift in Sources */,
+				1B5BAC17185887733D7334EA /* AppStore+Squads.swift in Sources */,
 				C4D639B6FB92C30CB2822077 /* AppStore.swift in Sources */,
 				3B46F82532DA139D31A550D8 /* AppleWatchWorkoutLauncher.swift in Sources */,
 				B7840EC1684B9C2ECA85EAD7 /* AuthComponents.swift in Sources */,
@@ -648,6 +673,7 @@
 				1DE50B08C3685F46E9394C4E /* CommentModels.swift in Sources */,
 				33C8ACB4E3D0F1DAE5FC4EEF /* CommentsView.swift in Sources */,
 				16DD6B39109593928B5583A3 /* ContactsImporter.swift in Sources */,
+				65311B32D981D4486C8FAE84 /* CreateSquadSheet.swift in Sources */,
 				664317151FD26AFB65FCFB64 /* DesignSystem.swift in Sources */,
 				713CDC37F05C373C2A4C9DFB /* DraftModels.swift in Sources */,
 				E610A0298FD18084A62FDD82 /* EdgeFunctionModels.swift in Sources */,
@@ -665,6 +691,7 @@
 				BE4F20EBC36E0717FC98E442 /* InviteModels.swift in Sources */,
 				EFDDBF4113FAE1DADF1C2FD2 /* InviteSharing.swift in Sources */,
 				D7F2EE361D4137FD7E546EB4 /* InviteView.swift in Sources */,
+				5E89F1E126EB6B05851DD689 /* JoinSquadSheet.swift in Sources */,
 				3D6C3B86141C26738F80B2A1 /* LeaderboardView.swift in Sources */,
 				2C8385E386ACCE3A125AEADA /* LegalDocuments.swift in Sources */,
 				FD52FEB282F1D784FD37A351 /* LiveActivityAttributes.swift in Sources */,
@@ -688,6 +715,8 @@
 				FBC5CA0F99C49D8AC902D659 /* ProfileIdentityValidation.swift in Sources */,
 				449EC4A27D19CBFFFABCB4CC /* ProfileModels.swift in Sources */,
 				C5338F649A3DC6D11AE71F0B /* ProfileView.swift in Sources */,
+				CF800B0CD13114A52F07BD0B /* PublicBrowseView.swift in Sources */,
+				D8057A6D4CB67CE50A219402 /* PublicPreviewModels.swift in Sources */,
 				00291CA924896F8E25FFC6A3 /* PushPrimerSheet.swift in Sources */,
 				91C1312E7498D846C328A74E /* PushService.swift in Sources */,
 				67003847FAE65E98968EFA9E /* RealtimeSubscription.swift in Sources */,
@@ -707,6 +736,9 @@
 				B582D55DDDCD4C2E47573059 /* SocialModels.swift in Sources */,
 				BC1C0D7301EDFE01BCAB6B78 /* SocialRequestRows.swift in Sources */,
 				6578538862C4322D39EF9F01 /* SplashView.swift in Sources */,
+				3C42B759A4BE74DE16CF70FC /* SquadDetailView.swift in Sources */,
+				485E1272DCD77840331A830E /* SquadModels.swift in Sources */,
+				63D07A14993161FBCB105FB9 /* SquadsListSheet.swift in Sources */,
 				CE7E5F4369D9181C9C659C80 /* StatsSheet.swift in Sources */,
 				ADB24CAF72BB58C2CBF4D628 /* Subscription.swift in Sources */,
 				66B2BB82985061C2DD0900CD /* SuggestedAthleteCard.swift in Sources */,

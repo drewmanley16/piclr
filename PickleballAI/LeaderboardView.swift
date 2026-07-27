@@ -1,5 +1,23 @@
 import SwiftUI
 
+/// Shared shape for `LeaderboardRow` so both the follow-graph crew
+/// leaderboard (`LeaderboardEntry`) and a squad-scoped leaderboard
+/// (`SquadLeaderboardEntry`) can render through the same row view.
+protocol LeaderboardDisplayable: Identifiable, Hashable {
+    var userId: UUID { get }
+    var displayName: String { get }
+    var username: String { get }
+    var avatarURL: String? { get }
+    var initials: String { get }
+    var isPro: Bool { get }
+    var recordLine: String { get }
+    var winRate: Int { get }
+    var matches: Int { get }
+}
+
+extension LeaderboardEntry: LeaderboardDisplayable {}
+extension SquadLeaderboardEntry: LeaderboardDisplayable {}
+
 /// Match window for the crew leaderboard. `.all` is free; `.month`/`.season`
 /// are Pro-only filters layered on top of the same free board.
 enum LeaderboardPeriod: String, CaseIterable, Identifiable {
@@ -138,9 +156,9 @@ struct LeaderboardSheet: View {
     }
 }
 
-struct LeaderboardRow: View {
+struct LeaderboardRow<Entry: LeaderboardDisplayable>: View {
     let rank: Int?
-    let entry: LeaderboardEntry
+    let entry: Entry
     var isYou: Bool = false
 
     var body: some View {

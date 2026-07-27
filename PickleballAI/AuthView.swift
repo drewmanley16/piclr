@@ -38,6 +38,14 @@ enum AppLinks {
     static func profile(_ userId: UUID) -> URL {
         URL(string: "https://\(webHost)/u/\(userId.uuidString.lowercased())")!
     }
+
+    /// A squad join-code link. Custom scheme only (not a universal link) — no
+    /// AASA/landing page exists for `/squad/*`, so this only opens the app when
+    /// it's already installed and reachable via the custom scheme; the join
+    /// code is always shared alongside it as a typeable fallback.
+    static func squadJoin(_ code: String) -> URL {
+        URL(string: "pickleballai://squad/\(code)")!
+    }
 }
 
 struct AuthView: View {

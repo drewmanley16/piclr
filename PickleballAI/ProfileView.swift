@@ -97,6 +97,7 @@ struct ProfileView: View {
                 case .goals: GoalsSheet(sessionsThisWeek: sessionsThisWeek, weeklyStreak: stats.weeklyStreak)
                 case .leaderboard: LeaderboardSheet()
                 case .milestones: MilestonesSheet()
+                case .squads: SquadsListSheet()
                 }
             }
             .alert("Couldn't update photo", isPresented: profilePhotoErrorBinding) {
@@ -759,6 +760,7 @@ struct ProfileView: View {
     private var dashboard: some View {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
             DashboardTile(icon: "trophy.fill", label: "Leaderboard") { activeSheet = .leaderboard }
+            DashboardTile(icon: "person.3.fill", label: "Squads") { activeSheet = .squads }
             DashboardTile(icon: "bag.fill", label: "Gear") { activeSheet = .gear }
             DashboardTile(icon: "figure.stand", label: "Measures") { activeSheet = .measures }
         }
@@ -990,6 +992,6 @@ struct CustomRangeSheet: View {
 }
 
 enum ProfileSheet: String, Identifiable {
-    case stats, gear, measures, rivals, leaderboard, insights, weeklyWrap, goals, milestones
+    case stats, gear, measures, rivals, leaderboard, insights, weeklyWrap, goals, milestones, squads
     var id: String { rawValue }
 }

@@ -62,6 +62,14 @@ extension AppStore {
             }
             return true
         }
+        // Squad join code: pickleballai://squad/{code}. Custom scheme only —
+        // see AppLinks.squadJoin.
+        if url.scheme == "pickleballai", url.host == "squad" {
+            let code = url.pathComponents.filter { $0 != "/" }.first
+            guard let code, !code.isEmpty else { return false }
+            pendingDeepLink = .squadInvite(code: code)
+            return true
+        }
         let parts = url.pathComponents.filter { $0 != "/" }
         guard parts.count >= 2, parts[0].lowercased() == "u",
               let userId = UUID(uuidString: parts[1]) else { return false }
