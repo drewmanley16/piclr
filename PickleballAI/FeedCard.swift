@@ -630,7 +630,7 @@ struct MatchScorecard: View {
             teamScore: activity.teamScore,
             teamAccent: posterAccent,
             opponentAvatars: opponentAvatars,
-            opponentNames: opponentNames.isEmpty ? "Opponent" : opponentNames,
+            opponentNames: opponentNames,
             opponentScore: activity.opponentScore,
             note: activity.note,
             noteLineLimit: noteLineLimit
@@ -646,18 +646,43 @@ struct MatchScorecard: View {
     }
 
     private var teamAvatars: [ProfileAvatar] {
-        [ProfileAvatar(profile: author, size: avatarSize)]
-            + activity.partners.map { $0.avatarView(size: avatarSize) }
+        let ownerAvatar = ProfileAvatar(profile: author, size: avatarSize)
+        guard activity.resolvedMatchFormat == .doubles else { return [ownerAvatar] }
+        let partnerAvatar = activity.partners.first.map {
+            $0.avatarView(size: avatarSize)
+        } ?? ProfileAvatar(preview: "P", size: avatarSize)
+        return [ownerAvatar, partnerAvatar]
     }
+
     private var opponentAvatars: [ProfileAvatar] {
-        activity.opponents.map { $0.avatarView(size: avatarSize) }
+        opponentSlots.enumerated().map { index, opponent in
+            opponent.map { $0.avatarView(size: avatarSize) }
+                ?? ProfileAvatar(
+                    preview: activity.resolvedMatchFormat == .singles ? "O" : "O\(index + 1)",
+                    size: avatarSize
+                )
+        }
     }
+
     private var teamNames: String {
-        ([authorShortName] + activity.partners.map(\.shortName)).joined(separator: ", ")
+        guard activity.resolvedMatchFormat == .doubles else { return authorShortName }
+        let partnerName = activity.partners.first?.shortName ?? "Partner"
+        return "\(authorShortName), \(partnerName)"
     }
+
     private var opponentNames: String {
-        activity.opponents.map(\.shortName).joined(separator: ", ")
+        opponentSlots.enumerated().map { index, opponent in
+            opponent?.shortName
+                ?? (activity.resolvedMatchFormat == .singles ? "Opponent" : "Opponent \(index + 1)")
+        }.joined(separator: ", ")
     }
+
+    private var opponentSlots: [ActivityParticipant?] {
+        let slotCount = activity.resolvedMatchFormat == .singles ? 1 : 2
+        let selected = activity.opponents.prefix(slotCount).map(Optional.some)
+        return selected + Array(repeating: nil, count: slotCount - selected.count)
+    }
+
     private var authorShortName: String {
         author.displayName.split(separator: " ").first.map(String.init) ?? author.displayName
     }
@@ -685,7 +710,7 @@ struct MatchScorecardLayout: View {
         VStack(spacing: 4) {
             // The poster's own team is the accented row — their names + score
             // communicate their result (green for a win, clay for a loss,
-            // neutral for a tie) — with the opponents always rendered muted.
+            // neutral for a tie). Both rosters keep equal visual prominence.
             teamRow(
                 avatars: teamAvatars,
                 names: teamNames,
@@ -721,15 +746,15 @@ struct MatchScorecardLayout: View {
             }
 
             Text(names)
-                .font(.subheadline.weight(accent != nil ? .semibold : .regular))
-                .foregroundStyle(accent != nil ? Theme.textPrimary : Theme.textSecondary)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.textPrimary)
                 .lineLimit(1)
 
             Spacer(minLength: 8)
 
             Text(score.map(String.init) ?? "-")
                 .font(.title3.weight(.bold).monospacedDigit())
-                .foregroundStyle(accent ?? Theme.textSecondary)
+                .foregroundStyle(accent ?? Theme.textPrimary)
         }
     }
 }
