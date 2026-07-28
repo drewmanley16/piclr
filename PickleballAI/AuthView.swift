@@ -21,7 +21,7 @@ enum AppLinks {
     /// people without the app yet — see the `pickleball.ai-web` repo. Matched
     /// on-device by the `com.apple.developer.associated-domains` entitlement
     /// (`applinks:pickleball-ai-web.vercel.app`).
-    static let webHost = "pickleball-ai-web.vercel.app"
+    static let webHost = "piclr.vercel.app"
 
     /// App Store listing — the fallback when we don't yet know the sharer's id
     /// (e.g. before a session is restored), so shared invites always land

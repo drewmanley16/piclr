@@ -8,7 +8,7 @@
 	<true/>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>applinks:pickleball-ai-web.vercel.app</string>
+		<string>applinks:piclr.vercel.app</string>
 	</array>
 </dict>
 </plist>
