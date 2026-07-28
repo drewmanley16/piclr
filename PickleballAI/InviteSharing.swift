@@ -62,19 +62,30 @@ extension AppStore {
             }
             return true
         }
-        // Squad join code: pickleballai://squad/{code}. Custom scheme only —
-        // see AppLinks.squadJoin.
-        if url.scheme == "pickleballai", url.host == "squad" {
-            let code = url.pathComponents.filter { $0 != "/" }.first
-            guard let code, !code.isEmpty else { return false }
-            pendingDeepLink = .squadInvite(code: code)
-            return true
+        // Path-based routes, recognized regardless of scheme: the universal
+        // link https://webHost/{route}/{value}, or the equivalent custom
+        // scheme pickleballai://{route}/{value}. A custom scheme's first
+        // segment lands in `host`, not `pathComponents` (unlike https, where
+        // `host` is webHost and doesn't participate in routing), so route
+        // parts are normalized to start with `host` only for the custom
+        // scheme. /u/{userId} and /squad/{code}. See AppLinks.profile / .squadJoin.
+        var parts = url.pathComponents.filter { $0 != "/" }
+        if url.scheme == "pickleballai", let host = url.host, !host.isEmpty {
+            parts = [host] + parts
         }
-        let parts = url.pathComponents.filter { $0 != "/" }
-        guard parts.count >= 2, parts[0].lowercased() == "u",
-              let userId = UUID(uuidString: parts[1]) else { return false }
-        pendingDeepLink = .profile(userId)
-        return true
+        guard let first = parts.first?.lowercased() else { return false }
+        switch first {
+        case "u":
+            guard parts.count >= 2, let userId = UUID(uuidString: parts[1]) else { return false }
+            pendingDeepLink = .profile(userId)
+            return true
+        case "squad":
+            guard parts.count >= 2, !parts[1].isEmpty else { return false }
+            pendingDeepLink = .squadInvite(code: parts[1])
+            return true
+        default:
+            return false
+        }
     }
 }
 

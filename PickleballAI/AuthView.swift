@@ -15,15 +15,12 @@ enum Legal {
 
 /// Shared app links used in more than one screen.
 enum AppLinks {
-    /// Web host that also serves the app's universal links.
-    ///
-    /// TODO(referral): for `AppLinks.profile(_:)` to open the installed app
-    /// instead of Safari, this host must (1) serve an
-    /// `/.well-known/apple-app-site-association` file listing the app's
-    /// `applinks:` component for `/u/*`, matching the Associated Domains
-    /// entitlement, and (2) render a real `/u/{userId}` landing page (profile +
-    /// "Get the app" button) for people who don't have the app yet. Until the
-    /// AASA file is deployed the link resolves to the web page only.
+    /// Web host that also serves the app's universal links. Serves
+    /// `/.well-known/apple-app-site-association` (declaring `/u/*` and
+    /// `/squad/*`) plus `/u/{id}` and `/squad/{code}` landing pages for
+    /// people without the app yet — see the `pickleball.ai-web` repo. Matched
+    /// on-device by the `com.apple.developer.associated-domains` entitlement
+    /// (`applinks:pickleball-ai-web.vercel.app`).
     static let webHost = "pickleball-ai-web.vercel.app"
 
     /// App Store listing — the fallback when we don't yet know the sharer's id
@@ -39,12 +36,11 @@ enum AppLinks {
         URL(string: "https://\(webHost)/u/\(userId.uuidString.lowercased())")!
     }
 
-    /// A squad join-code link. Custom scheme only (not a universal link) — no
-    /// AASA/landing page exists for `/squad/*`, so this only opens the app when
-    /// it's already installed and reachable via the custom scheme; the join
-    /// code is always shared alongside it as a typeable fallback.
+    /// A squad join-code universal link. Opens the installed app straight to
+    /// `JoinSquadSheet` (prefilled) via the deep-link system; without the app
+    /// it lands on the `/squad/{code}` web landing page.
     static func squadJoin(_ code: String) -> URL {
-        URL(string: "pickleballai://squad/\(code)")!
+        URL(string: "https://\(webHost)/squad/\(code)")!
     }
 }
 
