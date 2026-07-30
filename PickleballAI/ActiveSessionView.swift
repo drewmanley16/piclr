@@ -100,22 +100,11 @@ struct ActiveSessionView: View {
         .onAppear {
             store.errorMessage = nil
             if isLive, let live = store.activeDraft { draft = live }
-            if isLive { store.requestLiveWorkoutMetrics() }
         }
         .onChange(of: draft) { _, newValue in
             if isLive { store.activeDraft = newValue }
         }
         .alert(isEditing ? "Couldn't save session" : "Couldn't post session", isPresented: postErrorBinding) {
-            if isLive, store.activeDraft?.expectsWatchMetrics == true {
-                Button("Retry Watch Sync") {
-                    store.errorMessage = nil
-                    Task { await save() }
-                }
-                Button("Post Without Metrics", role: .destructive) {
-                    store.errorMessage = nil
-                    Task { await postWithoutMetrics() }
-                }
-            }
             Button("Cancel", role: .cancel) { store.errorMessage = nil }
         } message: {
             Text(store.errorMessage ?? "Please try again.")
@@ -163,47 +152,6 @@ struct ActiveSessionView: View {
                 .frame(minHeight: 48)
             }
             Divider().overlay(Theme.hairline)
-            if isLive, store.activeDraft?.expectsWatchMetrics == true {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "applewatch.radiowaves.left.and.right")
-                            .foregroundStyle(Theme.accent)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Apple Watch tracking")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Theme.textPrimary)
-                            Text(store.watchWorkoutStatus.message)
-                                .font(.caption)
-                                .foregroundStyle(statusColor)
-                        }
-                        Spacer()
-                    }
-                    HStack(spacing: 0) {
-                        liveMetric(
-                            value: store.liveWorkoutMetrics?.heartRateBPM,
-                            label: "CURRENT",
-                            suffix: "bpm",
-                            color: .red
-                        )
-                        liveMetric(
-                            value: store.liveWorkoutMetrics?.averageHeartRateBPM,
-                            label: "AVG",
-                            suffix: "bpm",
-                            color: Theme.textPrimary
-                        )
-                        liveMetric(
-                            value: store.liveWorkoutMetrics?.activeCaloriesKcal,
-                            label: "ACTIVE",
-                            suffix: "cal",
-                            color: .orange
-                        )
-                    }
-                    .padding(.vertical, 8)
-                    .background(Theme.surfaceElevated, in: RoundedRectangle(cornerRadius: Theme.radiusControl))
-                }
-                .padding(.vertical, 10)
-                Divider().overlay(Theme.hairline)
-            }
             TextField(AppStore.timeOfDayTitle(for: draft.startedAt), text: $draft.title)
                 .font(.headline)
                 .frame(minHeight: 44)
@@ -239,26 +187,6 @@ struct ActiveSessionView: View {
                 if draft.photoData != nil { draft.removePhoto = false }
             }
         }
-    }
-
-    private var statusColor: Color {
-        switch store.watchWorkoutStatus {
-        case .failed: return .red
-        case .disconnected: return .orange
-        default: return Theme.textSecondary
-        }
-    }
-
-    private func liveMetric(value: Int?, label: String, suffix: String, color: Color) -> some View {
-        VStack(spacing: 2) {
-            Text(value.map { "\($0) \(suffix)" } ?? "-")
-                .font(.subheadline.weight(.bold).monospacedDigit())
-                .foregroundStyle(color)
-            Text(label)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(Theme.textTertiary)
-        }
-        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
@@ -374,12 +302,6 @@ struct ActiveSessionView: View {
             guard posted else { return }
             await finishSuccessfulPost(streakBefore: streakBefore)
         }
-    }
-
-    private func postWithoutMetrics() async {
-        let streakBefore = SessionStats(sessions: store.mySessions).weeklyStreak
-        guard await store.postLiveSessionWithoutMetrics() else { return }
-        await finishSuccessfulPost(streakBefore: streakBefore)
     }
 
     private func finishSuccessfulPost(streakBefore: Int) async {

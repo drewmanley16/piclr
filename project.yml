@@ -20,7 +20,7 @@ packages:
 settings:
   base:
     MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "129"
+    CURRENT_PROJECT_VERSION: "130"
     DEVELOPMENT_TEAM: "X9H68STU8F"
     CODE_SIGN_STYLE: Automatic
 # Explicit scheme (replaces the auto-generated one) so the run action can attach
@@ -65,7 +65,6 @@ targets:
       - package: PostHog
         product: PostHog
       - target: PickleballAIWidget
-      - target: PickleballAIWatch
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.pickleball.ai
@@ -105,8 +104,6 @@ targets:
           - UIInterfaceOrientationPortrait
         NSContactsUsageDescription: "pickleball.ai uses your contacts to find friends already using the app. Contacts are matched once and are not stored."
         NSLocationWhenInUseUsageDescription: "pickleball.ai uses your location to find pickleball courts near you when logging a session."
-        NSHealthShareUsageDescription: "pickleball.ai reads workout heart rate and active calories so they can be included with sessions you post."
-        NSHealthUpdateUsageDescription: "pickleball.ai saves pickleball workouts recorded with Apple Watch to Apple Health."
         # Custom scheme backing the Live Activity tap target
         # (SessionActivityAttributes.liveSessionURL → pickleballai://live-session).
         CFBundleURLTypes:
@@ -137,35 +134,7 @@ targets:
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
 
-  # Tethered watch companion: a tap-to-score controller. The phone owns auth,
-  # Supabase networking, and posting; the watch accumulates points locally and
-  # syncs LiveMatchScore snapshots over WatchConnectivity.
-  PickleballAIWatch:
-    type: application
-    platform: watchOS
-    sources:
-      - PickleballAIWatch
-      # Same shared model + WC contract compiled into the iOS app above.
-      - Shared
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.pickleball.ai.watchapp
-        PRODUCT_NAME: PickleballAIWatch
-        CODE_SIGN_ENTITLEMENTS: PickleballAIWatch/PickleballAIWatch.entitlements
-        TARGETED_DEVICE_FAMILY: "4"
-        INFOPLIST_KEY_CFBundleDisplayName: "piclr"
-        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
-    info:
-      path: PickleballAIWatch/Info.plist
-      properties:
-        CFBundleDisplayName: "piclr"
-        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
-        CFBundleShortVersionString: "$(MARKETING_VERSION)"
-        CFBundleIconName: AppIcon
-        WKApplication: true
-        WKCompanionAppBundleIdentifier: com.pickleball.ai
-        WKBackgroundModes:
-          - workout-processing
-        NSHealthShareUsageDescription: "pickleball.ai reads heart rate and active calories during your pickleball workout."
-        NSHealthUpdateUsageDescription: "pickleball.ai saves your completed pickleball workout to Apple Health."
+  # NOTE: the PickleballAIWatch target (tethered tap-to-score watch companion)
+  # is excluded from this build to resolve an App Review HealthKit/HKWorkoutSession
+  # rejection (Guideline 2.5.1). Source remains at PickleballAIWatch/ and Shared/
+  # for a future re-add; re-instate this target block to bring it back.

@@ -34,8 +34,8 @@ final class LiveActivityManager {
         let state = SessionActivityAttributes.ContentState(
             activityCount: draft.activities.count,
             title: draft.title.isEmpty ? AppStore.timeOfDayTitle(for: draft.startedAt) : draft.title,
-            us: draft.liveMatch?.us,
-            them: draft.liveMatch?.them
+            us: nil,
+            them: nil
         )
 
         if let activity {

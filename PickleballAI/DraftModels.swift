@@ -76,14 +76,6 @@ struct DraftActivity: Identifiable, Codable, Hashable {
         self.kind = kind
     }
 
-    /// Build a finished match activity from a watch live-game score. US → team,
-    /// THEM → opponents. Players are attached on the phone before posting.
-    init(liveMatch: LiveMatchScore) {
-        self.init(kind: .match)
-        teamScore = liveMatch.us
-        opponentScore = liveMatch.them
-    }
-
     /// New match, optionally carrying forward the partners/opponents of `previous`
     /// (the prior match in a live session), so players don't have to be re-picked
     /// every game. Player structs get fresh ids — `updateSession` writes
@@ -116,16 +108,7 @@ struct SessionDraft: Codable, Equatable {
     var startedAt: Date = Date()
     var endedAt: Date?
     var activities: [DraftActivity] = []
-    /// The in-progress game streaming from the paired Apple Watch, if any. Set
-    /// as score snapshots arrive; converted into an `activities` entry when the
-    /// game ends. nil when no watch game is live.
-    var liveMatch: LiveMatchScore?
-    /// Set only after Apple Watch confirms its HealthKit session is collecting.
-    var watchWorkoutStartedAt: Date?
-    /// Set before launching the Watch app. Posting must not silently omit
-    /// metrics merely because the startup acknowledgement was delayed or lost.
-    var expectsWatchMetrics: Bool? = false
-    /// Aggregate metrics received when the Watch finalizes its HealthKit workout.
+    /// Aggregate metrics carried over when editing a previously-posted session.
     var workoutMetrics: WorkoutMetrics?
     var postToFeed: Bool = true
     var photoData: Data? = nil

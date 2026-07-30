@@ -245,7 +245,6 @@ extension AppStore {
         // Recent is reachable during the gap before that task reaches it.
         isInitialMySessionsLoading = mySessions.isEmpty
         startRealtime(userId: userId)
-        setUpWatchConnectivity()
         await loadFeed()
         debugFeedMetric("initial feed pipeline complete", since: startupBeganAt)
 
@@ -273,129 +272,6 @@ extension AppStore {
         return letters.isEmpty ? "PB" : String(letters).uppercased()
     }
 
-    // MARK: - Watch connectivity
-
-    /// Activates the WatchConnectivity link and routes inbound watch messages.
-    /// W1 only observes them (logged in the manager); reflecting live scores into
-    /// `activeDraft` and posting from the watch land in later phases.
-    private func setUpWatchConnectivity() {
-        WatchConnectivityManager.shared.onMessage = { [weak self] message in
-            self?.handleWatchMessage(message)
-        }
-        WatchConnectivityManager.shared.onConnectionChange = { [weak self] activated, reachable in
-            guard let self, self.activeDraft?.expectsWatchMetrics == true,
-                  self.activeDraft?.workoutMetrics == nil else { return }
-            if reachable {
-                self.requestLiveWorkoutMetrics()
-            } else if activated {
-                self.watchWorkoutStatus = .disconnected
-            }
-        }
-        WatchConnectivityManager.shared.activate()
-    }
-
-    /// Routes messages from the watch into the live session. Score snapshots
-    /// stream into `activeDraft.liveMatch` (driving the Live Activity); lifecycle
-    /// commands open the session, convert a finished game into a match activity,
-    /// or post the whole session.
-    private func handleWatchMessage(_ message: WatchSyncMessage) {
-        switch message {
-        case .score(let score):
-            adoptWatchScore(score)
-
-        case .command(.startGame(let score)), .command(.newGame(let score)):
-            // A snapshot may have already opened the session; either way, adopt
-            // the game the watch just declared authoritative.
-            if activeDraft == nil { activeDraft = SessionDraft() }
-            activeDraft?.liveMatch = score
-            if HealthMetricsSharing.isEnabled {
-                activeDraft?.expectsWatchMetrics = true
-                if activeDraft?.watchWorkoutStartedAt == nil { watchWorkoutStatus = .starting }
-            }
-
-        case .command(.endGame(let score)):
-            // Convert the finished game into a match activity (US → team) and
-            // clear the live game so the Live Activity stops showing a score.
-            if activeDraft == nil { activeDraft = SessionDraft() }
-            activeDraft?.activities.append(DraftActivity(liveMatch: score))
-            activeDraft?.liveMatch = nil
-
-        case .command(.finishSession):
-            if activeDraft?.expectsWatchMetrics == true {
-                watchWorkoutStatus = .failed("Apple Watch could not finalize the workout metrics.")
-                errorMessage = "Apple Watch metrics could not be finalized. Retry from the phone, or post without metrics."
-            } else {
-                Task { await postLiveSession() }
-            }
-
-        case .command(.workoutStarted(let startedAt)):
-            guard activeDraft != nil else { return }
-            activeDraft?.watchWorkoutStartedAt = startedAt
-            if HealthMetricsSharing.isEnabled {
-                activeDraft?.expectsWatchMetrics = true
-                watchWorkoutStatus = .waitingForHeartRate
-                requestLiveWorkoutMetrics()
-            }
-
-        case .command(.workoutStartFailed(let message)):
-            guard activeDraft?.expectsWatchMetrics == true else { return }
-            watchWorkoutStatus = .failed(message)
-
-        case .command(.liveWorkoutMetrics(let metrics)):
-            guard activeDraft?.expectsWatchMetrics == true, HealthMetricsSharing.isEnabled else { return }
-            guard liveWorkoutMetrics.map({ metrics.sampledAt >= $0.sampledAt }) ?? true else { return }
-            if activeDraft?.watchWorkoutStartedAt == nil {
-                activeDraft?.watchWorkoutStartedAt = activeDraft?.startedAt
-            }
-            liveWorkoutMetrics = metrics
-            watchWorkoutStatus = metrics.heartRateBPM == nil ? .waitingForHeartRate : .tracking
-
-        case .command(.requestLiveWorkoutMetrics):
-            break
-
-        case .command(.workoutFinished(let metrics, let postSession)):
-            guard activeDraft != nil, activeDraft?.workoutMetrics == nil else { return }
-            activeDraft?.workoutMetrics = HealthMetricsSharing.isEnabled
-                ? metrics
-                : WorkoutMetrics(
-                    averageHeartRateBPM: nil,
-                    maximumHeartRateBPM: nil,
-                    activeCaloriesKcal: nil,
-                    startedAt: metrics.startedAt,
-                    endedAt: metrics.endedAt
-                )
-            activeDraft?.watchWorkoutStartedAt = nil
-            liveWorkoutMetrics = nil
-            if HealthMetricsSharing.isEnabled, metrics.averageHeartRateBPM == nil {
-                watchWorkoutStatus = .failed(
-                    "No heart-rate samples were received. Check Apple Watch Health permissions and wrist detection."
-                )
-                errorMessage = "Apple Watch finished without heart-rate data. Retry from the phone, or post without metrics."
-            } else {
-                watchWorkoutStatus = .idle
-                if postSession || (shouldPostWhenWatchFinishes && !isWaitingForWatchFinalization) {
-                    shouldPostWhenWatchFinishes = false
-                    Task { await postLiveSession() }
-                }
-            }
-
-        case .command(.requestFinishWorkout), .command(.discardWorkout):
-            break
-        }
-    }
-
-    /// Adopts an incoming score only when it's strictly newer than what we hold
-    /// (last-writer-wins by `seq`, ties broken by start time), or when it belongs
-    /// to a different game. A stale delivery can't clobber a fresher local state.
-    private func adoptWatchScore(_ score: LiveMatchScore) {
-        if activeDraft == nil { activeDraft = SessionDraft() }
-        if let current = activeDraft?.liveMatch, current.id == score.id {
-            let newer = score.seq > current.seq
-                || (score.seq == current.seq && score.startedAt > current.startedAt)
-            guard newer else { return }
-        }
-        activeDraft?.liveMatch = score
-    }
 
     // MARK: - Push notifications
 

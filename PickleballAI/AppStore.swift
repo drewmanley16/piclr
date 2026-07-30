@@ -156,27 +156,13 @@ final class AppStore: ObservableObject {
 
     // MARK: - Live session
 
-    /// Latest transient sensor values from Apple Watch. Kept outside the draft
-    /// so raw live samples are never written to disk or uploaded.
-    @Published var liveWorkoutMetrics: LiveWorkoutMetrics?
-    @Published var watchWorkoutStatus: WatchWorkoutStatus = .idle
-    var shouldPostWhenWatchFinishes = false
-    var isWaitingForWatchFinalization = false
-    /// Guards `postLiveSession()` against concurrent invocation — the phone's
-    /// "Finish" button and watch-driven `.finishSession`/`.workoutFinished`
-    /// messages can each independently trigger a post in quick succession.
+    /// Guards `postLiveSession()` against concurrent invocation.
     var isPostingLiveSession = false
 
     /// An in-progress ("live") session that survives leaving the Workout tab.
     /// nil means no session is currently open. Mutations drive the Live Activity.
     @Published var activeDraft: SessionDraft? {
         didSet {
-            if activeDraft == nil {
-                liveWorkoutMetrics = nil
-                watchWorkoutStatus = .idle
-                shouldPostWhenWatchFinishes = false
-                isWaitingForWatchFinalization = false
-            }
             LiveActivityManager.shared.sync(draft: activeDraft)
             persistActiveDraft()
         }

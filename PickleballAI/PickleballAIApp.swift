@@ -3,7 +3,6 @@ import SwiftUI
 
 @main
 struct PickleballAIApp: App {
-    @Environment(\.scenePhase) private var scenePhase
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var store = AppStore()
     @StateObject private var subscriptions = SubscriptionStore()
@@ -42,9 +41,6 @@ struct PickleballAIApp: App {
                     .preferredColorScheme(.dark)
                     .allowsHitTesting(!showSplash)
                     .accessibilityHidden(showSplash)
-                    .onChange(of: scenePhase) { _, phase in
-                        if phase == .active { store.appDidBecomeActive() }
-                    }
 
                 if showSplash {
                     SplashView { showSplash = false }

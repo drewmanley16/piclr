@@ -53,117 +53,19 @@ extension AppStore {
             return
         }
         activeDraft = draft
-        if draft.expectsWatchMetrics == true, draft.workoutMetrics == nil {
-            watchWorkoutStatus = .disconnected
-        }
     }
 
-    func startLiveSession(trackOnWatch: Bool = true) {
-        liveWorkoutMetrics = nil
+    func startLiveSession() {
         if activeDraft == nil { activeDraft = SessionDraft() }
-        activeDraft?.expectsWatchMetrics = trackOnWatch
-        guard trackOnWatch else {
-            watchWorkoutStatus = .idle
-            return
-        }
-
-        watchWorkoutStatus = .starting
-        WatchConnectivityManager.shared.activate()
-        AppleWatchWorkoutLauncher.shared.startWorkout { [weak self] result in
-            guard let self, self.activeDraft?.expectsWatchMetrics == true else { return }
-            switch result {
-            case .success:
-                // HealthKit accepted the launch request. The Watch will move us
-                // to tracking when collection actually begins.
-                if self.activeDraft?.watchWorkoutStartedAt == nil {
-                    self.watchWorkoutStatus = .starting
-                }
-                let draftStartedAt = self.activeDraft?.startedAt
-                Task { @MainActor [weak self] in
-                    try? await Task.sleep(for: .seconds(12))
-                    guard let self,
-                          self.activeDraft?.startedAt == draftStartedAt,
-                          self.activeDraft?.expectsWatchMetrics == true,
-                          self.activeDraft?.watchWorkoutStartedAt == nil,
-                          self.liveWorkoutMetrics == nil else { return }
-                    self.watchWorkoutStatus = .failed(
-                        "Apple Watch did not confirm tracking. Open the Watch app and check Health permissions."
-                    )
-                }
-            case .failure(let error):
-                self.watchWorkoutStatus = .failed(error.localizedDescription)
-            }
-        }
-    }
-
-    func requestLiveWorkoutMetrics() {
-        guard activeDraft?.expectsWatchMetrics == true, activeDraft?.workoutMetrics == nil else { return }
-        WatchConnectivityManager.shared.activate()
-        if activeDraft?.watchWorkoutStartedAt != nil {
-            watchWorkoutStatus = WatchConnectivityManager.shared.isReachable
-                ? (liveWorkoutMetrics?.heartRateBPM == nil ? .waitingForHeartRate : .tracking)
-                : .disconnected
-        }
-        WatchConnectivityManager.shared.sendCommand(.requestLiveWorkoutMetrics)
-    }
-
-    func appDidBecomeActive() {
-        guard activeDraft?.expectsWatchMetrics == true, activeDraft?.workoutMetrics == nil else { return }
-        requestLiveWorkoutMetrics()
     }
 
     func discardLiveSession() {
-        if activeDraft?.expectsWatchMetrics == true {
-            WatchConnectivityManager.shared.sendCommand(.discardWorkout)
-        }
-        liveWorkoutMetrics = nil
-        shouldPostWhenWatchFinishes = false
         activeDraft = nil
     }
 
-    /// Waits briefly for Apple Watch to finalize HealthKit so its aggregate
-    /// values are part of the same insert. If tracking never started, posts now.
+    /// Posts the live session immediately, clearing it on success.
     func finishAndPostLiveSession() async -> Bool {
         guard activeDraft != nil else { return false }
-        guard activeDraft?.expectsWatchMetrics == true else {
-            return await postLiveSession()
-        }
-
-        shouldPostWhenWatchFinishes = true
-        isWaitingForWatchFinalization = true
-        defer { isWaitingForWatchFinalization = false }
-        watchWorkoutStatus = .finalizing
-        WatchConnectivityManager.shared.sendCommand(.requestFinishWorkout)
-        for _ in 0..<80 {
-            if let metrics = activeDraft?.workoutMetrics {
-                guard metrics.averageHeartRateBPM != nil else {
-                    watchWorkoutStatus = .failed(
-                        "No heart-rate samples were received. Check Apple Watch Health permissions and wrist detection."
-                    )
-                    errorMessage = "Apple Watch finished without heart-rate data. Retry, or choose Post Without Metrics."
-                    return false
-                }
-                return await postLiveSession()
-            }
-            try? await Task.sleep(for: .milliseconds(250))
-        }
-        if let metrics = activeDraft?.workoutMetrics, metrics.averageHeartRateBPM != nil {
-            return await postLiveSession()
-        }
-        watchWorkoutStatus = WatchConnectivityManager.shared.isReachable ? .finalizing : .disconnected
-        errorMessage = "Apple Watch metrics have not finished syncing. Retry, or choose Post Without Metrics."
-        return false
-    }
-
-    /// Explicit escape hatch after a failed sync. This is never selected
-    /// implicitly: the user must confirm that the post may omit Watch metrics.
-    func postLiveSessionWithoutMetrics() async -> Bool {
-        guard activeDraft != nil else { return false }
-        activeDraft?.expectsWatchMetrics = false
-        activeDraft?.workoutMetrics = nil
-        shouldPostWhenWatchFinishes = false
-        liveWorkoutMetrics = nil
-        watchWorkoutStatus = .idle
         return await postLiveSession()
     }
 
