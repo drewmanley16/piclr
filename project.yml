@@ -88,6 +88,11 @@ targets:
           UIApplicationSupportsMultipleScenes: false
         # Enable Live Activities (session lock-screen timer).
         NSSupportsLiveActivities: true
+        # Opt out of the 60Hz minimum frame duration iOS imposes on third-party
+        # apps by default, so paging/scrolling runs the full ProMotion 10-120Hz
+        # range instead of being pinned at 60. Phone-only; the simulator can't
+        # show the difference, so verify on a ProMotion device.
+        CADisableMinimumFrameDurationOnPhone: true
         # Required: without this iOS letterboxes the app to a legacy size.
         UILaunchScreen:
           UIColorName: LaunchBackground
