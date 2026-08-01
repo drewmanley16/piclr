@@ -283,17 +283,30 @@ extension AppStore {
             let followerCount = counts.first?.followerCount ?? 0
             let followingCount = counts.first?.followingCount ?? 0
 
-            let sessionRows: [FeedSession] = try await supabase
-                .from("sessions")
-                .select(selectWithCounts)
-                .is("comments.deleted_at", value: nil)
-                .eq("user_id", value: userId.uuidString)
-                .eq("posted", value: true)
-                .order("created_at", ascending: false)
-                .limit(50)
-                .execute()
-                .value
-            let sessions = await media.hydrateSessions(sessionRows)
+            let sessionLimit = 50
+            var sessionOffset = 0
+            var rawPageCount = 0
+            var sessionRows: [FeedSession] = []
+            repeat {
+                let rawPage: [FeedSession] = try await supabase
+                    .from("sessions")
+                    .select(selectWithCounts)
+                    .is("comments.deleted_at", value: nil)
+                    .eq("user_id", value: userId.uuidString)
+                    .eq("posted", value: true)
+                    .order("created_at", ascending: false)
+                    .range(from: sessionOffset, to: sessionOffset + sessionLimit - 1)
+                    .execute()
+                    .value
+                rawPageCount = rawPage.count
+                sessionOffset += rawPageCount
+                sessionRows.append(contentsOf: rawPage.filter(\.hasMatchContent))
+                // The profile promises up to 50 visible sessions, not 50 raw
+                // rows that may include practice-only shells.
+            } while sessionRows.count < sessionLimit
+                && rawPageCount == sessionLimit
+                && !Task.isCancelled
+            let sessions = await media.hydrateSessions(Array(sessionRows.prefix(sessionLimit)))
 
             return PublicProfile(
                 profile: profile,

@@ -105,8 +105,8 @@ select lives_ok(
       'activities', jsonb_build_array(
         jsonb_build_object(
           'id', '60000000-0000-0000-0000-000000000003',
-          'kind', 'practice', 'position', 0,
-          'focus', 'Dinks', 'reps', '50 cross-court',
+          'kind', 'match', 'position', 0,
+          'team_score', 11, 'opponent_score', 9, 'won', true,
           'participants', '[]'::jsonb
         ),
         jsonb_build_object(
@@ -132,12 +132,12 @@ select lives_ok(
 );
 
 select results_eq(
-  $$select title, location, takeaway, duration_minutes, focus, posted,
+  $$select title, location, takeaway, duration_minutes, posted,
            average_heart_rate_bpm, active_calories_kcal
     from public.sessions where id = '50000000-0000-0000-0000-000000000003'$$,
   $$values ('Evening Session', 'Capital City Pickleball', 'Third-shot drops landed',
-            75, 'Dinks', true, 132::smallint, 410)$$,
-  'session columns are trimmed, and focus comes from the first practice activity'
+            75, true, 132::smallint, 410)$$,
+  'session columns are trimmed'
 );
 
 select is(
@@ -176,7 +176,7 @@ select lives_ok(
       'posted', true,
       'activities', jsonb_build_array(jsonb_build_object(
         'id', '60000000-0000-0000-0000-000000000003',
-        'kind', 'practice', 'position', 0
+        'kind', 'match', 'position', 0
       ))
   ))$$,
   'retrying a committed client id succeeds'

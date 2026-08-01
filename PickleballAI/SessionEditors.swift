@@ -2,7 +2,7 @@ import SwiftUI
 
 enum PlayerRole: String, Identifiable { case partner, opponent; var id: String { rawValue } }
 
-// MARK: - Activity editor (practice or match)
+// MARK: - Match editor
 
 struct ActivityEditorView: View {
     @Environment(\.dismiss) private var dismiss
@@ -21,11 +21,7 @@ struct ActivityEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                if activity.kind == .practice {
-                    practiceFields
-                } else {
-                    matchFields
-                }
+                matchFields
                 if let duration { durationField(duration) }
 
                 Section {
@@ -42,14 +38,14 @@ struct ActivityEditorView: View {
                             .foregroundStyle(Theme.background)
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
-                    .disabled(!isValid || isSaving)
-                    .listRowBackground(isValid && !isSaving ? Theme.accent : Theme.surfaceElevated)
+                    .disabled(isSaving)
+                    .listRowBackground(isSaving ? Theme.surfaceElevated : Theme.accent)
                 }
             }
             .scrollContentBackground(.hidden)
             .background(Theme.background)
             .listRowBackground(Theme.surface)
-            .navigationTitle(activity.kind == .match ? "Match" : "Practice")
+            .navigationTitle("Match")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -65,22 +61,6 @@ struct ActivityEditorView: View {
                         activity.opponents.append(player)
                     }
                 }
-            }
-        }
-    }
-
-    private var practiceFields: some View {
-        Group {
-            Section("Practice") {
-                Picker("Focus", selection: $activity.focus) {
-                    Text("None").tag("")
-                    ForEach(SkillFocus.allCases) { Text($0.rawValue).tag($0.rawValue) }
-                }
-                TextField("Reps / drills (e.g. 50 third-shot drops)", text: $activity.reps)
-            }
-            Section("Notes") {
-                TextField("What did you work on?", text: $activity.notes, axis: .vertical)
-                    .lineLimit(2...5)
             }
         }
     }
@@ -153,10 +133,6 @@ struct ActivityEditorView: View {
 
     static func durationLabel(_ minutes: Int) -> String {
         minutes < 60 ? "\(minutes)m" : "\(minutes / 60)h \(minutes % 60)m"
-    }
-
-    private var isValid: Bool {
-        activity.kind == .match || !activity.focus.isEmpty || !activity.reps.isEmpty || !activity.notes.isEmpty
     }
 
     private var canAddPartner: Bool {

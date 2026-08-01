@@ -316,7 +316,7 @@ set local role authenticated;
 set local request.jwt.claim.sub = '10000002-0000-0000-0000-000000000002';
 select throws_ok(
   $$insert into public.session_activities (session_id, kind, position)
-    select id, 'practice', 99 from public.sessions
+    select id, 'match', 99 from public.sessions
     where user_id = '10000002-0000-0000-0000-000000000002'
       and reposted_from = '20000000-0000-0000-0000-000000000001'$$,
   '42501',

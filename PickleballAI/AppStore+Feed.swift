@@ -8,7 +8,9 @@ extension AppStore {
     /// Paginated — pass reset: false to append the next page.
     func loadFeed(reset: Bool = true) async {
         guard let uid = currentProfile?.id else { return }
-        if reset { feedReachedEnd = false } else if feedReachedEnd { return }
+        if reset {
+            feedReachedEnd = false
+        } else if feedReachedEnd { return }
         if isFeedRequestInFlight {
             if reset { pendingFeedRefresh = true }
             return
@@ -28,50 +30,61 @@ extension AppStore {
             let followingIds = try await acceptedFollowingIds(for: uid)
             let visibleIds = [uid] + followingIds
             let idFilter = Self.inFilter(for: visibleIds)
-            let from = reset ? 0 : feed.count
-            let page: [FeedSession] = try await supabase
-                .from("sessions")
-                .select(selectFeedPreview)
-                .is("comments.deleted_at", value: nil)
-                .is("preview_comments.deleted_at", value: nil)
-                .is("preview_comments.parent_id", value: nil)
-                .eq("posted", value: true)
-                .filter("user_id", operator: "in", value: idFilter)
-                .order("created_at", ascending: false)
-                .order("created_at", ascending: true, referencedTable: "preview_comments")
-                .range(from: from, to: from + feedPageSize - 1)
-                .limit(3, referencedTable: "preview_comments")
-                .execute()
-                .value
+            var nextOffset = reset ? 0 : feedNextOffset
+            var rawPageCount = 0
+            var page: [FeedSession] = []
+            repeat {
+                let rawPage: [FeedSession] = try await supabase
+                    .from("sessions")
+                    .select(selectFeedPreview)
+                    .is("comments.deleted_at", value: nil)
+                    .is("preview_comments.deleted_at", value: nil)
+                    .is("preview_comments.parent_id", value: nil)
+                    .eq("posted", value: true)
+                    .filter("user_id", operator: "in", value: idFilter)
+                    .order("created_at", ascending: false)
+                    .order("created_at", ascending: true, referencedTable: "preview_comments")
+                    .range(from: nextOffset, to: nextOffset + feedPageSize - 1)
+                    .limit(3, referencedTable: "preview_comments")
+                    .execute()
+                    .value
+                rawPageCount = rawPage.count
+                nextOffset += rawPageCount
+                page = rawPage.filter(\.hasMatchContent)
+                // An all-practice page would leave no last card to trigger the
+                // next pagination request, so advance through empty pages now.
+            } while page.isEmpty && rawPageCount == feedPageSize && !Task.isCancelled
             guard currentProfile?.id == uid, !Task.isCancelled else { return }
+            let visiblePage = page
             feedLoadError = nil
+            feedNextOffset = nextOffset
 
             // Text and activity data can render immediately. Private-media URL
             // signing and liked-state lookup are enhancements, not prerequisites
             // for showing the feed.
             if reset {
-                feed = page
+                feed = visiblePage
             } else {
                 let existingIDs = Set(feed.map(\.id))
-                feed.append(contentsOf: page.filter { !existingIDs.contains($0.id) })
+                feed.append(contentsOf: visiblePage.filter { !existingIDs.contains($0.id) })
             }
-            feedReachedEnd = page.count < feedPageSize
+            feedReachedEnd = rawPageCount < feedPageSize
             isInitialFeedLoading = false
-            debugFeedMetric("feed query returned \(page.count) rows", since: requestBeganAt)
+            debugFeedMetric("feed query returned \(visiblePage.count) visible rows", since: requestBeganAt)
             if let initialFeedLoadStartedAt {
                 debugFeedMetric("cold start to first feed rows", since: initialFeedLoadStartedAt)
                 self.initialFeedLoadStartedAt = nil
             }
 
-            async let hydrated: [FeedSession] = media.hydrateSessions(page)
-            async let liked: Set<UUID>? = try? likedSessionIds(for: uid, sessionIds: page.map(\.id))
+            async let hydrated: [FeedSession] = media.hydrateSessions(visiblePage)
+            async let liked: Set<UUID>? = try? likedSessionIds(for: uid, sessionIds: visiblePage.map(\.id))
             let (hydratedPage, likedPage) = await (hydrated, liked)
             guard currentProfile?.id == uid, !Task.isCancelled else { return }
 
             let hydratedByID = Dictionary(uniqueKeysWithValues: hydratedPage.map { ($0.id, $0) })
             feed = feed.map { hydratedByID[$0.id] ?? $0 }
             if let likedPage {
-                likedSessionIds.subtract(page.map(\.id))
+                likedSessionIds.subtract(visiblePage.map(\.id))
                 likedSessionIds.formUnion(likedPage)
             }
             debugFeedMetric("feed media hydrated", since: requestBeganAt)
@@ -88,7 +101,9 @@ extension AppStore {
     /// Discover feed: recent public posts from people you do not already follow.
     func loadDiscover(reset: Bool = true) async {
         guard let uid = currentProfile?.id else { return }
-        if reset { discoverReachedEnd = false } else if discoverReachedEnd { return }
+        if reset {
+            discoverReachedEnd = false
+        } else if discoverReachedEnd { return }
         if isDiscoverRequestInFlight {
             if reset { pendingDiscoverRefresh = true }
             return
@@ -108,38 +123,47 @@ extension AppStore {
         do {
             let followingIds = try await acceptedFollowingIds(for: uid)
             let excludedAuthorFilter = Self.inFilter(for: [uid] + followingIds)
-            let from = reset ? 0 : discoverFeed.count
-            let page: [FeedSession] = try await supabase
-                .from("sessions")
-                .select(selectFeedPreview)
-                .is("comments.deleted_at", value: nil)
-                .is("preview_comments.deleted_at", value: nil)
-                .is("preview_comments.parent_id", value: nil)
-                .eq("posted", value: true)
-                .filter("user_id", operator: "not.in", value: excludedAuthorFilter)
-                .order("created_at", ascending: false)
-                .order("created_at", ascending: true, referencedTable: "preview_comments")
-                .range(from: from, to: from + feedPageSize - 1)
-                .limit(3, referencedTable: "preview_comments")
-                .execute()
-                .value
+            var nextOffset = reset ? 0 : discoverNextOffset
+            var rawPageCount = 0
+            var page: [FeedSession] = []
+            repeat {
+                let rawPage: [FeedSession] = try await supabase
+                    .from("sessions")
+                    .select(selectFeedPreview)
+                    .is("comments.deleted_at", value: nil)
+                    .is("preview_comments.deleted_at", value: nil)
+                    .is("preview_comments.parent_id", value: nil)
+                    .eq("posted", value: true)
+                    .filter("user_id", operator: "not.in", value: excludedAuthorFilter)
+                    .order("created_at", ascending: false)
+                    .order("created_at", ascending: true, referencedTable: "preview_comments")
+                    .range(from: nextOffset, to: nextOffset + feedPageSize - 1)
+                    .limit(3, referencedTable: "preview_comments")
+                    .execute()
+                    .value
+                rawPageCount = rawPage.count
+                nextOffset += rawPageCount
+                page = rawPage.filter(\.hasMatchContent)
+            } while page.isEmpty && rawPageCount == feedPageSize && !Task.isCancelled
             guard currentProfile?.id == uid, !Task.isCancelled else { return }
+            let visiblePage = page
             discoverLoadError = nil
+            discoverNextOffset = nextOffset
             if reset {
-                discoverFeed = page
+                discoverFeed = visiblePage
             } else {
                 let existingIDs = Set(discoverFeed.map(\.id))
-                discoverFeed.append(contentsOf: page.filter { !existingIDs.contains($0.id) })
+                discoverFeed.append(contentsOf: visiblePage.filter { !existingIDs.contains($0.id) })
             }
-            discoverReachedEnd = page.count < feedPageSize
-            async let hydrated: [FeedSession] = media.hydrateSessions(page)
-            async let liked: Set<UUID>? = try? likedSessionIds(for: uid, sessionIds: page.map(\.id))
+            discoverReachedEnd = rawPageCount < feedPageSize
+            async let hydrated: [FeedSession] = media.hydrateSessions(visiblePage)
+            async let liked: Set<UUID>? = try? likedSessionIds(for: uid, sessionIds: visiblePage.map(\.id))
             let (hydratedPage, likedPage) = await (hydrated, liked)
             guard currentProfile?.id == uid, !Task.isCancelled else { return }
             let hydratedByID = Dictionary(uniqueKeysWithValues: hydratedPage.map { ($0.id, $0) })
             discoverFeed = discoverFeed.map { hydratedByID[$0.id] ?? $0 }
             if let likedPage {
-                likedSessionIds.subtract(page.map(\.id))
+                likedSessionIds.subtract(visiblePage.map(\.id))
                 likedSessionIds.formUnion(likedPage)
             }
         } catch {
@@ -168,7 +192,7 @@ extension AppStore {
                 .order("created_at", ascending: false)
                 .execute()
                 .value
-            mySessions = await media.hydrateSessions(sessions)
+            mySessions = await media.hydrateSessions(sessions.filter(\.hasMatchContent))
             mySessions.sort { $0.workoutDate > $1.workoutDate }
         } catch {
             reportError(error)
@@ -188,7 +212,7 @@ extension AppStore {
                 .limit(1)
                 .execute()
                 .value
-            let hydrated = await media.hydrateSessions(rows)
+            let hydrated = await media.hydrateSessions(rows.filter(\.hasMatchContent))
             if let uid = currentProfile?.id { await refreshLikedState(for: hydrated, uid: uid) }
             return hydrated.first
         } catch {

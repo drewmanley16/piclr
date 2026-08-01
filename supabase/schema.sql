@@ -84,14 +84,13 @@ create trigger sync_profile_name_parts
 
 
 -- A session is the loggable + postable unit. It shows in the feed when posted = true.
--- A session is also a container of activities (practice/match) written on-device.
+-- A session is also a container of match activities written on-device.
 create table if not exists public.sessions (
   id               uuid primary key default gen_random_uuid(),
   user_id          uuid not null references public.profiles(id) on delete cascade,
   title            text,
   location         text,
   duration_minutes int  not null default 0,
-  focus            text,
   takeaway         text,
   posted           boolean not null default true,
   started_at       timestamptz,
@@ -180,17 +179,15 @@ create table if not exists private.phone_lookup (
 alter table private.phone_lookup enable row level security;
 revoke all on table private.phone_lookup from anon, authenticated;
 
--- A session is a container of activities (practice or match). Match activities
--- tag the people you played with/against — either app members (profile_id) or
--- free-text guests (guest_name).
+-- A session is a container of match activities, which tag the people you played
+-- with/against — either app members (profile_id) or free-text guests
+-- (guest_name). `kind` is always 'match'; it survives the removal of practice
+-- logging because the iOS model decodes it as a non-optional String.
 create table if not exists public.session_activities (
   id             uuid primary key default gen_random_uuid(),
   session_id     uuid not null references public.sessions(id) on delete cascade,
-  kind           text not null check (kind in ('practice', 'match')),
+  kind           text not null check (kind in ('match')),
   position       int  not null default 0,
-  -- practice
-  focus          text,
-  reps           text,
   notes          text,
   -- match
   team_score     int,
@@ -577,20 +574,20 @@ begin
   update public.repost_requests set status = 'approved', updated_at = now() where id = request_id;
 
   insert into public.sessions
-    (id, user_id, title, location, duration_minutes, focus, takeaway, posted,
+    (id, user_id, title, location, duration_minutes, takeaway, posted,
      started_at, ended_at, reposted_from, created_at)
   values
     (new_session_id, req.requester_id, orig.title, orig.location, orig.duration_minutes,
-     orig.focus, orig.takeaway, true, orig.started_at, orig.ended_at, orig.id, now());
+     orig.takeaway, true, orig.started_at, orig.ended_at, orig.id, now());
 
   for act in
     select * from public.session_activities where session_id = orig.id order by position
   loop
     new_act_id := gen_random_uuid();
     insert into public.session_activities
-      (id, session_id, kind, position, focus, reps, notes, team_score, opponent_score, won)
+      (id, session_id, kind, position, notes, team_score, opponent_score, won)
     values
-      (new_act_id, new_session_id, act.kind, act.position, act.focus, act.reps, act.notes,
+      (new_act_id, new_session_id, act.kind, act.position, act.notes,
        act.team_score, act.opponent_score, act.won);
     insert into public.activity_participants (activity_id, session_id, profile_id, guest_name, role)
       select new_act_id, new_session_id, profile_id, guest_name, role
@@ -689,12 +686,12 @@ grant select, delete on public.sessions to authenticated;
 revoke insert, update on public.sessions from authenticated;
 revoke insert (reposted_from), update (reposted_from) on public.sessions from authenticated;
 grant insert (
-  id, user_id, title, location, duration_minutes, focus, takeaway, posted,
+  id, user_id, title, location, duration_minutes, takeaway, posted,
   started_at, ended_at, average_heart_rate_bpm, maximum_heart_rate_bpm,
   active_calories_kcal, created_at
 ) on public.sessions to authenticated;
 grant update (
-  title, location, duration_minutes, focus, takeaway, posted, started_at, ended_at,
+  title, location, duration_minutes, takeaway, posted, started_at, ended_at,
   average_heart_rate_bpm, maximum_heart_rate_bpm, active_calories_kcal
 ) on public.sessions to authenticated;
 grant select, insert, delete on public.likes to authenticated;
