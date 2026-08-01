@@ -233,14 +233,8 @@ struct FeedCard: View {
                 noteLineLimit: expanded ? nil : 1
             )
         } else if let solo = displayActivities.first {
-            let noteLineLimit: Int? = expanded ? nil : 2
-            if solo.isMatch {
-                MatchScorecard(activity: solo, author: displayAuthor, noteLineLimit: noteLineLimit)
-                    .padding(.vertical, 4)
-            } else {
-                DrillRow(activity: solo, noteLineLimit: noteLineLimit)
-                    .padding(.vertical, 4)
-            }
+            MatchScorecard(activity: solo, author: displayAuthor, noteLineLimit: expanded ? nil : 2)
+                .padding(.vertical, 4)
         }
     }
 
@@ -376,7 +370,6 @@ struct FeedCard: View {
             if record.hasMatches {
                 append(Text(record.text).fontWeight(.bold).foregroundColor(record.color))
             }
-            if let drills = record.drillsText { append(Text(drills)) }
         }
         return line
     }
@@ -387,13 +380,12 @@ struct FeedCard: View {
         if isMultiActivity {
             let record = SessionRecord(activities: displayActivities)
             if record.hasMatches { parts.append(record.accessibilityText) }
-            if let drills = record.drillsText { parts.append(drills) }
         }
         return parts.joined(separator: ", ")
     }
 
     private var metaContextParts: [String] {
-        [session.postFocus, session.postLocation]
+        [session.postLocation]
             .compactMap { $0 }
             .filter { !$0.isEmpty }
     }
@@ -547,15 +539,12 @@ struct SessionRecord {
     let wins: Int
     let losses: Int
     let ties: Int
-    let drills: Int
 
     init(activities: [SessionActivity]) {
-        let matches = activities.filter(\.isMatch)
-        matchCount = matches.count
-        wins = matches.filter { $0.matchResult == .win }.count
-        losses = matches.filter { $0.matchResult == .loss }.count
-        ties = matches.filter { $0.matchResult == .tie }.count
-        drills = activities.count - matches.count
+        matchCount = activities.count
+        wins = activities.filter { $0.matchResult == .win }.count
+        losses = activities.filter { $0.matchResult == .loss }.count
+        ties = activities.filter { $0.matchResult == .tie }.count
     }
 
     /// Unscored matches still count, so a session of them reads "0–0" rather
@@ -567,11 +556,6 @@ struct SessionRecord {
         if wins > losses { return Theme.win }
         if losses > wins { return Theme.loss }
         return Theme.textPrimary
-    }
-
-    var drillsText: String? {
-        guard drills > 0 else { return nil }
-        return "\(drills) drill\(drills == 1 ? "" : "s")"
     }
 
     /// "0–2" is read aloud as a date otherwise.
@@ -597,14 +581,8 @@ struct SessionMatchList: View {
                 if index > 0 {
                     Divider().overlay(Theme.hairline)
                 }
-                Group {
-                    if activity.isMatch {
-                        MatchScorecard(activity: activity, author: author, noteLineLimit: noteLineLimit)
-                    } else {
-                        DrillRow(activity: activity, noteLineLimit: noteLineLimit)
-                    }
-                }
-                .padding(.vertical, 10)
+                MatchScorecard(activity: activity, author: author, noteLineLimit: noteLineLimit)
+                    .padding(.vertical, 10)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -799,46 +777,6 @@ struct ActivityNote: View {
             .foregroundStyle(Theme.textSecondary)
             .lineLimit(lineLimit)
             .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-/// A drill/practice entry has no score or opponent, so it stays a quiet row.
-struct DrillRow: View {
-    let activity: SessionActivity
-    /// nil shows the note in full (session detail); a preview clamps it.
-    var noteLineLimit: Int?
-
-    var body: some View {
-        // Top-aligned so the glyph stays anchored to the title: reps and a note
-        // can make the text stack twice the glyph's height, and centering would
-        // leave the title floating above it.
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "figure.pickleball")
-                .font(.footnote.weight(.bold))
-                .foregroundStyle(Theme.textSecondary)
-                .frame(width: 36, height: 36)
-                .background(Theme.surfaceElevated, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(activity.title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.textPrimary)
-                if let reps = activity.reps, !reps.isEmpty {
-                    Text(reps)
-                        .font(.caption)
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                }
-                // Notes used to share the subtitle with reps; they now get their
-                // own line so practice and match notes read identically.
-                if let note = activity.note {
-                    ActivityNote(text: note, lineLimit: noteLineLimit)
-                }
-            }
-
-            Spacer(minLength: 8)
-        }
-        .accessibilityElement(children: .combine)
     }
 }
 

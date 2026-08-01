@@ -98,14 +98,9 @@ struct ActiveSessionView: View {
             }
             .sheet(item: $editor) { route in
                 switch route {
-                case .newPractice:
-                    ActivityEditorView(activity: DraftActivity(kind: .practice)) { add($0); return true }
                 case .newMatch:
                     ActivityEditorView(
-                        activity: DraftActivity(
-                            kind: .match,
-                            carryingPlayersFrom: draft.activities.last(where: { $0.kind == .match })
-                        )
+                        activity: DraftActivity(carryingPlayersFrom: draft.activities.last)
                     ) { add($0); return true }
                 case .edit(let activity):
                     ActivityEditorView(activity: activity) { update($0); return true }
@@ -400,16 +395,13 @@ struct ActiveSessionView: View {
     }
 
     private var addButtons: some View {
-        HStack(spacing: 12) {
-            AddActivityButton(title: "Practice", systemImage: "figure.cooldown") { editor = .newPractice }
-            AddActivityButton(title: "Match", systemImage: "flag.checkered") { editor = .newMatch }
-        }
+        AddActivityButton(title: "Match", systemImage: "flag.checkered") { editor = .newMatch }
     }
 
     private var activityList: some View {
         VStack(alignment: .leading, spacing: 12) {
             if draft.activities.isEmpty {
-                Text("Add practices and matches as you play. Post when you're done.")
+                Text("Add matches as you play. Post when you're done.")
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)
             } else {
@@ -534,10 +526,9 @@ struct ActiveSessionView: View {
 }
 
 enum ActivityEditorRoute: Identifiable {
-    case newPractice, newMatch, edit(DraftActivity)
+    case newMatch, edit(DraftActivity)
     var id: String {
         switch self {
-        case .newPractice: return "practice"
         case .newMatch: return "match"
         case .edit(let a): return a.id.uuidString
         }
@@ -571,38 +562,7 @@ struct DraftActivityRow: View {
     private let avatarSize: CGFloat = 28
 
     var body: some View {
-        Group {
-            if activity.kind == .match {
-                matchScorecard
-            } else {
-                practiceRow
-            }
-        }
-        .cardStyle()
-    }
-
-    private var practiceRow: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "figure.cooldown")
-                .font(.title3)
-                .foregroundStyle(Theme.accent)
-                .frame(width: 44, height: 44)
-                .background(Theme.accentSoft, in: Circle())
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(activity.summary)
-                    .font(.headline)
-                    .foregroundStyle(Theme.textPrimary)
-                if let practiceDetail {
-                    Text(practiceDetail)
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                }
-            }
-            Spacer()
-            Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Theme.textTertiary)
-        }
+        matchScorecard.cardStyle()
     }
 
     private var matchScorecard: some View {
@@ -669,10 +629,6 @@ struct DraftActivityRow: View {
     private var matchNote: String? {
         let trimmed = activity.notes.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
-    }
-
-    private var practiceDetail: String? {
-        activity.reps.isEmpty ? (activity.notes.isEmpty ? nil : activity.notes) : activity.reps
     }
 
     private func playerAvatar(_ player: DraftPlayer?, placeholderInitials: String) -> ProfileAvatar {
