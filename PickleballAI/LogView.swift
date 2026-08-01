@@ -67,11 +67,6 @@ struct WorkoutView: View {
                     } label: {
                         Label("Log a match", systemImage: "flag.checkered")
                     }
-                    Button {
-                        beginQuickLog(.newPractice)
-                    } label: {
-                        Label("Log practice", systemImage: "figure.cooldown")
-                    }
                 }
             }
             .background(Theme.background)
@@ -93,12 +88,7 @@ struct WorkoutView: View {
             switch route {
             case .newMatch:
                 ActivityEditorView(
-                    activity: DraftActivity(kind: .match),
-                    duration: $quickLogDuration
-                ) { await quickLog($0) }
-            case .newPractice:
-                ActivityEditorView(
-                    activity: DraftActivity(kind: .practice),
+                    activity: DraftActivity(),
                     duration: $quickLogDuration
                 ) { await quickLog($0) }
             case .edit:
@@ -199,8 +189,8 @@ struct WorkoutView: View {
 
     private var liveSubtitle: String {
         let count = store.activeDraft?.activities.count ?? 0
-        if count == 0 { return "No games logged yet. Tap to add matches and practice." }
-        return count == 1 ? "1 activity logged" : "\(count) activities logged"
+        if count == 0 { return "No games logged yet. Tap to add a match." }
+        return count == 1 ? "1 match logged" : "\(count) matches logged"
     }
 
     private func elapsed(since start: Date) -> String {
@@ -211,13 +201,8 @@ struct WorkoutView: View {
     // MARK: Quick log
 
     private var quickLog: some View {
-        HStack(spacing: 12) {
-            QuickLogButton(title: "Log a Match", systemImage: "flag.checkered", filled: true) {
-                beginQuickLog(.newMatch)
-            }
-            QuickLogButton(title: "Log Practice", systemImage: "figure.cooldown", filled: false) {
-                beginQuickLog(.newPractice)
-            }
+        QuickLogButton(title: "Log a Match", systemImage: "flag.checkered") {
+            beginQuickLog(.newMatch)
         }
     }
 
@@ -234,7 +219,7 @@ struct WorkoutView: View {
                     Text("Start a live session")
                         .font(.title3.weight(.bold))
                         .foregroundStyle(Theme.textPrimary)
-                    Text("Log matches and practice as you play")
+                    Text("Log matches as you play")
                         .font(.subheadline)
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -328,7 +313,6 @@ struct WorkoutView: View {
 struct QuickLogButton: View {
     let title: String
     let systemImage: String
-    let filled: Bool
     let action: () -> Void
 
     var body: some View {
@@ -336,15 +320,15 @@ struct QuickLogButton: View {
             VStack(alignment: .leading, spacing: 10) {
                 Image(systemName: systemImage)
                     .font(.title2.weight(.semibold))
-                    .foregroundStyle(filled ? Theme.background : Theme.accent)
+                    .foregroundStyle(Theme.background)
                 Text(title)
                     .font(.headline)
-                    .foregroundStyle(filled ? Theme.background : Theme.textPrimary)
+                    .foregroundStyle(Theme.background)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
             .frame(height: 104, alignment: .topLeading)
-            .background(filled ? Theme.accent : Theme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(Theme.accent, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .buttonStyle(.plain)
     }

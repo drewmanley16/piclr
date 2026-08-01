@@ -98,7 +98,7 @@ final class AppStore {
     static let selectProfileLite = "id,username,display_name,avatar_initials,avatar_url,avatar_path,is_pro"
 
     static let selectActivityGraph = "activities:session_activities(*, participants:activity_participants!activity_participants_activity_id_fkey(*, profile:profiles!activity_participants_profile_id_fkey(\(selectProfileLite))))"
-    static let selectRepostSource = "source:repost_source(id,user_id,title,location,duration_minutes,focus,takeaway,created_at,started_at,ended_at,average_heart_rate_bpm,maximum_heart_rate_bpm,active_calories_kcal,streak_week,photo_path,author:profiles!sessions_user_id_fkey(*),\(selectActivityGraph))"
+    static let selectRepostSource = "source:repost_source(id,user_id,title,location,duration_minutes,takeaway,created_at,started_at,ended_at,average_heart_rate_bpm,maximum_heart_rate_bpm,active_calories_kcal,streak_week,photo_path,author:profiles!sessions_user_id_fkey(*),\(selectActivityGraph))"
 
     let selectWithCounts = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), \(AppStore.selectActivityGraph), \(AppStore.selectRepostSource)"
     let selectFeedPreview = "*, author:profiles!sessions_user_id_fkey(*), likes(count), comments(count), preview_comments:comments(*, author:profiles!comments_user_id_fkey(\(AppStore.selectProfileLite))), \(AppStore.selectActivityGraph), \(AppStore.selectRepostSource)"

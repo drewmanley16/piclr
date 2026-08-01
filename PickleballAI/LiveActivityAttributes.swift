@@ -5,7 +5,7 @@ import ActivityKit
 /// shown on the lock screen / Dynamic Island while a session is in progress.
 struct SessionActivityAttributes: ActivityAttributes {
     struct ContentState: Codable, Hashable {
-        /// Number of matches/practices logged so far.
+        /// Number of matches logged so far.
         var activityCount: Int
         /// Session title (or a time-of-day default).
         var title: String

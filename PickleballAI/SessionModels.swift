@@ -48,7 +48,6 @@ struct RepostSource: Decodable, Hashable {
     let title: String?
     let location: String?
     let durationMinutes: Int
-    let focus: String?
     let takeaway: String?
     let createdAt: String
     let startedAt: String?
@@ -63,7 +62,7 @@ struct RepostSource: Decodable, Hashable {
     var activities: [SessionActivity]?
 
     var sortedActivities: [SessionActivity] {
-        (activities ?? []).sorted { $0.position < $1.position }
+        (activities ?? []).filter(\.isMatch).sorted { $0.position < $1.position }
     }
 
     enum CodingKeys: String, CodingKey {
@@ -71,7 +70,7 @@ struct RepostSource: Decodable, Hashable {
         case userId = "user_id"
         case title, location
         case durationMinutes = "duration_minutes"
-        case focus, takeaway
+        case takeaway
         case createdAt = "created_at"
         case startedAt = "started_at"
         case endedAt = "ended_at"
@@ -91,7 +90,6 @@ struct FeedSession: Identifiable, Decodable, Hashable {
     let title: String?
     let location: String?
     let durationMinutes: Int
-    let focus: String?
     let takeaway: String?
     let posted: Bool
     let createdAt: String
@@ -119,7 +117,6 @@ struct FeedSession: Identifiable, Decodable, Hashable {
     var postTitle: String? { source?.title ?? title }
     var postLocation: String? { source?.location ?? location }
     var postDurationMinutes: Int { source?.durationMinutes ?? durationMinutes }
-    var postFocus: String? { source?.focus ?? focus }
     var postTakeaway: String? { source?.takeaway ?? takeaway }
     var postPhotoURL: String? { source?.photoUrl ?? photoUrl }
     var postPhotoPath: String? { source?.photoPath ?? photoPath }
@@ -146,7 +143,6 @@ struct FeedSession: Identifiable, Decodable, Hashable {
 
     var postDisplayTitle: String {
         if let postTitle, !postTitle.isEmpty { return postTitle }
-        if let postFocus, !postFocus.isEmpty { return "\(postFocus) session" }
         return "Session"
     }
 
@@ -171,9 +167,13 @@ struct FeedSession: Identifiable, Decodable, Hashable {
             .prefix(3)
             .map { $0 }
     }
-    var sortedActivities: [SessionActivity] { (activities ?? []).sorted { $0.position < $1.position } }
-    var matchCount: Int { postActivities.filter(\.isMatch).count }
-    var practiceCount: Int { postActivities.filter { !$0.isMatch }.count }
+    /// Practice logging is gone, but practice rows written before it was removed
+    /// are still on the server until the backend purge runs. Drop them here so
+    /// no surface has to special-case a scoreless activity.
+    var sortedActivities: [SessionActivity] {
+        (activities ?? []).filter(\.isMatch).sorted { $0.position < $1.position }
+    }
+    var matchCount: Int { postActivities.count }
 
     /// Distinct people (members + guests) tagged across the session's matches.
     var taggedNames: [String] {
@@ -193,7 +193,6 @@ struct FeedSession: Identifiable, Decodable, Hashable {
     var endedDate: Date { endedAt.map(Self.parse) ?? startedDate.addingTimeInterval(TimeInterval(durationMinutes * 60)) }
     var displayTitle: String {
         if let title, !title.isEmpty { return title }
-        if let focus, !focus.isEmpty { return "\(focus) session" }
         return "Session"
     }
 
@@ -202,17 +201,15 @@ struct FeedSession: Identifiable, Decodable, Hashable {
         durationMinutes < 60 ? "\(durationMinutes)m" : "\(durationMinutes / 60)h \(durationMinutes % 60)m"
     }
 
-    /// Human-readable subtitle: focus · duration · location (no chips).
+    /// Human-readable subtitle: duration · location (no chips).
     var metaLine: String {
-        var parts: [String] = []
-        if let focus, !focus.isEmpty { parts.append(focus) }
-        parts.append("\(durationMinutes) min")
+        var parts = ["\(durationMinutes) min"]
         if let location, !location.isEmpty { parts.append(location) }
         return parts.joined(separator: " · ")
     }
 
     var shareSummary: String {
-        let matches = postActivities.filter(\.isMatch).count
+        let matches = postActivities.count
         var parts = ["\(postAuthor.displayName): \(postDisplayTitle)"]
         if matches > 0 { parts.append("\(matches) match\(matches == 1 ? "" : "es")") }
         parts.append("\(postDurationMinutes) min")
@@ -237,7 +234,7 @@ struct FeedSession: Identifiable, Decodable, Hashable {
         case userId = "user_id"
         case title, location
         case durationMinutes = "duration_minutes"
-        case focus, takeaway, posted
+        case takeaway, posted
         case createdAt = "created_at"
         case startedAt = "started_at"
         case endedAt = "ended_at"
@@ -286,10 +283,11 @@ enum MatchResult {
 
 struct SessionActivity: Identifiable, Decodable, Hashable {
     let id: UUID
+    /// Only "match" is written now that practice logging is removed. Retained
+    /// so clients can skip practice rows still on the server (see
+    /// `FeedSession.sortedActivities`) until the backend purge lands.
     let kind: String
     let position: Int
-    let focus: String?
-    let reps: String?
     let notes: String?
     let teamScore: Int?
     let opponentScore: Int?
@@ -298,7 +296,7 @@ struct SessionActivity: Identifiable, Decodable, Hashable {
     var participants: [ActivityParticipant]?
 
     enum CodingKeys: String, CodingKey {
-        case id, kind, position, focus, reps, notes
+        case id, kind, position, notes
         case teamScore = "team_score"
         case opponentScore = "opponent_score"
         case matchFormat = "match_format"
@@ -316,16 +314,12 @@ struct SessionActivity: Identifiable, Decodable, Hashable {
     /// Win/loss/tie derived from the scores, so a tie (equal scores) is never
     /// mistaken for a loss — the stored `won` flag can't represent a draw.
     var matchResult: MatchResult? {
-        guard isMatch, let t = teamScore, let o = opponentScore else { return nil }
+        guard let t = teamScore, let o = opponentScore else { return nil }
         if t > o { return .win }
         if t < o { return .loss }
         return .tie
     }
-    var title: String {
-        if isMatch { return scoreLine.map { "Match \($0)" } ?? "Match" }
-        if let focus, !focus.isEmpty { return "\(focus) practice" }
-        return "Practice"
-    }
+    var title: String { scoreLine.map { "Match \($0)" } ?? "Match" }
     /// The note to render, or nil when there's nothing worth a line. Collapses
     /// the empty and whitespace-only cases so views can plain `if let` it.
     var note: String? {
@@ -364,7 +358,7 @@ struct SessionActivity: Identifiable, Decodable, Hashable {
         let projectedTeamScore = flipSides ? opponentScore : teamScore
         let projectedOpponentScore = flipSides ? teamScore : opponentScore
         let projectedWon: Bool?
-        if isMatch, let team = projectedTeamScore, let opponent = projectedOpponentScore, team != opponent {
+        if let team = projectedTeamScore, let opponent = projectedOpponentScore, team != opponent {
             projectedWon = team > opponent
         } else {
             projectedWon = nil
@@ -374,8 +368,6 @@ struct SessionActivity: Identifiable, Decodable, Hashable {
             id: id,
             kind: kind,
             position: position,
-            focus: focus,
-            reps: reps,
             // The note is the author's own read on the game ("my drops were on")
             // and doesn't survive being reframed from the tagged player's side,
             // so their workout record carries the score but not the commentary.
@@ -433,10 +425,10 @@ struct SessionWriteParticipant: Encodable {
 
 struct SessionWriteActivity: Encodable {
     let id: UUID
+    /// Always "match" — practice logging was removed. Still sent because the
+    /// column and its check constraint remain server-side.
     let kind: String
     let position: Int
-    let focus: String?
-    let reps: String?
     let notes: String?
     let teamScore: Int?
     let opponentScore: Int?
@@ -445,7 +437,7 @@ struct SessionWriteActivity: Encodable {
     let participants: [SessionWriteParticipant]
 
     enum CodingKeys: String, CodingKey {
-        case id, kind, position, focus, reps, notes, won, participants
+        case id, kind, position, notes, won, participants
         case teamScore = "team_score"
         case opponentScore = "opponent_score"
         case matchFormat = "match_format"

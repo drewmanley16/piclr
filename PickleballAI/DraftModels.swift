@@ -2,11 +2,6 @@ import Foundation
 
 // MARK: - On-device session draft (built live, written on Finish & Post)
 
-/// Draft-only classifier for an activity. Remote `SessionActivity`/`NewSessionActivity`
-/// store `kind` as a raw String; this typed enum is used solely by the on-device
-/// draft types below.
-enum ActivityKind: String, Codable, Hashable { case practice, match }
-
 // Draft types are Codable so a live session can be persisted to disk and
 // restored after a force-quit/crash (see AppStore live-draft persistence).
 struct DraftPlayer: Identifiable, Codable, Hashable {
@@ -49,60 +44,63 @@ struct DraftActivity: Identifiable, Codable, Hashable {
     static let doublesMaxOpponents = 2
 
     var id = UUID()
-    var kind: ActivityKind
-    // practice
-    var focus: String = ""
-    var reps: String = ""
     var notes: String = ""
-    // match
     var partners: [DraftPlayer] = []
     var opponents: [DraftPlayer] = []
     var teamScore: Int = 11
     var opponentScore: Int = 9
     var matchFormat: MatchFormat = .doubles
+    /// Decode-only marker for an activity restored from a draft written before
+    /// practice logging was removed. Such entries carry no score worth keeping,
+    /// so `restorePersistedDraft` drops them rather than resurrecting them as
+    /// bogus 11–9 matches. Absent from `CodingKeys`, so it is never persisted.
+    var isLegacyPractice = false
 
     var won: Bool { teamScore > opponentScore }
-    var isTie: Bool { kind == .match && teamScore == opponentScore }
+    var isTie: Bool { teamScore == opponentScore }
     var maxPartners: Int { matchFormat == .singles ? 0 : Self.doublesMaxPartners }
     var maxOpponents: Int { matchFormat == .singles ? 1 : Self.doublesMaxOpponents }
     /// What to persist in `won`: nil for a tie (neither win nor loss), so ties
     /// never count against a record on the server (leaderboard, rivalries).
     var wonValue: Bool? {
-        guard kind == .match else { return nil }
-        return teamScore == opponentScore ? nil : teamScore > opponentScore
+        teamScore == opponentScore ? nil : teamScore > opponentScore
     }
-    var summary: String {
-        switch kind {
-        case .practice: return focus.isEmpty ? "Practice" : "\(focus) practice"
-        case .match: return "Match \(teamScore)–\(opponentScore)"
-        }
+    var summary: String { "Match \(teamScore)–\(opponentScore)" }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, notes, partners, opponents, teamScore, opponentScore, matchFormat
     }
 
-    init(kind: ActivityKind) {
-        self.kind = kind
+    /// Read-only: `kind` is no longer a property, but drafts persisted before
+    /// practice logging was removed still carry it. Kept out of `CodingKeys` so
+    /// it is never written back.
+    private enum LegacyCodingKeys: String, CodingKey {
+        case kind
     }
+
+    init() {}
 
     /// `matchFormat` was added after live drafts were already persisted on
     /// device. Decode it leniently so an in-progress pre-update session resumes
-    /// as doubles instead of being discarded.
+    /// as doubles instead of being discarded. `kind` is likewise read-only
+    /// legacy: it disappeared with practice logging.
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         id = try values.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
-        kind = try values.decode(ActivityKind.self, forKey: .kind)
-        focus = try values.decodeIfPresent(String.self, forKey: .focus) ?? ""
-        reps = try values.decodeIfPresent(String.self, forKey: .reps) ?? ""
         notes = try values.decodeIfPresent(String.self, forKey: .notes) ?? ""
         partners = try values.decodeIfPresent([DraftPlayer].self, forKey: .partners) ?? []
         opponents = try values.decodeIfPresent([DraftPlayer].self, forKey: .opponents) ?? []
         teamScore = try values.decodeIfPresent(Int.self, forKey: .teamScore) ?? 11
         opponentScore = try values.decodeIfPresent(Int.self, forKey: .opponentScore) ?? 9
         matchFormat = try values.decodeIfPresent(MatchFormat.self, forKey: .matchFormat) ?? .doubles
+
+        let legacy = try decoder.container(keyedBy: LegacyCodingKeys.self)
+        isLegacyPractice = try legacy.decodeIfPresent(String.self, forKey: .kind) == "practice"
     }
 
     /// Build a finished match activity from a watch live-game score. US → team,
     /// THEM → opponents. Players are attached on the phone before posting.
     init(liveMatch: LiveMatchScore) {
-        self.init(kind: .match)
         teamScore = liveMatch.us
         opponentScore = liveMatch.them
     }
@@ -112,9 +110,8 @@ struct DraftActivity: Identifiable, Codable, Hashable {
     /// every game. Player structs get fresh ids — `updateSession` writes
     /// `DraftPlayer.id` as the `activity_participants` row id, so reusing ids
     /// across activities would collide on the backend.
-    init(kind: ActivityKind, carryingPlayersFrom previous: DraftActivity?) {
-        self.init(kind: kind)
-        guard kind == .match, let previous, previous.kind == .match else { return }
+    init(carryingPlayersFrom previous: DraftActivity?) {
+        guard let previous else { return }
         matchFormat = previous.matchFormat
         partners = previous.partners.prefix(maxPartners).map {
             DraftPlayer(profile: $0.profile, guestName: $0.guestName)
@@ -126,9 +123,6 @@ struct DraftActivity: Identifiable, Codable, Hashable {
 
     init(activity: SessionActivity) {
         id = activity.id
-        kind = activity.isMatch ? .match : .practice
-        focus = activity.focus ?? ""
-        reps = activity.reps ?? ""
         notes = activity.notes ?? ""
         partners = activity.partners.map(DraftPlayer.init(participant:))
         opponents = activity.opponents.map(DraftPlayer.init(participant:))
@@ -140,11 +134,6 @@ struct DraftActivity: Identifiable, Codable, Hashable {
     mutating func normalizeRosterForFormat() {
         partners = Array(partners.prefix(maxPartners))
         opponents = Array(opponents.prefix(maxOpponents))
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case id, kind, focus, reps, notes, partners, opponents
-        case teamScore, opponentScore, matchFormat
     }
 }
 
