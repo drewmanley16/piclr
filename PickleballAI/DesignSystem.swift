@@ -219,7 +219,7 @@ struct RemoteImage: View {
 }
 
 /// The single avatar component used everywhere. Shows the profile photo when a
-/// URL is available (with retries via `RemoteImage`) and falls back to initials
+/// URL is available (loaded and cached via `RemoteImage`) and falls back to initials
 /// otherwise. Build it from a `Profile`, a `ParticipantProfile`, or raw
 /// url/initials so every call site renders photos consistently.
 struct ProfileAvatar: View {
