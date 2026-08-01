@@ -1,3 +1,4 @@
+import NukeUI
 import SwiftUI
 import UIKit
 
@@ -177,30 +178,36 @@ struct FocusChip: View {
     }
 }
 
-/// Loads a remote image with retries so a slow/blipped first load doesn't get
-/// stuck on the placeholder forever (AsyncImage never retries a failed load).
+/// The one remote-image view. A thin shell over Nuke's `LazyImage`; memory and
+/// disk caching, request coalescing, retry/backoff policy, and off-main
+/// downsampled decoding all live in the pipeline (`ImageLoading`).
+///
+/// Pass `targetSize` wherever the render size is known — without it the full
+/// image is decoded at source resolution and the decode lands on the main
+/// thread at draw time, which is what makes scrolling and paging stutter.
 struct RemoteImage: View {
     let url: URL
-    @State private var image: UIImage?
-    @State private var failed = false
-
-    /// Decoded-image cache shared across all instances so a URL that's already
-    /// been loaded renders instantly on re-appear (scrolling, navigation) with
-    /// no flash or re-download.
-    private static let cache: NSCache<NSURL, UIImage> = {
-        let cache = NSCache<NSURL, UIImage>()
-        cache.countLimit = 300
-        return cache
-    }()
+    /// Points, not pixels. Nil means "no downsampling" — acceptable only where
+    /// the display size genuinely isn't known at build time.
+    var targetSize: CGSize?
 
     var body: some View {
-        Group {
-            if let image {
-                Image(uiImage: image).resizable().scaledToFill()
+        LazyImage(request: ImageLoading.request(url: url, targetSize: targetSize)) { state in
+            if let image = state.image {
+                // `LazyImage` puts its content in a ZStack, which — unlike the
+                // layout-transparent Group this view used to use — reports the
+                // overflow of `.scaledToFill()` as its own size. Any ancestor
+                // that sizes to its widest child (e.g. Play's `recentSection`)
+                // then stretches past the screen. `Color.clear` takes exactly
+                // the proposed size and an overlay can never grow its parent,
+                // so the fill is purely cosmetic and layout stays put.
+                Color.clear
+                    .overlay { image.resizable().scaledToFill() }
+                    .clipped()
             } else {
                 Rectangle().fill(Theme.surfaceElevated)
                     .overlay {
-                        if failed {
+                        if state.error != nil {
                             Image(systemName: "photo").foregroundStyle(Theme.textTertiary)
                         } else {
                             ProgressView().tint(Theme.textTertiary)
@@ -208,30 +215,6 @@ struct RemoteImage: View {
                     }
             }
         }
-        .task(id: url) { await load() }
-    }
-
-    private func load() async {
-        // Cache hit → show immediately, skip the network entirely.
-        if let cached = Self.cache.object(forKey: url as NSURL) {
-            image = cached
-            failed = false
-            return
-        }
-        image = nil
-        failed = false
-        for _ in 0..<4 {
-            if Task.isCancelled { return }
-            if let (data, response) = try? await URLSession.shared.data(from: url),
-               (response as? HTTPURLResponse)?.statusCode == 200,
-               let img = UIImage(data: data) {
-                Self.cache.setObject(img, forKey: url as NSURL)
-                image = img
-                return
-            }
-            try? await Task.sleep(nanoseconds: 600_000_000)
-        }
-        failed = true
     }
 }
 
@@ -297,7 +280,7 @@ struct ProfileAvatar: View {
     private var circle: some View {
         Group {
             if let url, let parsed = URL(string: url) {
-                RemoteImage(url: parsed)
+                RemoteImage(url: parsed, targetSize: CGSize(width: size, height: size))
             } else {
                 fallback
             }
