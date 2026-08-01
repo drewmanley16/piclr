@@ -115,8 +115,12 @@ final class AppStore {
     @ObservationIgnored var signedInBackgroundTask: Task<Void, Never>?
     @ObservationIgnored var isFeedRequestInFlight = false
     @ObservationIgnored var pendingFeedRefresh = false
+    /// Server-row offsets stay separate from visible-card counts while legacy
+    /// practice-only sessions are filtered client-side before the phase-2 purge.
+    @ObservationIgnored var feedNextOffset = 0
     @ObservationIgnored var isDiscoverRequestInFlight = false
     @ObservationIgnored var pendingDiscoverRefresh = false
+    @ObservationIgnored var discoverNextOffset = 0
     @ObservationIgnored var initialFeedLoadStartedAt: Date?
     @ObservationIgnored var acceptedFollowingUserIDs: Set<UUID> = []
     @ObservationIgnored var sessionRefreshDebounceTask: Task<Void, Never>?

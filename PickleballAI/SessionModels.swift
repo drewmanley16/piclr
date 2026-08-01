@@ -174,6 +174,10 @@ struct FeedSession: Identifiable, Decodable, Hashable {
         (activities ?? []).filter(\.isMatch).sorted { $0.position < $1.position }
     }
     var matchCount: Int { postActivities.count }
+    /// Whether this row still represents content the match-only client can use.
+    /// Repost wrappers have no activities of their own, so this deliberately
+    /// checks `postActivities`, which resolves through their source session.
+    var hasMatchContent: Bool { !postActivities.isEmpty }
 
     /// Distinct people (members + guests) tagged across the session's matches.
     var taggedNames: [String] {
