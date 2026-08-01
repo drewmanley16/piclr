@@ -317,18 +317,24 @@ struct QuickLogButton: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
                 Image(systemName: systemImage)
-                    .font(.title2.weight(.semibold))
+                    .font(.body.weight(.semibold))
                     .foregroundStyle(Theme.background)
+                    .frame(width: 24)
+
                 Text(title)
                     .font(.headline)
                     .foregroundStyle(Theme.background)
+
+                Spacer()
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .frame(height: 104, alignment: .topLeading)
-            .background(Theme.accent, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, minHeight: 60)
+            .background(
+                Theme.accent,
+                in: RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous)
+            )
         }
         .buttonStyle(.plain)
     }
