@@ -96,7 +96,7 @@ struct InviteShareLink<Label: View>: View {
 /// a real match but isn't on the app yet). Shares the sharer's personalized link
 /// with a message naming the guest.
 struct GuestInviteButton: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     let guestName: String
     var source = "guest_row"
 

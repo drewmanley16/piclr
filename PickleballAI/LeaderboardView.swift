@@ -22,7 +22,7 @@ enum LeaderboardPeriod: String, CaseIterable, Identifiable {
 /// Profile dashboard.
 struct LeaderboardSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     @EnvironmentObject private var subscriptions: SubscriptionStore
     @State private var loaded = false
     @State private var period: LeaderboardPeriod = .all

@@ -11,7 +11,7 @@ struct SettingsProfileView: View {
     }
 
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     var onSaved: () -> Void = {}
     @State private var firstName = ""
     @State private var lastName = ""
@@ -375,5 +375,24 @@ struct SettingsProfileView: View {
         let parts = displayName.split(whereSeparator: \.isWhitespace)
         guard let first = parts.first else { return ("", "") }
         return (String(first), parts.dropFirst().joined(separator: " "))
+    }
+}
+
+// MARK: - Standalone presentation
+
+/// `SettingsProfileView` pushed inside Settings normally; this presents it on
+/// its own for callers that need to land straight on the editor.
+struct EditProfileSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            SettingsProfileView()
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        HeaderCircleButton(systemImage: "xmark", accessibilityTitle: "Close") { dismiss() }
+                    }
+                }
+        }
     }
 }

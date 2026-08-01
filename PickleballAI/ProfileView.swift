@@ -3,7 +3,7 @@ import Charts
 import PhotosUI
 
 struct ProfileView: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     @EnvironmentObject private var subscriptions: SubscriptionStore
     /// Bumped by RootView when the Profile tab is re-tapped; pops to root.
     var reselectSignal: Int = 0
@@ -97,6 +97,7 @@ struct ProfileView: View {
                 case .goals: GoalsSheet(sessionsThisWeek: sessionsThisWeek, weeklyStreak: stats.weeklyStreak)
                 case .leaderboard: LeaderboardSheet()
                 case .milestones: MilestonesSheet()
+                case .editProfile: EditProfileSheet()
                 }
             }
             .alert("Couldn't update photo", isPresented: profilePhotoErrorBinding) {
@@ -311,27 +312,35 @@ struct ProfileView: View {
     }
 
     private var completionBanner: some View {
-        HStack(spacing: 12) {
+        // Keep the CTA on the leading edge: a trailing arrow sat a few points
+        // from the ✕, and aiming for it dismissed the banner for good instead.
+        HStack(spacing: 20) {
             Button {
-                showSettings = true
+                Haptics.tap()
+                activeSheet = .editProfile
             } label: {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Your profile is \(Int(completion * 100))% finished")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Theme.textPrimary)
-                        Text("Add your court, rating, side, and photo")
-                            .font(.caption)
-                            .foregroundStyle(Theme.textSecondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Your profile is \(Int(completion * 100))% finished")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("Add your court, rating, side, and photo")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                    HStack(spacing: 4) {
+                        Text("Finish setup")
+                        Image(systemName: "arrow.right")
                     }
-                    Spacer()
-                    Image(systemName: "arrow.right").foregroundStyle(Theme.accent)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.accent)
+                    .padding(.top, 4)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
             Button {
+                Haptics.tap()
                 withAnimation(.snappy) { dismissedCompletion = true }
             } label: {
                 Image(systemName: "xmark")
@@ -339,6 +348,8 @@ struct ProfileView: View {
                     .foregroundStyle(Theme.textTertiary)
                     .frame(width: 28, height: 28)
                     .background(Theme.surfaceElevated, in: Circle())
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Dismiss")
@@ -991,5 +1002,6 @@ struct CustomRangeSheet: View {
 
 enum ProfileSheet: String, Identifiable {
     case stats, gear, measures, rivals, leaderboard, insights, weeklyWrap, goals, milestones
+    case editProfile
     var id: String { rawValue }
 }

@@ -45,6 +45,9 @@ struct DraftPlayer: Identifiable, Codable, Hashable {
 }
 
 struct DraftActivity: Identifiable, Codable, Hashable {
+    static let doublesMaxPartners = 1
+    static let doublesMaxOpponents = 2
+
     var id = UUID()
     var kind: ActivityKind
     // practice
@@ -56,9 +59,12 @@ struct DraftActivity: Identifiable, Codable, Hashable {
     var opponents: [DraftPlayer] = []
     var teamScore: Int = 11
     var opponentScore: Int = 9
+    var matchFormat: MatchFormat = .doubles
 
     var won: Bool { teamScore > opponentScore }
     var isTie: Bool { kind == .match && teamScore == opponentScore }
+    var maxPartners: Int { matchFormat == .singles ? 0 : Self.doublesMaxPartners }
+    var maxOpponents: Int { matchFormat == .singles ? 1 : Self.doublesMaxOpponents }
     /// What to persist in `won`: nil for a tie (neither win nor loss), so ties
     /// never count against a record on the server (leaderboard, rivalries).
     var wonValue: Bool? {
@@ -74,6 +80,23 @@ struct DraftActivity: Identifiable, Codable, Hashable {
 
     init(kind: ActivityKind) {
         self.kind = kind
+    }
+
+    /// `matchFormat` was added after live drafts were already persisted on
+    /// device. Decode it leniently so an in-progress pre-update session resumes
+    /// as doubles instead of being discarded.
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        kind = try values.decode(ActivityKind.self, forKey: .kind)
+        focus = try values.decodeIfPresent(String.self, forKey: .focus) ?? ""
+        reps = try values.decodeIfPresent(String.self, forKey: .reps) ?? ""
+        notes = try values.decodeIfPresent(String.self, forKey: .notes) ?? ""
+        partners = try values.decodeIfPresent([DraftPlayer].self, forKey: .partners) ?? []
+        opponents = try values.decodeIfPresent([DraftPlayer].self, forKey: .opponents) ?? []
+        teamScore = try values.decodeIfPresent(Int.self, forKey: .teamScore) ?? 11
+        opponentScore = try values.decodeIfPresent(Int.self, forKey: .opponentScore) ?? 9
+        matchFormat = try values.decodeIfPresent(MatchFormat.self, forKey: .matchFormat) ?? .doubles
     }
 
     /// Build a finished match activity from a watch live-game score. US → team,
@@ -92,8 +115,13 @@ struct DraftActivity: Identifiable, Codable, Hashable {
     init(kind: ActivityKind, carryingPlayersFrom previous: DraftActivity?) {
         self.init(kind: kind)
         guard kind == .match, let previous, previous.kind == .match else { return }
-        partners = previous.partners.map { DraftPlayer(profile: $0.profile, guestName: $0.guestName) }
-        opponents = previous.opponents.map { DraftPlayer(profile: $0.profile, guestName: $0.guestName) }
+        matchFormat = previous.matchFormat
+        partners = previous.partners.prefix(maxPartners).map {
+            DraftPlayer(profile: $0.profile, guestName: $0.guestName)
+        }
+        opponents = previous.opponents.prefix(maxOpponents).map {
+            DraftPlayer(profile: $0.profile, guestName: $0.guestName)
+        }
     }
 
     init(activity: SessionActivity) {
@@ -106,15 +134,34 @@ struct DraftActivity: Identifiable, Codable, Hashable {
         opponents = activity.opponents.map(DraftPlayer.init(participant:))
         teamScore = activity.teamScore ?? 11
         opponentScore = activity.opponentScore ?? 9
+        matchFormat = activity.resolvedMatchFormat
+    }
+
+    mutating func normalizeRosterForFormat() {
+        partners = Array(partners.prefix(maxPartners))
+        opponents = Array(opponents.prefix(maxOpponents))
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, kind, focus, reps, notes, partners, opponents
+        case teamScore, opponentScore, matchFormat
     }
 }
 
 struct SessionDraft: Codable, Equatable {
+    /// Stable id for create retries. Storage uploads use this id in their object
+    /// path, and `create_own_session` treats a repeated id from the same owner as
+    /// the same write. Optional so older persisted drafts still decode.
+    var createID: UUID? = UUID()
     var title: String = ""
     var location: String = ""
     var takeaway: String = ""
     var startedAt: Date = Date()
     var endedAt: Date?
+    /// Explicit duration, set by the quick-log editor. A live session leaves
+    /// this nil and derives its duration from elapsed time instead — a quick log
+    /// has no elapsed time to measure, since it's entered after the fact.
+    var durationMinutes: Int?
     var activities: [DraftActivity] = []
     /// The in-progress game streaming from the paired Apple Watch, if any. Set
     /// as score snapshots arrive; converted into an `activities` entry when the

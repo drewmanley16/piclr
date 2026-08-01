@@ -9,7 +9,7 @@ import SwiftUI
 struct InsightsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     @EnvironmentObject private var subscriptions: SubscriptionStore
     /// Drives the hero record's roll-up from 0–0 on appear (the sheet's one
     /// orchestrated moment). Starts true under Reduce Motion.

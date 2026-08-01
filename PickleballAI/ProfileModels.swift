@@ -157,7 +157,11 @@ struct ParticipantProfile: Decodable, Hashable {
     var initials: String {
         if let a = avatarInitials, !a.isEmpty { return a }
         let letters = displayName.split(separator: " ").prefix(2).compactMap { $0.first }
-        return letters.isEmpty ? "?" : String(letters).uppercased()
+        if !letters.isEmpty { return String(letters).uppercased() }
+        // A blank display name still belongs to a real account, so lean on the
+        // username before the app-wide mark: a "?" avatar reads as an error.
+        if let initial = username.first { return String(initial).uppercased() }
+        return "PB"
     }
 
     init(profile: Profile) {

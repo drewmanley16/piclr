@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Workout Tab
 
 struct WorkoutView: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     /// Bumped by RootView when the Play tab is re-tapped; pops the stack to root.
     var reselectSignal: Int = 0
     /// Prevents an offscreen tab from consuming a Live Activity route before
@@ -14,6 +14,8 @@ struct WorkoutView: View {
     @State private var showInviteComposer = false
     @State private var showHealthMetricsConsent = false
     @AppStorage(HealthMetricsSharing.defaultsKey) private var shareHealthMetrics = false
+    @State private var quickLogDuration = AppStore.defaultQuickLogDurationMinutes
+    @State private var quickLogSessionID = UUID()
 
     var body: some View {
         ProfileNavigationStack(reselectSignal: reselectSignal) {
@@ -45,6 +47,7 @@ struct WorkoutView: View {
             .padding(.bottom, 24)
         }
         .background(Theme.background.ignoresSafeArea())
+        .appErrorAlert("Couldn't log that", store: store)
         .refreshable {
             if let uid = store.currentProfile?.id {
                 await store.loadMySessions(userId: uid)
@@ -60,12 +63,12 @@ struct WorkoutView: View {
                         Label("Start live session", systemImage: "play.fill")
                     }
                     Button {
-                        quickEditor = .newMatch
+                        beginQuickLog(.newMatch)
                     } label: {
                         Label("Log a match", systemImage: "flag.checkered")
                     }
                     Button {
-                        quickEditor = .newPractice
+                        beginQuickLog(.newPractice)
                     } label: {
                         Label("Log practice", systemImage: "figure.cooldown")
                     }
@@ -89,13 +92,15 @@ struct WorkoutView: View {
         .sheet(item: $quickEditor) { route in
             switch route {
             case .newMatch:
-                ActivityEditorView(activity: DraftActivity(kind: .match)) { activity in
-                    Task { await store.quickLog(activity) }
-                }
+                ActivityEditorView(
+                    activity: DraftActivity(kind: .match),
+                    duration: $quickLogDuration
+                ) { await quickLog($0) }
             case .newPractice:
-                ActivityEditorView(activity: DraftActivity(kind: .practice)) { activity in
-                    Task { await store.quickLog(activity) }
-                }
+                ActivityEditorView(
+                    activity: DraftActivity(kind: .practice),
+                    duration: $quickLogDuration
+                ) { await quickLog($0) }
             case .edit:
                 EmptyView()
             }
@@ -112,6 +117,24 @@ struct WorkoutView: View {
         } message: {
             Text("Average heart rate, maximum heart rate, and active calories will appear publicly on sessions you post.")
         }
+    }
+
+    /// Posts a one-tap log. Reports the outcome so the editor stays open on
+    /// failure — this posts straight to the backend, with no draft to fall back
+    /// on, so a silent dismissal would just lose what the user entered.
+    private func quickLog(_ activity: DraftActivity) async -> Bool {
+        let posted = await store.quickLog(
+            activity,
+            durationMinutes: quickLogDuration,
+            sessionId: quickLogSessionID
+        )
+        if posted { Haptics.success() }
+        return posted
+    }
+
+    private func beginQuickLog(_ route: ActivityEditorRoute) {
+        quickLogSessionID = UUID()
+        quickEditor = route
     }
 
     private func startLive() {
@@ -160,7 +183,7 @@ struct WorkoutView: View {
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)
                 HStack {
-                    Text("Tap to resume")
+                    Text("Tap to return")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Theme.accent)
                     Spacer()
@@ -190,10 +213,10 @@ struct WorkoutView: View {
     private var quickLog: some View {
         HStack(spacing: 12) {
             QuickLogButton(title: "Log a Match", systemImage: "flag.checkered", filled: true) {
-                quickEditor = .newMatch
+                beginQuickLog(.newMatch)
             }
             QuickLogButton(title: "Log Practice", systemImage: "figure.cooldown", filled: false) {
-                quickEditor = .newPractice
+                beginQuickLog(.newPractice)
             }
         }
     }

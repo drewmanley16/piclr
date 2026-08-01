@@ -4,7 +4,7 @@ import SwiftUI
 
 struct ReportSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
 
     let target: ReportTarget
     @State private var reason = ReportReason.harassment
@@ -61,7 +61,7 @@ struct ReportSheet: View {
 
 struct BlockedAccountsView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
 
     var body: some View {
         NavigationStack {
@@ -113,7 +113,7 @@ struct BlockedAccountsView: View {
 
 struct DeleteAccountSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
 
     @State private var confirmDelete = false
 

@@ -4,7 +4,7 @@ import SwiftUI
 
 struct StatsSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
 
     private var totalMinutes: Int { store.mySessions.reduce(0) { $0 + $1.workoutDurationMinutes } }
     private var avgMinutes: Int { store.mySessions.isEmpty ? 0 : totalMinutes / store.mySessions.count }
@@ -19,6 +19,7 @@ struct StatsSheet: View {
 
                     if s.matches > 0 {
                         RecordHero(stats: s)
+                        MatchFormatBreakdown(singles: s.singles, doubles: s.doubles)
                     }
 
                     VStack(spacing: 12) {
@@ -52,6 +53,44 @@ struct StatsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
+    }
+}
+
+private struct MatchFormatBreakdown: View {
+    let singles: MatchFormatRecord
+    let doubles: MatchFormatRecord
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("By format")
+                .font(.headline)
+                .foregroundStyle(Theme.textPrimary)
+            HStack(spacing: 12) {
+                FormatRecordCard(record: singles, systemImage: "person.fill")
+                FormatRecordCard(record: doubles, systemImage: "person.2.fill")
+            }
+        }
+    }
+}
+
+private struct FormatRecordCard: View {
+    let record: MatchFormatRecord
+    let systemImage: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(record.format.title, systemImage: systemImage)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.accent)
+            Text(record.recordLine)
+                .font(.title2.weight(.bold).monospacedDigit())
+                .foregroundStyle(Theme.textPrimary)
+            Text(record.matches == 0 ? "No matches" : "\(record.winRate)% win rate")
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardStyle(padding: 14)
     }
 }
 

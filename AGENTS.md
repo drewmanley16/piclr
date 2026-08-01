@@ -11,4 +11,11 @@ depth:
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — app structure and data flow
 - [docs/BACKEND.md](docs/BACKEND.md) — Supabase migrations and edge functions
 - [docs/CONVENTIONS.md](docs/CONVENTIONS.md) — UI contract and lint tripwires
+- [docs/VERIFICATION.md](docs/VERIFICATION.md) — how to prove a change works
+- [docs/XCODEBUILDMCP_SETUP.md](docs/XCODEBUILDMCP_SETUP.md) — one-time machine setup
 - [docs/RELEASE.md](docs/RELEASE.md) — TestFlight releases
+
+There is no test target. Verification means building **and driving** the app on a simulator
+through XcodeBuildMCP — read [docs/VERIFICATION.md](docs/VERIFICATION.md) before verifying a
+change, and prefer its tools over raw `xcodebuild` / `xcrun simctl`. If the XcodeBuildMCP
+skill is installed, load it before calling those tools.

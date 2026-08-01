@@ -7,9 +7,16 @@ enum PlayerRole: String, Identifiable { case partner, opponent; var id: String {
 struct ActivityEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @State var activity: DraftActivity
-    var onSave: (DraftActivity) -> Void
+    /// Non-nil for a quick log, which is entered after play and so has no
+    /// elapsed time to derive a duration from. A live session leaves this nil
+    /// and times itself.
+    var duration: Binding<Int>?
+    /// Return false to keep the editor open — quick log posts straight to the
+    /// backend from here, and a failed post must not discard what was typed.
+    var onSave: (DraftActivity) async -> Bool
 
     @State private var picker: PlayerRole?
+    @State private var isSaving = false
 
     var body: some View {
         NavigationStack {
@@ -19,19 +26,24 @@ struct ActivityEditorView: View {
                 } else {
                     matchFields
                 }
+                if let duration { durationField(duration) }
 
                 Section {
                     Button {
-                        onSave(activity)
-                        dismiss()
+                        isSaving = true
+                        Task {
+                            let saved = await onSave(activity)
+                            isSaving = false
+                            if saved { dismiss() }
+                        }
                     } label: {
-                        Text("Save")
+                        Text(isSaving ? "Saving…" : "Save")
                             .font(.headline)
                             .foregroundStyle(Theme.background)
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
-                    .disabled(!isValid)
-                    .listRowBackground(isValid ? Theme.accent : Theme.surfaceElevated)
+                    .disabled(!isValid || isSaving)
+                    .listRowBackground(isValid && !isSaving ? Theme.accent : Theme.surfaceElevated)
                 }
             }
             .scrollContentBackground(.hidden)
@@ -45,8 +57,12 @@ struct ActivityEditorView: View {
             .sheet(item: $picker) { role in
                 PlayerPickerSheet(exclude: excludedMemberIds) { player in
                     switch role {
-                    case .partner: activity.partners.append(player)
-                    case .opponent: activity.opponents.append(player)
+                    case .partner:
+                        guard canAddPartner else { return }
+                        activity.partners.append(player)
+                    case .opponent:
+                        guard canAddOpponent else { return }
+                        activity.opponents.append(player)
                     }
                 }
             }
@@ -71,24 +87,84 @@ struct ActivityEditorView: View {
 
     private var matchFields: some View {
         Group {
+            Section("Format") {
+                Picker("Match format", selection: $activity.matchFormat) {
+                    ForEach(MatchFormat.allCases) { format in
+                        Text(format.title).tag(format)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: activity.matchFormat) { _, _ in
+                    Haptics.tap()
+                    activity.normalizeRosterForFormat()
+                }
+            }
             Section {
                 ScorePad(teamScore: $activity.teamScore, opponentScore: $activity.opponentScore)
                     .listRowInsets(EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12))
                     .listRowBackground(Theme.surface)
             }
-            Section("Partners") {
-                PlayerChips(players: $activity.partners)
-                Button { picker = .partner } label: { Label("Add partner", systemImage: "person.badge.plus") }
+            if activity.matchFormat == .doubles {
+                Section("Partner") {
+                    PlayerChips(players: $activity.partners)
+                    Button { picker = .partner } label: {
+                        Label(
+                            canAddPartner ? "Add partner" : "Your side is full",
+                            systemImage: canAddPartner ? "person.badge.plus" : "person.2.fill"
+                        )
+                    }
+                    .disabled(!canAddPartner)
+                }
             }
-            Section("Opponents") {
+            Section(activity.matchFormat == .singles ? "Opponent" : "Opponents") {
                 PlayerChips(players: $activity.opponents)
-                Button { picker = .opponent } label: { Label("Add opponent", systemImage: "person.badge.plus") }
+                Button { picker = .opponent } label: {
+                    Label(
+                        canAddOpponent ? "Add opponent" : "Opponent side is full",
+                        systemImage: canAddOpponent
+                            ? "person.badge.plus"
+                            : (activity.matchFormat == .singles ? "person.fill" : "person.2.fill")
+                    )
+                }
+                .disabled(!canAddOpponent)
+            }
+            Section("Notes") {
+                TextField("How did the game go?", text: $activity.notes, axis: .vertical)
+                    .lineLimit(2...5)
             }
         }
     }
 
+    private func durationField(_ duration: Binding<Int>) -> some View {
+        Section("Duration") {
+            Stepper(value: duration, in: 15...480, step: 15) {
+                HStack {
+                    Text("How long did you play?")
+                        .foregroundStyle(Theme.textSecondary)
+                    Spacer()
+                    Text(Self.durationLabel(duration.wrappedValue))
+                        .font(.headline.monospacedDigit())
+                        .foregroundStyle(Theme.textPrimary)
+                }
+            }
+            .frame(minHeight: 44)
+        }
+    }
+
+    static func durationLabel(_ minutes: Int) -> String {
+        minutes < 60 ? "\(minutes)m" : "\(minutes / 60)h \(minutes % 60)m"
+    }
+
     private var isValid: Bool {
         activity.kind == .match || !activity.focus.isEmpty || !activity.reps.isEmpty || !activity.notes.isEmpty
+    }
+
+    private var canAddPartner: Bool {
+        activity.partners.count < activity.maxPartners
+    }
+
+    private var canAddOpponent: Bool {
+        activity.opponents.count < activity.maxOpponents
     }
 
     private var excludedMemberIds: Set<UUID> {
@@ -254,7 +330,7 @@ struct PlayerChips: View {
 
 struct PlayerPickerSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     var exclude: Set<UUID>
     var onPick: (DraftPlayer) -> Void
 

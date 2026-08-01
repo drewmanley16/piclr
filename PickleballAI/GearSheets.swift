@@ -4,7 +4,7 @@ import SwiftUI
 
 struct GearSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     @State private var showAdd = false
 
     /// Gear grouped into sections by category, in the category enum's order, so
@@ -78,7 +78,7 @@ struct GearSheet: View {
 }
 
 struct GearRow: View {
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
     var item: GearItem
 
     var body: some View {
@@ -118,7 +118,7 @@ struct GearRow: View {
 
 struct AddGearSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var store: AppStore
+    @Environment(AppStore.self) private var store
 
     @State private var category = GearCategory.paddle
     @State private var name = ""

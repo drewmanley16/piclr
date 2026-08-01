@@ -840,6 +840,24 @@ struct HeaderIconButton: View {
     }
 }
 
+extension View {
+    /// Presents `AppStore.errorMessage` and clears it on dismiss. Any screen
+    /// that writes through the store needs this (or its own alert), otherwise a
+    /// failed write is invisible — the sheet just closes and nothing appears.
+    /// Screens with bespoke recovery actions, like the live session's
+    /// "Post Without Metrics", build their own alert instead.
+    func appErrorAlert(_ title: String, store: AppStore) -> some View {
+        alert(title, isPresented: Binding(
+            get: { store.errorMessage != nil },
+            set: { if !$0 { store.errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { store.errorMessage = nil }
+        } message: {
+            Text(store.errorMessage ?? "Please try again.")
+        }
+    }
+}
+
 extension Date {
     var relativeLabel: String {
         Self.relativeFormatter.localizedString(for: self, relativeTo: Date())
