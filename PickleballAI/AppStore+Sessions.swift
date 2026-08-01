@@ -52,6 +52,10 @@ extension AppStore {
             deletePersistedDraft()
             return
         }
+        // A draft written before practice logging was removed may still hold
+        // practice entries. They have no score, so keep the session's matches
+        // and drop the rest rather than restoring meaningless 11–9 games.
+        draft.activities.removeAll { $0.isLegacyPractice }
         if draft.createID == nil { draft.createID = UUID() }
         activeDraft = draft
         if draft.expectsWatchMetrics == true, draft.workoutMetrics == nil {
@@ -255,17 +259,14 @@ extension AppStore {
                         role: "opponent"
                     )
                 }
-            let isMatch = activity.kind == .match
             return SessionWriteActivity(
                 id: activity.id,
-                kind: activity.kind.rawValue,
+                kind: "match",
                 position: index,
-                focus: activity.focus.isEmpty ? nil : activity.focus,
-                reps: activity.reps.isEmpty ? nil : activity.reps,
                 notes: activity.notes.isEmpty ? nil : activity.notes,
-                teamScore: isMatch ? activity.teamScore : nil,
-                opponentScore: isMatch ? activity.opponentScore : nil,
-                matchFormat: isMatch ? activity.matchFormat : nil,
+                teamScore: activity.teamScore,
+                opponentScore: activity.opponentScore,
+                matchFormat: activity.matchFormat,
                 won: activity.wonValue,
                 participants: participants
             )
@@ -290,7 +291,7 @@ extension AppStore {
         // `finishSession` command reaches postLiveSession() without passing
         // through it, and an activity-less session renders as a bare "Session".
         guard !activities.isEmpty else {
-            errorMessage = "Add a match or practice before posting."
+            errorMessage = "Add a match before posting."
             return false
         }
 

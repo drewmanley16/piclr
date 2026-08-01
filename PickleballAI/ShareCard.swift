@@ -8,7 +8,7 @@ import UIKit
 struct SessionShareCard: View {
     let session: FeedSession
 
-    private var matches: [SessionActivity] { session.postActivities.filter { $0.isMatch } }
+    private var matches: [SessionActivity] { session.postActivities }
     private var wins: Int { matches.filter { $0.matchResult == .win }.count }
     private var losses: Int { matches.filter { $0.matchResult == .loss }.count }
 
