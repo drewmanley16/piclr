@@ -55,6 +55,13 @@ struct GearItem: Identifiable, Decodable, Hashable {
     var categoryIcon: String {
         GearCategory(rawValue: category)?.systemImage ?? "shippingbox"
     }
+
+    /// Secondary line wherever an item is listed — locker rows and the profile
+    /// showcase read the same, so it lives on the model.
+    var subtitle: String {
+        if let brand, !brand.isEmpty { return "\(brand) · \(category)" }
+        return category
+    }
 }
 
 struct NewGear: Encodable {
@@ -67,4 +74,20 @@ struct NewGear: Encodable {
         case userId = "user_id"
         case category, name, brand
     }
+}
+
+struct GearVisibilityUpdate: Encodable {
+    let gearVisible: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case gearVisible = "gear_visible"
+    }
+}
+
+/// Who's looking at a locker. `.owner` reads `store.gear` and can add, remove,
+/// and change visibility; `.viewer` is a read-only snapshot of someone else's
+/// gear, already filtered by RLS before it ever reaches the client.
+enum GearLockerMode: Hashable {
+    case owner
+    case viewer(name: String, items: [GearItem])
 }

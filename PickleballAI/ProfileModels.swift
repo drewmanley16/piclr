@@ -23,6 +23,9 @@ struct Profile: Identifiable, Codable, Hashable {
     var weeklyGoal: Int?
     var streakRemindersEnabled: Bool?
     var isPrivate: Bool?
+    /// Owner switch for the gear locker (from `profiles.gear_visible`). Nil on
+    /// narrow selects that omit the column; treat nil as visible.
+    var gearVisible: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id, username
@@ -43,6 +46,7 @@ struct Profile: Identifiable, Codable, Hashable {
         case weeklyGoal = "weekly_goal"
         case streakRemindersEnabled = "streak_reminders_enabled"
         case isPrivate = "is_private"
+        case gearVisible = "gear_visible"
     }
 
     init(from decoder: Decoder) throws {
@@ -66,6 +70,8 @@ struct Profile: Identifiable, Codable, Hashable {
         isPro = try c.decodeIfPresent(Bool.self, forKey: .isPro) ?? false
         weeklyGoal = try c.decodeIfPresent(Int.self, forKey: .weeklyGoal)
         streakRemindersEnabled = try c.decodeIfPresent(Bool.self, forKey: .streakRemindersEnabled)
+        isPrivate = try c.decodeIfPresent(Bool.self, forKey: .isPrivate)
+        gearVisible = try c.decodeIfPresent(Bool.self, forKey: .gearVisible)
     }
 
     var initials: String {
@@ -108,6 +114,7 @@ struct Profile: Identifiable, Codable, Hashable {
         weeklyGoal = nil
         streakRemindersEnabled = nil
         isPrivate = nil
+        gearVisible = nil
     }
 }
 
@@ -217,6 +224,10 @@ struct PublicProfile {
     let followerCount: Int
     let followingCount: Int
     var sessions: [FeedSession]
+    /// The subject's gear locker. Empty when they've hidden it — `gear_read`
+    /// RLS does the filtering, so an empty array is the only signal the client
+    /// needs (and the only one it can trust).
+    var gear: [GearItem] = []
 
     /// Whether sessions and follower/following lists are visible to the
     /// signed-in user. Public accounts (or self/accepted-follow) are always

@@ -81,6 +81,7 @@ struct OtherProfileView: View {
     @State private var confirmCancelRequest = false
     @State private var confirmBlock = false
     @State private var reportTarget: ReportTarget?
+    @State private var showGear = false
 
     private var profile: Profile? { loaded?.profile ?? placeholder }
     private var relationship: FollowRelationship { loaded?.relationship ?? .none }
@@ -91,6 +92,7 @@ struct OtherProfileView: View {
                 header
                 if let loaded {
                     if loaded.contentVisible {
+                        GearShowcaseRow(items: loaded.gear) { showGear = true }
                         sessionsSection(loaded.sessions)
                     } else {
                         privateCard
@@ -133,6 +135,12 @@ struct OtherProfileView: View {
         .task { await load() }
         .sheet(item: $reportTarget) { target in
             ReportSheet(target: target)
+        }
+        .sheet(isPresented: $showGear) {
+            GearSheet(mode: .viewer(
+                name: profile?.displayName ?? "Player",
+                items: loaded?.gear ?? []
+            ))
         }
         .confirmationDialog("Block this player?", isPresented: $confirmBlock, titleVisibility: .visible) {
             Button("Block", role: .destructive) {

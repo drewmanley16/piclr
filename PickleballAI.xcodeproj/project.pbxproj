@@ -12,6 +12,7 @@
 		05C1DAFD17F9A950EDFB2408 /* Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F90BCB4C6BD7BCDF83062556 /* Analytics.swift */; };
 		076565ECFC5D40E2EDE1D5E1 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC7CF99A3E687EB8A86C623F /* Models.swift */; };
 		079E74A9F84E8B1B2C9406BD /* ShareCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43B84DB1AF26B28199D3B9F9 /* ShareCard.swift */; };
+		08A3FB196B5175AD9CC6058D /* GearShowcase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2CC64465A82D5A0C68F9A9 /* GearShowcase.swift */; };
 		09769653678BBE3A0E31E1CB /* PickleballAIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81B8CE679ACD5A6F4E5DCB13 /* PickleballAIApp.swift */; };
 		0B5E11A83FB5BA7AB8BAA542 /* PickleballAIWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 19B5187EB34F5664E703C43B /* PickleballAIWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		0C149EF49C81B28648ED3BA8 /* Supabase.example.plist in Resources */ = {isa = PBXBuildFile; fileRef = DD24443783672F30DD360A7A /* Supabase.example.plist */; };
@@ -184,6 +185,7 @@
 		19B5187EB34F5664E703C43B /* PickleballAIWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PickleballAIWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		19C1C7B2904478125FCD743B /* WatchConnectivityClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityClient.swift; sourceTree = "<group>"; };
 		19CC43FBB53DAF94FA9E78D3 /* AppStore+Reposts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Reposts.swift"; sourceTree = "<group>"; };
+		1A2CC64465A82D5A0C68F9A9 /* GearShowcase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearShowcase.swift; sourceTree = "<group>"; };
 		1C1946954DF585AB3AA78971 /* ProfileIdentityValidation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileIdentityValidation.swift; sourceTree = "<group>"; };
 		1DF3D5A5AC51AF989571223E /* LiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityAttributes.swift; sourceTree = "<group>"; };
 		1E1748736F7435B3CB977DC7 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
@@ -389,6 +391,7 @@
 				7EB07F47E8E45FB47F54F244 /* FriendCandidateRow.swift */,
 				68362579BCA6AA9DB6DC88EE /* GearModels.swift */,
 				D169CF8E4C9FDD09C74432A3 /* GearSheets.swift */,
+				1A2CC64465A82D5A0C68F9A9 /* GearShowcase.swift */,
 				FE9ED74F6FDDD731FA70EEB6 /* Goals.swift */,
 				65F9240942A799CF19EF40AC /* Haptics.swift */,
 				6BF6725B8FBFB5A75FCF41BB /* Info.plist */,
@@ -668,6 +671,7 @@
 				FCD1B8ABB0023F6FEE39758F /* FriendCandidateRow.swift in Sources */,
 				01FBF11CB8802B2E11882178 /* GearModels.swift in Sources */,
 				4BA0FAC781BDC3A8DB6C1A00 /* GearSheets.swift in Sources */,
+				08A3FB196B5175AD9CC6058D /* GearShowcase.swift in Sources */,
 				FDF86D49A996AC9C10D83F6C /* Goals.swift in Sources */,
 				DE6F84AD2314939D4E8C317C /* Haptics.swift in Sources */,
 				49CE65D8F627CAD2C793DA9C /* InsightsCard.swift in Sources */,

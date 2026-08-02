@@ -38,6 +38,10 @@ struct ProfileView: View {
                     // better ad — the standalone banner alongside it is redundant noise.
                     if subscriptions.showsLockedFeatures && !playInsights.isReady { proBanner }
                     if completion < 1 && !dismissedCompletion { completionBanner }
+                    GearShowcaseRow(
+                        items: store.gear,
+                        isHidden: profile?.gearVisible == false
+                    ) { activeSheet = .gear }
                     recordCard
                     rivalsCard
                     insightsCard
