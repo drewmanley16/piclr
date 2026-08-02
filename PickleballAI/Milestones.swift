@@ -45,7 +45,7 @@ struct Milestone: Identifiable, Hashable {
     }
     private static let weeklyStreakMilestones: [Milestone] = [4, 10, 26, 52].map {
         Milestone(id: "weekly_streak_\($0)", title: "\($0)-week streak",
-                  detail: "Play at least once a week, \($0) weeks running.", icon: "circle.hexagongrid.fill",
+                  detail: "Play at least once a week, \($0) weeks running.", icon: "bolt.fill",
                   rung: "\($0)", rowLabel: "weeks in a row")
     }
     private static let winStreakMilestones: [Milestone] = [3, 5, 10].map {

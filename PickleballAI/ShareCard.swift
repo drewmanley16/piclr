@@ -163,7 +163,7 @@ struct WeeklyWrapShareCard: View {
             }
 
             if wrap.weeklyStreak > 0 {
-                Label("\(wrap.weeklyStreak)-week streak", systemImage: "circle.hexagongrid.fill")
+                Label("\(wrap.weeklyStreak)-week streak", systemImage: "bolt.fill")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Theme.accent)
             }
