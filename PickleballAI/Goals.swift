@@ -159,7 +159,7 @@ struct GoalsSheet: View {
 
                     if weeklyStreak > 0 {
                         HStack(spacing: 14) {
-                            Image(systemName: "circle.hexagongrid.fill")
+                            Image(systemName: "bolt.fill")
                                 .font(.title2.weight(.bold))
                                 .foregroundStyle(Theme.accent)
                             Text("You're on a \(weeklyStreak)-week streak. Keep it alive.")

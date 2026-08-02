@@ -360,7 +360,7 @@ struct ProfileView: View {
         let weeks = stats.weeklyStreak
         if weeks > 0 {
             HStack(spacing: 3) {
-                Image(systemName: "circle.hexagongrid.fill")
+                Image(systemName: "bolt.fill")
                     .font(.body.weight(.bold))
                 Text("\(weeks)")
                     .font(.headline.weight(.heavy))
