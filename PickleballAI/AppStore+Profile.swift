@@ -113,22 +113,6 @@ extension AppStore {
         }
     }
 
-    func updateWeight(pounds: Double?) async -> Bool {
-        guard let uid = currentProfile?.id else { return false }
-        busyCount += 1
-        errorMessage = nil
-        defer { busyCount -= 1 }
-        do {
-            let update = WeightUpdate(weightPounds: pounds)
-            try await supabase.from("profiles").update(update).eq("id", value: uid.uuidString).execute()
-            await loadProfile(userId: uid)
-            return errorMessage == nil
-        } catch {
-            reportError(error)
-            return false
-        }
-    }
-
     func uploadProfilePhoto(_ image: UIImage) async -> Bool {
         guard let uid = currentProfile?.id else { return false }
         busyCount += 1

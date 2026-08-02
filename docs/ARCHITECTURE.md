@@ -35,7 +35,8 @@ The class is split across files, all in the same module:
 | `AppStore+Sessions.swift` | Posting sessions, my-sessions list, session CRUD |
 | `AppStore+Comments.swift` | Comments, threaded replies, comment likes, mentions |
 | `AppStore+FollowGraph.swift` | Directional follows, requests, follower/following lists, search |
-| `AppStore+Profile.swift` | Profile reads/updates, avatar upload, weight |
+| `AppStore+Profile.swift` | Profile reads/updates, avatar upload |
+| `AppStore+Weight.swift` | Private weight log: weigh-ins, goal weight, display unit |
 | `AppStore+Notifications.swift` | Notifications list, read state |
 | `AppStore+Realtime.swift` | All `RealtimeSubscription` channel lifecycles + debounced refresh |
 | `AppStore+Reposts.swift` | Reposting sessions |
@@ -86,6 +87,7 @@ separate structs. The old `RemoteModels.swift` was split by domain:
 | `SessionModels.swift` | `FeedSession`, `SessionActivity`, `ActivityParticipant`, `NewSession`, cached date formatters |
 | `DraftModels.swift` | `SessionDraft`, `DraftActivity`, `DraftPlayer` — local composing types |
 | `ProfileModels.swift` | `Profile`, `ProfileUpdate`, `PersonRef` |
+| `WeightModels.swift` | `WeightEntry`, `WeightUnit`, weight-log write models |
 | `CommentModels.swift` | Comments + replies + likes |
 | `SocialModels.swift` | Follow graph rows (`FollowRequest`, `FollowListEntry`, `ContactMatch`, …) |
 | `NotificationModels.swift` | `AppNotification`, `DeepLink` |
