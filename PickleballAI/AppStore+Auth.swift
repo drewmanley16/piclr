@@ -184,6 +184,11 @@ extension AppStore {
         searchResults = []
         requestedFollowIds = []
         gear = []
+        // Body data must not survive into the next account on a shared device.
+        weightEntries = []
+        weightGoalPounds = nil
+        weightUnit = .pounds
+        isInitialWeightLoading = false
         likedSessionIds = []
         optimisticLikeCounts = [:]
         likedCommentIds = []
@@ -244,6 +249,7 @@ extension AppStore {
         // Set before the background task below, not inside `loadMySessions`:
         // Recent is reachable during the gap before that task reaches it.
         isInitialMySessionsLoading = mySessions.isEmpty
+        isInitialWeightLoading = weightEntries.isEmpty
         startRealtime(userId: userId)
         setUpWatchConnectivity()
         await loadFeed()
@@ -258,11 +264,12 @@ extension AppStore {
             async let followLists: Void = self.loadFollowLists(userId: userId)
             async let mySessions: Void = self.loadMySessions(userId: userId)
             async let gear: Void = self.loadGear(userId: userId)
+            async let weight: Void = self.loadWeightLog(userId: userId)
             async let notifications: Void = self.loadNotifications(userId: userId)
             async let blocks: Void = self.loadBlockedAccounts()
             async let invites: Void = self.loadActiveInvites(userId: userId)
             async let suggestions: Void = self.loadSuggestedAthletes()
-            _ = await (followState, followLists, mySessions, gear, notifications, blocks, invites, suggestions)
+            _ = await (followState, followLists, mySessions, gear, weight, notifications, blocks, invites, suggestions)
             guard !Task.isCancelled, self.currentProfile?.id == userId else { return }
             await self.setUpPush()
         }

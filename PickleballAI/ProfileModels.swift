@@ -17,7 +17,6 @@ struct Profile: Identifiable, Codable, Hashable {
     var onboardingCompletedAt: String?
     var paddle: String?
     var preferredSide: String?
-    var weightPounds: Double?
     var birthday: String?
     /// Public Pro flag (from `profiles.is_pro`), safe to render on any user.
     var isPro: Bool
@@ -39,7 +38,6 @@ struct Profile: Identifiable, Codable, Hashable {
         case onboardingCompletedAt = "onboarding_completed_at"
         case paddle
         case preferredSide = "preferred_side"
-        case weightPounds = "weight_pounds"
         case birthday
         case isPro = "is_pro"
         case weeklyGoal = "weekly_goal"
@@ -63,7 +61,6 @@ struct Profile: Identifiable, Codable, Hashable {
         onboardingCompletedAt = try c.decodeIfPresent(String.self, forKey: .onboardingCompletedAt)
         paddle = try c.decodeIfPresent(String.self, forKey: .paddle)
         preferredSide = try c.decodeIfPresent(String.self, forKey: .preferredSide)
-        weightPounds = try c.decodeIfPresent(Double.self, forKey: .weightPounds)
         birthday = try c.decodeIfPresent(String.self, forKey: .birthday)
         // Tolerate narrow selects that omit the column (defaults to non-Pro).
         isPro = try c.decodeIfPresent(Bool.self, forKey: .isPro) ?? false
@@ -107,7 +104,6 @@ struct Profile: Identifiable, Codable, Hashable {
         onboardingCompletedAt = nil
         paddle = nil
         preferredSide = nil
-        weightPounds = nil
         birthday = nil
         weeklyGoal = nil
         streakRemindersEnabled = nil
@@ -293,13 +289,5 @@ struct GoalPrefsUpdate: Encodable {
     enum CodingKeys: String, CodingKey {
         case weeklyGoal = "weekly_goal"
         case streakRemindersEnabled = "streak_reminders_enabled"
-    }
-}
-
-struct WeightUpdate: Encodable {
-    let weightPounds: Double?
-
-    enum CodingKeys: String, CodingKey {
-        case weightPounds = "weight_pounds"
     }
 }

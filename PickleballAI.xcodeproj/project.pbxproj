@@ -24,6 +24,7 @@
 		1DE50B08C3685F46E9394C4E /* CommentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B4FA8570E3F58A7BED6E97F /* CommentModels.swift */; };
 		1E410D96F3A0FA1A4836A8D2 /* WatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF5A9FC1A230E468254608EC /* WatchApp.swift */; };
 		25DD14B5A7EB2FD974D866F7 /* InsightsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C05392786FD78DD414FD73AF /* InsightsSheet.swift */; };
+		26C5ACC2CD19AEB6C1883F5C /* AppStore+Weight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FD8CC961248B32AFB24133A /* AppStore+Weight.swift */; };
 		2BC5A464046492AC5C8379C4 /* PlayInsights.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E6F8C2B52FA6E47498094F /* PlayInsights.swift */; };
 		2C8385E386ACCE3A125AEADA /* LegalDocuments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32CF1AA306E5F578AA3022F7 /* LegalDocuments.swift */; };
 		2F9A36DC1B8974294F4993AA /* WorkoutMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B33C1504DA3DA204EE4A1046 /* WorkoutMetrics.swift */; };
@@ -60,6 +61,7 @@
 		664317151FD26AFB65FCFB64 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C2F55C19C493784AFEFC588 /* DesignSystem.swift */; };
 		66B2BB82985061C2DD0900CD /* SuggestedAthleteCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC505C83297253D366673275 /* SuggestedAthleteCard.swift */; };
 		67003847FAE65E98968EFA9E /* RealtimeSubscription.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D1FBA77BA526A6415502267 /* RealtimeSubscription.swift */; };
+		67641A7EFAAFAA83A7D2599B /* WeightEntrySheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A7B7980AB8346462B24D28 /* WeightEntrySheets.swift */; };
 		6903C7CFAC2D15228D2A4C59 /* SessionStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4ABDD948BF6204089C4CACF /* SessionStats.swift */; };
 		6F04A161F647C03393B4DBB5 /* SettingsProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83E0F9E6B1DDFCE179DD351 /* SettingsProfileView.swift */; };
 		70BDBEC5410A84333DDF1F8A /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 54014EB97F18D699B5E8FE5C /* Supabase */; };
@@ -88,6 +90,7 @@
 		A5B81C280730C929CE5A320C /* WatchConnectivityClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19C1C7B2904478125FCD743B /* WatchConnectivityClient.swift */; };
 		A7AB3CB17285CB9C76938F9B /* SessionEditors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F3DE89404F54F718B1D071B /* SessionEditors.swift */; };
 		A87ED053E1361D2193395A82 /* PickleballAIWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5BC068B87E22A474B35B0E61 /* PickleballAIWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		AB9E2D81BD2720BFC355E43E /* WeightModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8327360F1F9CAC35BC184215 /* WeightModels.swift */; };
 		ADB24CAF72BB58C2CBF4D628 /* Subscription.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3ABA2151D296CFDE399EDFD /* Subscription.swift */; };
 		B11B01B9A357B172C22B077E /* LocationPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60A7FE208AB50A6DC053231 /* LocationPicker.swift */; };
 		B1259F60FD1CDB256B4E430A /* SafetySheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52D13E9ABB0B1772747DBB02 /* SafetySheets.swift */; };
@@ -184,6 +187,7 @@
 		1C1946954DF585AB3AA78971 /* ProfileIdentityValidation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileIdentityValidation.swift; sourceTree = "<group>"; };
 		1DF3D5A5AC51AF989571223E /* LiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityAttributes.swift; sourceTree = "<group>"; };
 		1E1748736F7435B3CB977DC7 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
+		1FD8CC961248B32AFB24133A /* AppStore+Weight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Weight.swift"; sourceTree = "<group>"; };
 		212C7D515516C3E07230F457 /* PickleballAI.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PickleballAI.entitlements; sourceTree = "<group>"; };
 		214162C6EFF74362BE3772CD /* InviteModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteModels.swift; sourceTree = "<group>"; };
 		26A5AD74AFBAB08E7BB33698 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -235,6 +239,7 @@
 		812326B10CE11A6D68558757 /* SupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseService.swift; sourceTree = "<group>"; };
 		812D44B60A7EA37D8E8F26CA /* SocialModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialModels.swift; sourceTree = "<group>"; };
 		81B8CE679ACD5A6F4E5DCB13 /* PickleballAIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickleballAIApp.swift; sourceTree = "<group>"; };
+		8327360F1F9CAC35BC184215 /* WeightModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightModels.swift; sourceTree = "<group>"; };
 		8AB0CBC4A6D5ADC1E235A46B /* SuggestedAthletesRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedAthletesRow.swift; sourceTree = "<group>"; };
 		8D1FBA77BA526A6415502267 /* RealtimeSubscription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeSubscription.swift; sourceTree = "<group>"; };
 		92AD1866882A183DAB69974D /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
@@ -275,6 +280,7 @@
 		DC7256BFCBF634E14336E660 /* LiveMatchScore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveMatchScore.swift; sourceTree = "<group>"; };
 		DD24443783672F30DD360A7A /* Supabase.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Supabase.example.plist; sourceTree = "<group>"; };
 		E027CA4D49372EC880E7A7BA /* AppStore+Feed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Feed.swift"; sourceTree = "<group>"; };
+		E2A7B7980AB8346462B24D28 /* WeightEntrySheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightEntrySheets.swift; sourceTree = "<group>"; };
 		E4AD24F0F56C50EAF397CF74 /* AppStore+Profile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Profile.swift"; sourceTree = "<group>"; };
 		E51D694E41512C0CE99B1C56 /* ScoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreView.swift; sourceTree = "<group>"; };
 		E83E0F9E6B1DDFCE179DD351 /* SettingsProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsProfileView.swift; sourceTree = "<group>"; };
@@ -363,6 +369,7 @@
 				19CC43FBB53DAF94FA9E78D3 /* AppStore+Reposts.swift */,
 				5D9CC3B49A2B1A43B0002C5D /* AppStore+Safety.swift */,
 				EFC6DF5FC7D2408F3EF6DC31 /* AppStore+Sessions.swift */,
+				1FD8CC961248B32AFB24133A /* AppStore+Weight.swift */,
 				C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */,
 				524C92C8AF8A9C6D3ADE7AC4 /* AuthComponents.swift */,
 				38D466C6F8E7D2FD8E302914 /* AuthView.swift */,
@@ -444,6 +451,8 @@
 				812326B10CE11A6D68558757 /* SupabaseService.swift */,
 				1E1748736F7435B3CB977DC7 /* WatchConnectivityManager.swift */,
 				A3C692535DA6A9EEFA9FF9D7 /* WeeklyWrap.swift */,
+				E2A7B7980AB8346462B24D28 /* WeightEntrySheets.swift */,
+				8327360F1F9CAC35BC184215 /* WeightModels.swift */,
 				44EB5BF9B884B10A1782C485 /* WeightSheet.swift */,
 				323771872266981FD4A95C19 /* WorkoutCalendarCard.swift */,
 			);
@@ -638,6 +647,7 @@
 				3E53197B3ACF8315533AA7C2 /* AppStore+Reposts.swift in Sources */,
 				7BE71A2B865DA409C8734967 /* AppStore+Safety.swift in Sources */,
 				BBB0B68BD14F2D4AAD57073A /* AppStore+Sessions.swift in Sources */,
+				26C5ACC2CD19AEB6C1883F5C /* AppStore+Weight.swift in Sources */,
 				C4D639B6FB92C30CB2822077 /* AppStore.swift in Sources */,
 				3B46F82532DA139D31A550D8 /* AppleWatchWorkoutLauncher.swift in Sources */,
 				B7840EC1684B9C2ECA85EAD7 /* AuthComponents.swift in Sources */,
@@ -714,6 +724,8 @@
 				98A517E08AFF6C1426A71B07 /* WatchConnectivityManager.swift in Sources */,
 				3977B08E8A0CE1938C991F12 /* WatchSyncMessage.swift in Sources */,
 				455E4344C365F0E80B739EA3 /* WeeklyWrap.swift in Sources */,
+				67641A7EFAAFAA83A7D2599B /* WeightEntrySheets.swift in Sources */,
+				AB9E2D81BD2720BFC355E43E /* WeightModels.swift in Sources */,
 				794DFC6C4DD57E94DC0CBAD5 /* WeightSheet.swift in Sources */,
 				496643F409765F3DCE496F80 /* WorkoutCalendarCard.swift in Sources */,
 				2F9A36DC1B8974294F4993AA /* WorkoutMetrics.swift in Sources */,
