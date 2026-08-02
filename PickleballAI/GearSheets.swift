@@ -5,31 +5,54 @@ import SwiftUI
 struct GearSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppStore.self) private var store
+    var mode: GearLockerMode = .owner
     @State private var showAdd = false
+    @State private var showOnProfile = true
+    @State private var isSavingVisibility = false
+
+    private var isOwner: Bool {
+        if case .owner = mode { return true }
+        return false
+    }
+
+    private var items: [GearItem] {
+        switch mode {
+        case .owner: return store.gear
+        case .viewer(_, let items): return items
+        }
+    }
+
+    private var title: String {
+        switch mode {
+        case .owner: return "My Gear"
+        case .viewer(let name, _): return "\(name)'s Gear"
+        }
+    }
 
     /// Gear grouped into sections by category, in the category enum's order, so
     /// the locker reads as an organized set of shelves rather than a flat list.
     private var sections: [(category: GearCategory, items: [GearItem])] {
         GearCategory.allCases.compactMap { category in
-            let items = store.gear.filter { $0.category == category.rawValue }
-            return items.isEmpty ? nil : (category, items)
+            let matching = items.filter { $0.category == category.rawValue }
+            return matching.isEmpty ? nil : (category, matching)
         }
     }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                if store.gear.isEmpty {
+                if items.isEmpty {
                     emptyState
                 } else {
                     VStack(alignment: .leading, spacing: 22) {
+                        if isOwner { visibilityToggle }
                         ForEach(sections, id: \.category) { section in
                             VStack(alignment: .leading, spacing: 10) {
                                 Text(section.category.rawValue.uppercased())
                                     .font(.caption.weight(.bold))
                                     .tracking(0.8)
                                     .foregroundStyle(Theme.textTertiary)
-                                ForEach(section.items) { GearRow(item: $0) }
+                                ForEach(section.items) { GearRow(item: $0, isOwner: isOwner) }
                             }
                         }
                     }
@@ -37,16 +60,48 @@ struct GearSheet: View {
                 }
             }
             .background(Theme.background.ignoresSafeArea())
-            .navigationTitle("My Gear")
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
-                ToolbarItem(placement: .primaryAction) {
-                    Button { showAdd = true } label: { Image(systemName: "plus") }
+                if isOwner {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button { showAdd = true } label: { Image(systemName: "plus") }
+                    }
                 }
             }
             .sheet(isPresented: $showAdd) { AddGearSheet().presentationDetents([.large]) }
+            .onAppear { showOnProfile = store.currentProfile?.gearVisible ?? true }
         }
+    }
+
+    /// The one privacy control for the locker. Lives here rather than in
+    /// Settings because this is where you're already thinking about your gear.
+    private var visibilityToggle: some View {
+        Toggle(isOn: $showOnProfile) {
+            VStack(alignment: .leading, spacing: 2) {
+                Label("Show on profile", systemImage: "eye")
+                    .foregroundStyle(Theme.textPrimary)
+                Text("Anyone who can see your profile can see your gear")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+        }
+        .tint(Theme.accent)
+        .disabled(isSavingVisibility)
+        .onChange(of: showOnProfile) { _, visible in
+            guard visible != (store.currentProfile?.gearVisible ?? true) else { return }
+            Haptics.tap()
+            isSavingVisibility = true
+            Task {
+                // Serialized by `isSavingVisibility` disabling the toggle
+                // mid-flight, so this can't race a second in-flight write.
+                let succeeded = await store.setGearVisible(visible)
+                if !succeeded { showOnProfile = !visible }
+                isSavingVisibility = false
+            }
+        }
+        .cardStyle()
     }
 
     private var emptyState: some View {
@@ -54,22 +109,26 @@ struct GearSheet: View {
             Image(systemName: "bag.fill")
                 .font(.largeTitle)
                 .foregroundStyle(Theme.accent)
-            Text("Build your locker")
+            Text(isOwner ? "Build your locker" : "No gear yet")
                 .font(.headline)
                 .foregroundStyle(Theme.textPrimary)
-            Text("Add your paddles, balls, shoes, and more to keep your setup in one place.")
+            Text(isOwner
+                 ? "Add your paddles, balls, shoes, and more to keep your setup in one place."
+                 : "This player hasn't shared any gear.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
-            Button { showAdd = true } label: {
-                Label("Add gear", systemImage: "plus")
-                    .font(.headline)
-                    .foregroundStyle(Theme.background)
-                    .frame(maxWidth: .infinity, minHeight: 48)
-                    .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
+            if isOwner {
+                Button { showAdd = true } label: {
+                    Label("Add gear", systemImage: "plus")
+                        .font(.headline)
+                        .foregroundStyle(Theme.background)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 8)
             }
-            .buttonStyle(.plain)
-            .padding(.top, 8)
         }
         .frame(maxWidth: .infinity)
         .padding(24)
@@ -80,6 +139,8 @@ struct GearSheet: View {
 struct GearRow: View {
     @Environment(AppStore.self) private var store
     var item: GearItem
+    /// Only the owner gets the remove menu; a viewer's locker is read-only.
+    var isOwner = true
 
     var body: some View {
         HStack(spacing: 14) {
@@ -91,28 +152,25 @@ struct GearRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.name).font(.headline).foregroundStyle(Theme.textPrimary)
-                Text(subtitle).font(.subheadline).foregroundStyle(Theme.textSecondary)
+                Text(item.subtitle).font(.subheadline).foregroundStyle(Theme.textSecondary)
             }
 
             Spacer()
 
-            Menu {
-                Button(role: .destructive) {
-                    Task { await store.deleteGear(item) }
-                } label: { Label("Remove", systemImage: "trash") }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Theme.textTertiary)
-                    .frame(width: 44, height: 44)
+            if isOwner {
+                Menu {
+                    Button(role: .destructive) {
+                        Task { await store.deleteGear(item) }
+                    } label: { Label("Remove", systemImage: "trash") }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Theme.textTertiary)
+                        .frame(width: 44, height: 44)
+                }
             }
         }
         .cardStyle()
-    }
-
-    private var subtitle: String {
-        if let brand = item.brand, !brand.isEmpty { return "\(brand) · \(item.category)" }
-        return item.category
     }
 }
 

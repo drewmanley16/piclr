@@ -288,12 +288,18 @@ extension AppStore {
                 && !Task.isCancelled
             let sessions = await media.hydrateSessions(Array(sessionRows.prefix(sessionLimit)))
 
+            // The locker is a nice-to-have on someone else's profile — a gear
+            // failure shouldn't cost the viewer the whole profile, so it falls
+            // back to empty (which is also what a hidden locker returns).
+            let gearItems = (try? await fetchGear(userId: userId, limit: gearShowcaseLimit)) ?? []
+
             return PublicProfile(
                 profile: profile,
                 relationship: relationship,
                 followerCount: followerCount,
                 followingCount: followingCount,
-                sessions: sessions
+                sessions: sessions,
+                gear: gearItems
             )
         } catch {
             reportError(error)

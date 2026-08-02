@@ -50,6 +50,7 @@ enum Analytics {
         case repostRequested = "repost_requested"
         case repostApproved = "repost_approved"
         case gearAdded = "gear_added"
+        case gearVisibilityChanged = "gear_visibility_changed"
         case weightLogged = "weight_logged"
         case milestoneUnlocked = "milestone_unlocked"
         /// Reserved: fired by the invite-sharing flow (Agent 1) with a `source`
