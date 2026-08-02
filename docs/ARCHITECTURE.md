@@ -35,7 +35,7 @@ The class is split across files, all in the same module:
 | `AppStore+Sessions.swift` | Posting sessions, my-sessions list, session CRUD |
 | `AppStore+Comments.swift` | Comments, threaded replies, comment likes, mentions |
 | `AppStore+FollowGraph.swift` | Directional follows, requests, follower/following lists, search |
-| `AppStore+Profile.swift` | Profile reads/updates, avatar upload, measures |
+| `AppStore+Profile.swift` | Profile reads/updates, avatar upload, weight |
 | `AppStore+Notifications.swift` | Notifications list, read state |
 | `AppStore+Realtime.swift` | All `RealtimeSubscription` channel lifecycles + debounced refresh |
 | `AppStore+Reposts.swift` | Reposting sessions |

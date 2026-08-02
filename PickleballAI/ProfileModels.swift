@@ -17,9 +17,7 @@ struct Profile: Identifiable, Codable, Hashable {
     var onboardingCompletedAt: String?
     var paddle: String?
     var preferredSide: String?
-    var heightInches: Double?
     var weightPounds: Double?
-    var shoeSize: Double?
     var birthday: String?
     /// Public Pro flag (from `profiles.is_pro`), safe to render on any user.
     var isPro: Bool
@@ -41,9 +39,7 @@ struct Profile: Identifiable, Codable, Hashable {
         case onboardingCompletedAt = "onboarding_completed_at"
         case paddle
         case preferredSide = "preferred_side"
-        case heightInches = "height_inches"
         case weightPounds = "weight_pounds"
-        case shoeSize = "shoe_size"
         case birthday
         case isPro = "is_pro"
         case weeklyGoal = "weekly_goal"
@@ -67,9 +63,7 @@ struct Profile: Identifiable, Codable, Hashable {
         onboardingCompletedAt = try c.decodeIfPresent(String.self, forKey: .onboardingCompletedAt)
         paddle = try c.decodeIfPresent(String.self, forKey: .paddle)
         preferredSide = try c.decodeIfPresent(String.self, forKey: .preferredSide)
-        heightInches = try c.decodeIfPresent(Double.self, forKey: .heightInches)
         weightPounds = try c.decodeIfPresent(Double.self, forKey: .weightPounds)
-        shoeSize = try c.decodeIfPresent(Double.self, forKey: .shoeSize)
         birthday = try c.decodeIfPresent(String.self, forKey: .birthday)
         // Tolerate narrow selects that omit the column (defaults to non-Pro).
         isPro = try c.decodeIfPresent(Bool.self, forKey: .isPro) ?? false
@@ -113,9 +107,7 @@ struct Profile: Identifiable, Codable, Hashable {
         onboardingCompletedAt = nil
         paddle = nil
         preferredSide = nil
-        heightInches = nil
         weightPounds = nil
-        shoeSize = nil
         birthday = nil
         weeklyGoal = nil
         streakRemindersEnabled = nil
@@ -304,14 +296,10 @@ struct GoalPrefsUpdate: Encodable {
     }
 }
 
-struct MeasuresUpdate: Encodable {
-    let heightInches: Double?
+struct WeightUpdate: Encodable {
     let weightPounds: Double?
-    let shoeSize: Double?
 
     enum CodingKeys: String, CodingKey {
-        case heightInches = "height_inches"
         case weightPounds = "weight_pounds"
-        case shoeSize = "shoe_size"
     }
 }
