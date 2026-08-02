@@ -113,17 +113,13 @@ extension AppStore {
         }
     }
 
-    func updateMeasures(heightInches: Double?, weightPounds: Double?, shoeSize: Double?) async -> Bool {
+    func updateWeight(pounds: Double?) async -> Bool {
         guard let uid = currentProfile?.id else { return false }
         busyCount += 1
         errorMessage = nil
         defer { busyCount -= 1 }
         do {
-            let update = MeasuresUpdate(
-                heightInches: heightInches,
-                weightPounds: weightPounds,
-                shoeSize: shoeSize
-            )
+            let update = WeightUpdate(weightPounds: pounds)
             try await supabase.from("profiles").update(update).eq("id", value: uid.uuidString).execute()
             await loadProfile(userId: uid)
             return errorMessage == nil
