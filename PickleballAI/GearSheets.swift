@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 // MARK: - Gear
@@ -7,6 +8,7 @@ struct GearSheet: View {
     @Environment(AppStore.self) private var store
     var mode: GearLockerMode = .owner
     @State private var showAdd = false
+    @State private var editing: GearItem?
     @State private var showOnProfile = true
     @State private var isSavingVisibility = false
 
@@ -52,7 +54,9 @@ struct GearSheet: View {
                                     .font(.caption.weight(.bold))
                                     .tracking(0.8)
                                     .foregroundStyle(Theme.textTertiary)
-                                ForEach(section.items) { GearRow(item: $0, isOwner: isOwner) }
+                                ForEach(section.items) { item in
+                                    GearRow(item: item, isOwner: isOwner) { editing = item }
+                                }
                             }
                         }
                     }
@@ -71,6 +75,7 @@ struct GearSheet: View {
                 }
             }
             .sheet(isPresented: $showAdd) { AddGearSheet().presentationDetents([.large]) }
+            .sheet(item: $editing) { EditGearSheet(item: $0).presentationDetents([.large]) }
             .onAppear { showOnProfile = store.currentProfile?.gearVisible ?? true }
         }
     }
@@ -139,26 +144,36 @@ struct GearSheet: View {
 struct GearRow: View {
     @Environment(AppStore.self) private var store
     var item: GearItem
-    /// Only the owner gets the remove menu; a viewer's locker is read-only.
+    /// Only the owner gets the edit tap and remove menu; a viewer's locker is
+    /// read-only.
     var isOwner = true
+    var onEdit: (() -> Void)?
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: item.categoryIcon)
-                .font(.title3)
-                .foregroundStyle(Theme.accent)
-                .frame(width: 44, height: 44)
-                .background(Theme.accentSoft, in: Circle())
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.name).font(.headline).foregroundStyle(Theme.textPrimary)
-                Text(item.subtitle).font(.subheadline).foregroundStyle(Theme.textSecondary)
+            // A Button rather than `.onTapGesture` so "edit this item" is a real
+            // accessibility action — VoiceOver users and UI automation both need
+            // it exposed, not just reachable by touch.
+            if isOwner {
+                Button {
+                    Haptics.tap()
+                    onEdit?()
+                } label: {
+                    details
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Opens gear details")
+            } else {
+                details
             }
 
-            Spacer()
+            Spacer(minLength: 0)
 
             if isOwner {
                 Menu {
+                    Button {
+                        onEdit?()
+                    } label: { Label("Edit", systemImage: "pencil") }
                     Button(role: .destructive) {
                         Task { await store.deleteGear(item) }
                     } label: { Label("Remove", systemImage: "trash") }
@@ -168,9 +183,23 @@ struct GearRow: View {
                         .foregroundStyle(Theme.textTertiary)
                         .frame(width: 44, height: 44)
                 }
+                .accessibilityLabel("Gear actions")
             }
         }
         .cardStyle()
+    }
+
+    private var details: some View {
+        HStack(spacing: 14) {
+            GearThumbnail(item: item)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.name).font(.headline).foregroundStyle(Theme.textPrimary)
+                Text(item.subtitle).font(.subheadline).foregroundStyle(Theme.textSecondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
     }
 }
 
@@ -181,38 +210,28 @@ struct AddGearSheet: View {
     @State private var category = GearCategory.paddle
     @State private var name = ""
     @State private var brand = ""
-
-    private let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
+    @State private var photo = GearPhotoSelection()
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("CATEGORY")
-                            .font(.caption.weight(.bold)).tracking(0.8)
-                            .foregroundStyle(Theme.textTertiary)
-                        LazyVGrid(columns: columns, spacing: 10) {
-                            ForEach(GearCategory.allCases) { cat in
-                                CategoryChip(category: cat, isSelected: category == cat) {
-                                    Haptics.tap()
-                                    withAnimation(.snappy(duration: 0.18)) { category = cat }
-                                }
-                            }
-                        }
-                    }
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("DETAILS")
-                            .font(.caption.weight(.bold)).tracking(0.8)
-                            .foregroundStyle(Theme.textTertiary)
-                        AuthField(placeholder: category.namePlaceholder, text: $name)
-                        AuthField(placeholder: "Brand (optional)", text: $brand)
-                    }
+                    GearFormFields(
+                        category: $category,
+                        name: $name,
+                        brand: $brand,
+                        photo: $photo,
+                        storedPhotoURL: nil
+                    )
 
                     Button {
                         Task {
-                            let saved = await store.addGear(category: category.rawValue, name: name, brand: brand)
+                            let saved = await store.addGear(
+                                category: category.rawValue,
+                                name: name,
+                                brand: brand,
+                                photo: photo.pickedData
+                            )
                             if saved { Haptics.success(); dismiss() }
                         }
                     } label: {
@@ -239,6 +258,217 @@ struct AddGearSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
             .onAppear { store.errorMessage = nil }
+        }
+    }
+}
+
+struct EditGearSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(AppStore.self) private var store
+
+    let item: GearItem
+
+    @State private var category: GearCategory
+    @State private var name: String
+    @State private var brand: String
+    @State private var photo = GearPhotoSelection()
+
+    init(item: GearItem) {
+        self.item = item
+        _category = State(initialValue: GearCategory(rawValue: item.category) ?? .other)
+        _name = State(initialValue: item.name)
+        _brand = State(initialValue: item.brand ?? "")
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    GearFormFields(
+                        category: $category,
+                        name: $name,
+                        brand: $brand,
+                        photo: $photo,
+                        storedPhotoURL: item.photoUrl
+                    )
+
+                    Button {
+                        Task {
+                            let saved = await store.updateGear(
+                                item,
+                                category: category.rawValue,
+                                name: name,
+                                brand: brand,
+                                photo: photo.edit
+                            )
+                            if saved { Haptics.success(); dismiss() }
+                        }
+                    } label: {
+                        Text(store.isBusy ? "Saving…" : "Save changes")
+                            .font(.headline)
+                            .foregroundStyle(Theme.background)
+                            .frame(maxWidth: .infinity, minHeight: 52)
+                            .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(name.isEmpty || store.isBusy)
+                    .opacity(name.isEmpty || store.isBusy ? 0.5 : 1)
+
+                    Button(role: .destructive) {
+                        Task {
+                            await store.deleteGear(item)
+                            Haptics.success()
+                            dismiss()
+                        }
+                    } label: {
+                        Label("Remove from locker", systemImage: "trash")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.red)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(store.isBusy)
+
+                    if let error = store.errorMessage {
+                        Label(error, systemImage: "exclamationmark.triangle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
+                }
+                .padding(20)
+            }
+            .background(Theme.background.ignoresSafeArea())
+            .navigationTitle("Edit Gear")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .onAppear { store.errorMessage = nil }
+        }
+    }
+}
+
+/// What the user has done to a form's photo. Holds the picked image for an
+/// instant preview and folds down to the `GearPhotoEdit` the store wants.
+struct GearPhotoSelection {
+    var pickedImage: UIImage?
+    var pickedData: Data?
+    var clearedStored = false
+
+    var edit: GearPhotoEdit {
+        if let pickedData { return .replaced(pickedData) }
+        return clearedStored ? .removed : .unchanged
+    }
+}
+
+/// Category grid + name/brand + photo, shared by the Add and Edit sheets so the
+/// two stay identical by construction.
+private struct GearFormFields: View {
+    @Binding var category: GearCategory
+    @Binding var name: String
+    @Binding var brand: String
+    @Binding var photo: GearPhotoSelection
+    /// The item's already-saved photo, shown until it's replaced or cleared.
+    var storedPhotoURL: String?
+
+    @State private var pickerItem: PhotosPickerItem?
+
+    private let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
+
+    private var visibleStoredURL: URL? {
+        guard !photo.clearedStored, photo.pickedImage == nil,
+              let stored = storedPhotoURL else { return nil }
+        return URL(string: stored)
+    }
+
+    private var hasPhoto: Bool { photo.pickedImage != nil || visibleStoredURL != nil }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("CATEGORY")
+                    .font(.caption.weight(.bold)).tracking(0.8)
+                    .foregroundStyle(Theme.textTertiary)
+                LazyVGrid(columns: columns, spacing: 10) {
+                    ForEach(GearCategory.allCases) { cat in
+                        CategoryChip(category: cat, isSelected: category == cat) {
+                            Haptics.tap()
+                            withAnimation(.snappy(duration: 0.18)) { category = cat }
+                        }
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("DETAILS")
+                    .font(.caption.weight(.bold)).tracking(0.8)
+                    .foregroundStyle(Theme.textTertiary)
+                AuthField(placeholder: category.namePlaceholder, text: $name)
+                AuthField(placeholder: "Brand (optional)", text: $brand)
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("PHOTO")
+                    .font(.caption.weight(.bold)).tracking(0.8)
+                    .foregroundStyle(Theme.textTertiary)
+                HStack(spacing: 14) {
+                    preview
+                    VStack(alignment: .leading, spacing: 6) {
+                        PhotosPicker(selection: $pickerItem, matching: .images) {
+                            Label(hasPhoto ? "Change photo" : "Add a photo", systemImage: "photo.badge.plus")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Theme.accent)
+                                .frame(minHeight: 36)
+                        }
+                        if hasPhoto {
+                            Button {
+                                Haptics.tap()
+                                photo.pickedImage = nil
+                                photo.pickedData = nil
+                                photo.clearedStored = true
+                                pickerItem = nil
+                            } label: {
+                                Label("Remove photo", systemImage: "xmark.circle")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Theme.textSecondary)
+                                    .frame(minHeight: 36)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+        .onChange(of: pickerItem) { _, item in
+            guard let item else { return }
+            Task {
+                guard let data = try? await item.loadTransferable(type: Data.self),
+                      let image = UIImage(data: data) else { return }
+                photo.pickedData = data
+                photo.pickedImage = image
+                photo.clearedStored = false
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var preview: some View {
+        let size: CGFloat = 72
+        if let picked = photo.pickedImage {
+            Image(uiImage: picked)
+                .resizable()
+                .scaledToFill()
+                .frame(width: size, height: size)
+                .clipShape(Circle())
+        } else if let url = visibleStoredURL {
+            RemoteImage(url: url)
+                .frame(width: size, height: size)
+                .clipShape(Circle())
+        } else {
+            Image(systemName: category.systemImage)
+                .font(.title)
+                .foregroundStyle(Theme.accent)
+                .frame(width: size, height: size)
+                .background(Theme.accentSoft, in: Circle())
         }
     }
 }

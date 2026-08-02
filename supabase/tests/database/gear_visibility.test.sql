@@ -7,7 +7,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(9);
+select plan(17);
 
 insert into auth.users (id, email) values
   ('a0000001-0000-0000-0000-000000000001', 'gear-owner@example.test'),
@@ -128,6 +128,97 @@ reset role;
 select ok(
   not has_table_privilege('anon', 'public.gear', 'SELECT'),
   'anonymous clients cannot read gear'
+);
+
+-- ---------------------------------------------------------------------------
+-- Gear photos. `private.can_read_media` is what Storage consults before it will
+-- sign a URL, so asserting it directly proves a photo can never be readable
+-- when its gear row isn't — no Storage objects required.
+-- ---------------------------------------------------------------------------
+
+update public.gear
+set photo_path = 'a0000001-0000-0000-0000-000000000001/a1000000-0000-0000-0000-000000000001.jpg'
+where id = 'a1000000-0000-0000-0000-000000000001';
+
+select ok(
+  private.can_read_media(
+    'a0000002-0000-0000-0000-000000000002',
+    'gear-photos',
+    'a0000001-0000-0000-0000-000000000001/a1000000-0000-0000-0000-000000000001.jpg'
+  ),
+  'a visible locker''s photo is readable by another player'
+);
+
+update public.profiles set gear_visible = false
+where id = 'a0000001-0000-0000-0000-000000000001';
+
+select ok(
+  not private.can_read_media(
+    'a0000002-0000-0000-0000-000000000002',
+    'gear-photos',
+    'a0000001-0000-0000-0000-000000000001/a1000000-0000-0000-0000-000000000001.jpg'
+  ),
+  'hiding the locker also hides its photos'
+);
+
+select ok(
+  private.can_read_media(
+    'a0000001-0000-0000-0000-000000000001',
+    'gear-photos',
+    'a0000001-0000-0000-0000-000000000001/a1000000-0000-0000-0000-000000000001.jpg'
+  ),
+  'the owner still reads their own hidden photo'
+);
+
+update public.profiles set gear_visible = true
+where id = 'a0000001-0000-0000-0000-000000000001';
+
+select ok(
+  not private.can_read_media(
+    'a0000005-0000-0000-0000-000000000005',
+    'gear-photos',
+    'a0000001-0000-0000-0000-000000000001/a1000000-0000-0000-0000-000000000001.jpg'
+  ),
+  'a block hides gear photos too'
+);
+
+-- The private owner's item, for the follower/non-follower split.
+select ok(
+  not private.can_read_media(
+    'a0000002-0000-0000-0000-000000000002',
+    'gear-photos',
+    'a0000003-0000-0000-0000-000000000003/a1000000-0000-0000-0000-000000000002.jpg'
+  ),
+  'a private account''s gear photo is hidden from a non-follower'
+);
+
+select ok(
+  private.can_read_media(
+    'a0000004-0000-0000-0000-000000000004',
+    'gear-photos',
+    'a0000003-0000-0000-0000-000000000003/a1000000-0000-0000-0000-000000000002.jpg'
+  ),
+  'an accepted follower can read a private account''s gear photo'
+);
+
+-- A readable item must not be usable to pull a file out of someone else's
+-- folder: the folder owner has to be the gear's owner.
+select ok(
+  not private.can_read_media(
+    'a0000002-0000-0000-0000-000000000002',
+    'gear-photos',
+    'a0000002-0000-0000-0000-000000000002/a1000000-0000-0000-0000-000000000001.jpg'
+  ),
+  'a gear id cannot unlock an object in a different owner''s folder'
+);
+
+select ok(
+  not private.can_read_media(
+    'a0000002-0000-0000-0000-000000000002',
+    'gear-photos',
+    'a0000001-0000-0000-0000-000000000001/not-a-uuid.jpg'
+  ),
+  'a malformed gear-photo path is rejected'
 );
 
 select * from finish();
