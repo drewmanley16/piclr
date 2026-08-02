@@ -5,6 +5,31 @@ enum GearShowcaseLayout {
     static let iconSize: CGFloat = 44
 }
 
+/// An item's photo in a circle, falling back to its category icon when there
+/// isn't one — same footprint either way, so a part-photographed locker still
+/// lines up. Shared by the locker rows and the profile showcase.
+struct GearThumbnail: View {
+    var item: GearItem
+    var size: CGFloat = GearShowcaseLayout.iconSize
+
+    var body: some View {
+        Group {
+            if let photo = item.photoUrl, let url = URL(string: photo) {
+                RemoteImage(url: url)
+                    .frame(width: size, height: size)
+                    .clipShape(Circle())
+            } else {
+                Image(systemName: item.categoryIcon)
+                    .font(size > 56 ? .title : .title3)
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: size, height: size)
+                    .background(Theme.accentSoft, in: Circle())
+            }
+        }
+        .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
+    }
+}
+
 /// The gear locker as a display piece: a horizontal strip of gear cards shown
 /// on a profile, with "See all" opening the full locker. Renders nothing when
 /// the locker is empty — on your own profile the Gear dashboard tile is still
@@ -78,11 +103,7 @@ struct GearShowcaseCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Image(systemName: item.categoryIcon)
-                .font(.title3)
-                .foregroundStyle(Theme.accent)
-                .frame(width: GearShowcaseLayout.iconSize, height: GearShowcaseLayout.iconSize)
-                .background(Theme.accentSoft, in: Circle())
+            GearThumbnail(item: item)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.name)
