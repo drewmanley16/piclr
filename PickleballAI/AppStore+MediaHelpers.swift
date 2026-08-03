@@ -37,7 +37,12 @@ extension AppStore {
             guard let image = UIImage(data: data) else { return nil }
             return Self.downscaledJPEG(from: image, maxDimension: 1024)
         }.value
-        guard let jpeg else { return nil }
+        // Not an `Error`, so there's nothing for `reportError` to translate —
+        // but returning nil silently would abort the post with no explanation.
+        guard let jpeg else {
+            errorMessage = "Couldn't prepare that photo. Try a different one."
+            return nil
+        }
         do {
             let path = "\(uid.uuidString.lowercased())/\(sessionId.uuidString.lowercased()).jpg"
             try await supabase.storage.from("post-photos").upload(
@@ -82,29 +87,53 @@ extension AppStore {
         errorMessage = friendly(error)
     }
 
+    /// Translate an error into something safe to put in front of a user.
+    ///
+    /// Backend errors must never be surfaced verbatim. A PostgREST or Storage
+    /// failure carries schema and policy details ("new row violates row-level
+    /// security policy", "column sessions_1.focus does not exist") that mean
+    /// nothing to a user, look alarming, and describe our internals to anyone
+    /// who screenshots them. The technical text goes to the log instead, where
+    /// it's still there for debugging.
+    ///
+    /// The one backend string we do pass through is an edge function's `error`
+    /// field: those are written by us, for this purpose.
     private func friendly(_ error: Error) -> String {
+        Self.errorLogger.error("\(String(describing: error), privacy: .public)")
+
         if let functionsError = error as? FunctionsError {
             switch functionsError {
-            case .httpError(let code, let data):
+            case .httpError(_, let data):
                 if
                     let payload = try? JSONDecoder().decode(EdgeFunctionErrorPayload.self, from: data),
                     !payload.error.isEmpty
                 {
                     return payload.error
                 }
-                if let body = String(data: data, encoding: .utf8), !body.isEmpty {
-                    return "Edge Function \(code): \(body)"
-                }
-                return "Edge Function returned status \(code)."
+                return Self.genericFailureMessage
             case .relayError:
-                return functionsError.localizedDescription
+                return Self.genericFailureMessage
             }
         }
+        // Auth messages ("Invalid login credentials", "Token has expired") are
+        // written for end users and are the whole point of the sign-in screen.
         if let authError = error as? AuthError {
             return authError.localizedDescription
         }
-        return error.localizedDescription
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed:
+                return "You're offline. Check your connection and try again."
+            case .timedOut:
+                return "That took too long. Try again."
+            default:
+                return Self.genericFailureMessage
+            }
+        }
+        return Self.genericFailureMessage
     }
+
+    static let genericFailureMessage = "Something went wrong. Please try again."
 }
 
 private struct EdgeFunctionErrorPayload: Decodable {

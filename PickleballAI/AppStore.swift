@@ -138,6 +138,7 @@ final class AppStore {
 
     static let pushLogger = Logger(subsystem: "com.pickleball.ai", category: "Push")
     static let feedLogger = Logger(subsystem: "com.pickleball.ai", category: "FeedPerf")
+    static let errorLogger = Logger(subsystem: "com.pickleball.ai", category: "Errors")
 
     // MARK: - Lifecycle
 

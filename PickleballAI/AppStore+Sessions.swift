@@ -278,7 +278,10 @@ extension AppStore {
     /// tagged participants, and flips `posted` last, so realtime subscribers
     /// only see the completed post and a failure leaves nothing behind.
     func postSession(_ draft: SessionDraft, isQuickLog: Bool = false) async -> Bool {
-        guard let uid = currentProfile?.id else { return false }
+        guard let uid = currentProfile?.id else {
+            errorMessage = "You're signed out. Sign in and try again."
+            return false
+        }
 
         // A game still in progress on the watch lives in `liveMatch`, not in
         // `activities` — it only moves across when the watch sends `endGame`.
@@ -319,6 +322,15 @@ extension AppStore {
             var photoPath = ""
             if let photoData = draft.photoData {
                 guard let uploaded = await uploadPostPhoto(photoData, sessionId: sessionId, uid: uid) else {
+                    // `uploadPostPhoto` reports the specific failure (a storage
+                    // error, an encode failure) — don't overwrite it. This only
+                    // covers a path that returned nil without saying why, which
+                    // would otherwise abort the post in total silence: the user
+                    // taps Post, nothing happens, and the session still reads as
+                    // unposted with no indication of what went wrong.
+                    if errorMessage == nil {
+                        errorMessage = "Couldn't upload your photo. Check your connection and try again."
+                    }
                     return false
                 }
                 photoPath = uploaded
