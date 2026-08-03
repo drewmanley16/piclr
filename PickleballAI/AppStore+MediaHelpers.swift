@@ -59,6 +59,39 @@ extension AppStore {
         }
     }
 
+    /// Uploads a gear photo to the gear-photos bucket at `<uid>/<gear-id>.jpg`
+    /// — the `owner/target.jpg` shape `private.can_read_media` parses to decide
+    /// who may read it. Returns the private object path.
+    func uploadGearPhoto(_ data: Data, gearId: UUID, uid: UUID) async -> String? {
+        let jpeg = await Task.detached(priority: .userInitiated) { () -> Data? in
+            guard let image = UIImage(data: data) else { return nil }
+            // Renders in a 44pt circle and a modest edit-sheet preview, so this
+            // is plenty and keeps lockers cheap to load.
+            return Self.downscaledJPEG(from: image, maxDimension: 640)
+        }.value
+        guard let jpeg else { return nil }
+        do {
+            let path = "\(uid.uuidString.lowercased())/\(gearId.uuidString.lowercased()).jpg"
+            try await supabase.storage.from("gear-photos").upload(
+                path,
+                data: jpeg,
+                // Path is per-item and stable across edits, so a replaced photo
+                // reuses it — cache for a day, not a year.
+                options: FileOptions(cacheControl: "86400", contentType: "image/jpeg", upsert: true)
+            )
+            return path
+        } catch {
+            reportError(error)
+            return nil
+        }
+    }
+
+    /// Best-effort removal of a gear photo object. A failure here leaves an
+    /// orphaned file, which is untidy but never blocks the user's edit/delete.
+    func removeGearPhoto(path: String) async {
+        _ = try? await supabase.storage.from("gear-photos").remove(paths: [path])
+    }
+
     /// Downscales an image so its longest side is at most `maxDimension`, then
     /// JPEG-encodes it. Avatars use a small dimension (they render in tiny
     /// circles); post photos use a larger one. `nonisolated static` so callers

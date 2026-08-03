@@ -72,6 +72,20 @@ final class MediaHydrator {
         return hydrated
     }
 
+    /// Gear photos live in a private bucket, so they need the same batch-signing
+    /// round-trip as post photos (and share its cache).
+    func hydrateGear(_ items: [GearItem]) async -> [GearItem] {
+        let paths = Set(items.compactMap(\.photoPath))
+        guard !paths.isEmpty else { return items }
+        let photos = await signedMediaURLs(bucket: "gear-photos", paths: paths)
+        return items.map { item in
+            guard let path = item.photoPath else { return item }
+            var hydrated = item
+            hydrated.photoUrl = photos[path]
+            return hydrated
+        }
+    }
+
     func hydrateSessions(_ sessions: [FeedSession]) async -> [FeedSession] {
         var avatarPaths = Set<String>()
         var photoPaths = Set<String>()

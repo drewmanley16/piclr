@@ -50,6 +50,9 @@ enum Analytics {
         case repostRequested = "repost_requested"
         case repostApproved = "repost_approved"
         case gearAdded = "gear_added"
+        case gearEdited = "gear_edited"
+        case gearVisibilityChanged = "gear_visibility_changed"
+        case weightLogged = "weight_logged"
         case milestoneUnlocked = "milestone_unlocked"
         /// Reserved: fired by the invite-sharing flow (Agent 1) with a `source`
         /// property. Declared here so the name has a single home; don't duplicate.

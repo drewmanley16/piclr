@@ -781,27 +781,35 @@ struct ActivityNote: View {
 }
 
 /// A small "N week streak" pill for a post that extended the poster's weekly
-/// play streak. Uses the same `circle.hexagongrid.fill` streak mark as the
-/// profile header for consistency. Milestone weeks (multiples of 4) get a filled
-/// accent treatment; ordinary weeks get a subtle tinted chip. Frozen at post
-/// time (see `sessions.streak_week`).
+/// play streak. Uses a bolt mark — the app's "electric" streak/energy motif,
+/// also used in the profile header and elsewhere streaks surface — instead of
+/// the old `circle.hexagongrid.fill`, which blurred into a fuzzy dot at caption
+/// size. Ordinary weeks get a hairline outline chip; milestone weeks (multiples
+/// of 4) get a solid accent fill with a soft glow, so the badge itself marks the
+/// achievement rather than relying on the copy. Frozen at post time (see
+/// `sessions.streak_week`).
 struct StreakBadge: View {
     let weeks: Int
 
     private var isMilestone: Bool { weeks % 4 == 0 }
 
     var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "circle.hexagongrid.fill")
-            Text("\(weeks) week streak")
+        HStack(spacing: 5) {
+            Image(systemName: "bolt.fill")
+            Text("\(weeks)-week streak")
+                .tracking(0.2)
         }
         .font(.caption2.weight(.bold))
         .foregroundStyle(isMilestone ? Theme.background : Theme.accent)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
         .background(
-            Capsule().fill(isMilestone ? Theme.accent : Theme.accent.opacity(0.15))
+            Capsule().fill(isMilestone ? Theme.accent : Color.clear)
         )
+        .overlay(
+            Capsule().strokeBorder(Theme.accent.opacity(isMilestone ? 0 : 0.4), lineWidth: 1)
+        )
+        .shadow(color: isMilestone ? Theme.accent.opacity(0.35) : .clear, radius: 6, y: 2)
         .accessibilityLabel("\(weeks) week play streak")
     }
 }
