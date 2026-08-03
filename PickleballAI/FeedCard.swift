@@ -243,7 +243,7 @@ struct FeedCard: View {
     @ViewBuilder
     private var photoSection: some View {
         if let photo = session.postPhotoURL, let url = URL(string: photo) {
-            RemoteImage(url: url)
+            RemoteImage(url: url, targetSize: ImageLoading.feedPhotoSize(height: 200))
                 .frame(maxWidth: .infinity)
                 .frame(height: 200)
                 .clipped()

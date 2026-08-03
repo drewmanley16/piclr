@@ -11,6 +11,7 @@ struct PickleballAIApp: App {
 
     init() {
         Analytics.start()
+        ImageLoading.configure()
         Self.configureRevenueCat()
     }
 

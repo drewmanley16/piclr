@@ -21,9 +21,11 @@
 		15CF34EA18544A33E028145B /* ScoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51D694E41512C0CE99B1C56 /* ScoreView.swift */; };
 		16DD6B39109593928B5583A3 /* ContactsImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EC4FAB3BC7409E94B9F0E1 /* ContactsImporter.swift */; };
 		182BCA3925FD2E77C836B44D /* NotificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0385A0D1A212395E5B9D2720 /* NotificationModels.swift */; };
+		1888C77BA90D99052C2C8329 /* NukeUI in Frameworks */ = {isa = PBXBuildFile; productRef = 894E88B8088E37949E738639 /* NukeUI */; };
 		1D2A4331D84FC6558543C122 /* Milestones.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05187D44C417C58F81C97619 /* Milestones.swift */; };
 		1DE50B08C3685F46E9394C4E /* CommentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B4FA8570E3F58A7BED6E97F /* CommentModels.swift */; };
 		1E410D96F3A0FA1A4836A8D2 /* WatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF5A9FC1A230E468254608EC /* WatchApp.swift */; };
+		1EC4C958EC633B4380BE46E3 /* Nuke in Frameworks */ = {isa = PBXBuildFile; productRef = 860DA4E47C975A18CCB31542 /* Nuke */; };
 		25DD14B5A7EB2FD974D866F7 /* InsightsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C05392786FD78DD414FD73AF /* InsightsSheet.swift */; };
 		26C5ACC2CD19AEB6C1883F5C /* AppStore+Weight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FD8CC961248B32AFB24133A /* AppStore+Weight.swift */; };
 		2BC5A464046492AC5C8379C4 /* PlayInsights.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E6F8C2B52FA6E47498094F /* PlayInsights.swift */; };
@@ -111,6 +113,7 @@
 		CE7E5F4369D9181C9C659C80 /* StatsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF895DB874A0AA5FBE3CB948 /* StatsSheet.swift */; };
 		CF090BAFE2AE992E3217EBCF /* AppStore+Gear.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99DE6EB174F4713D18400199 /* AppStore+Gear.swift */; };
 		D055B2C456A4F9F242877547 /* WatchWorkoutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC8EB7A24D77C231E0A66684 /* WatchWorkoutManager.swift */; };
+		D3B2376089CD23AAD5FCF84A /* ImageLoading.swift in Sources */ = {isa = PBXBuildFile; fileRef = 875054D05B7E11A291968A10 /* ImageLoading.swift */; };
 		D60B10153096A64D929AE1AC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */; };
 		D7F2EE361D4137FD7E546EB4 /* InviteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9848E60F27125A620DA0B90 /* InviteView.swift */; };
 		DE6F84AD2314939D4E8C317C /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65F9240942A799CF19EF40AC /* Haptics.swift */; };
@@ -242,6 +245,7 @@
 		812D44B60A7EA37D8E8F26CA /* SocialModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialModels.swift; sourceTree = "<group>"; };
 		81B8CE679ACD5A6F4E5DCB13 /* PickleballAIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickleballAIApp.swift; sourceTree = "<group>"; };
 		8327360F1F9CAC35BC184215 /* WeightModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightModels.swift; sourceTree = "<group>"; };
+		875054D05B7E11A291968A10 /* ImageLoading.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageLoading.swift; sourceTree = "<group>"; };
 		8AB0CBC4A6D5ADC1E235A46B /* SuggestedAthletesRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedAthletesRow.swift; sourceTree = "<group>"; };
 		8D1FBA77BA526A6415502267 /* RealtimeSubscription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeSubscription.swift; sourceTree = "<group>"; };
 		92AD1866882A183DAB69974D /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
@@ -308,6 +312,8 @@
 				70BDBEC5410A84333DDF1F8A /* Supabase in Frameworks */,
 				764B9F591118B3E43193DF7D /* RevenueCat in Frameworks */,
 				EC9A44B03684D5CC69440BAF /* PostHog in Frameworks */,
+				1EC4C958EC633B4380BE46E3 /* Nuke in Frameworks */,
+				1888C77BA90D99052C2C8329 /* NukeUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -394,6 +400,7 @@
 				1A2CC64465A82D5A0C68F9A9 /* GearShowcase.swift */,
 				FE9ED74F6FDDD731FA70EEB6 /* Goals.swift */,
 				65F9240942A799CF19EF40AC /* Haptics.swift */,
+				875054D05B7E11A291968A10 /* ImageLoading.swift */,
 				6BF6725B8FBFB5A75FCF41BB /* Info.plist */,
 				6AC6FBEEB80B18537D16C67A /* InsightsCard.swift */,
 				C05392786FD78DD414FD73AF /* InsightsSheet.swift */,
@@ -507,6 +514,8 @@
 				54014EB97F18D699B5E8FE5C /* Supabase */,
 				66CF591F09E5BA78E2CB40A1 /* RevenueCat */,
 				C26069378D184E94FCA09925 /* PostHog */,
+				860DA4E47C975A18CCB31542 /* Nuke */,
+				894E88B8088E37949E738639 /* NukeUI */,
 			);
 			productName = PickleballAI;
 			productReference = 6BAF5E29E3E19941F0F544FB /* PickleballAI.app */;
@@ -580,6 +589,7 @@
 			mainGroup = 1594D0D1F2011A6C13A02105;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				B494F738AACF420A090D04D4 /* XCRemoteSwiftPackageReference "Nuke" */,
 				F84EFEDD26C6AB5BBC042042 /* XCRemoteSwiftPackageReference "PhoneNumberKit" */,
 				3331FCCC0B9ABE639AEC9915 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 				C41764CB2AC0391442A1C7DA /* XCRemoteSwiftPackageReference "purchases-ios" */,
@@ -674,6 +684,7 @@
 				08A3FB196B5175AD9CC6058D /* GearShowcase.swift in Sources */,
 				FDF86D49A996AC9C10D83F6C /* Goals.swift in Sources */,
 				DE6F84AD2314939D4E8C317C /* Haptics.swift in Sources */,
+				D3B2376089CD23AAD5FCF84A /* ImageLoading.swift in Sources */,
 				49CE65D8F627CAD2C793DA9C /* InsightsCard.swift in Sources */,
 				25DD14B5A7EB2FD974D866F7 /* InsightsSheet.swift in Sources */,
 				BE4F20EBC36E0717FC98E442 /* InviteModels.swift in Sources */,
@@ -1066,6 +1077,14 @@
 				minimumVersion = 2.0.0;
 			};
 		};
+		B494F738AACF420A090D04D4 /* XCRemoteSwiftPackageReference "Nuke" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kean/Nuke";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 13.0.0;
+			};
+		};
 		C41764CB2AC0391442A1C7DA /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/RevenueCat/purchases-ios";
@@ -1094,6 +1113,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C41764CB2AC0391442A1C7DA /* XCRemoteSwiftPackageReference "purchases-ios" */;
 			productName = RevenueCat;
+		};
+		860DA4E47C975A18CCB31542 /* Nuke */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B494F738AACF420A090D04D4 /* XCRemoteSwiftPackageReference "Nuke" */;
+			productName = Nuke;
+		};
+		894E88B8088E37949E738639 /* NukeUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B494F738AACF420A090D04D4 /* XCRemoteSwiftPackageReference "Nuke" */;
+			productName = NukeUI;
 		};
 		C26069378D184E94FCA09925 /* PostHog */ = {
 			isa = XCSwiftPackageProductDependency;
