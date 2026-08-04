@@ -86,6 +86,7 @@ struct GoalsSheet: View {
 
     @AppStorage(GoalDefaults.weeklyGoalKey) private var goal = GoalDefaults.defaultGoal
     @AppStorage(GoalDefaults.streakReminderKey) private var remindersOn = true
+    @ScaledMetric(relativeTo: .largeTitle) private var progressHeroSize: CGFloat = 44
 
     private var progress: Double { goal == 0 ? 0 : min(Double(sessionsThisWeek) / Double(goal), 1) }
 
@@ -95,7 +96,7 @@ struct GoalsSheet: View {
                 VStack(spacing: 20) {
                     VStack(spacing: 12) {
                         Text("\(sessionsThisWeek) / \(goal)")
-                            .font(.system(size: 44, weight: .bold, design: .rounded))
+                            .font(.system(size: progressHeroSize, weight: .bold, design: .rounded))
                             .foregroundStyle(Theme.accent)
                         Text("sessions this week")
                             .font(.caption.weight(.semibold))

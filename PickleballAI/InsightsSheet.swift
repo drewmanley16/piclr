@@ -14,6 +14,7 @@ struct InsightsSheet: View {
     /// Drives the hero record's roll-up from 0–0 on appear (the sheet's one
     /// orchestrated moment). Starts true under Reduce Motion.
     @State private var heroSettled = false
+    @ScaledMetric(relativeTo: .largeTitle) private var clutchHeroSize: CGFloat = 44
 
     private var locked: Bool { subscriptions.showsLockedFeatures }
 
@@ -76,7 +77,7 @@ struct InsightsSheet: View {
             // The close record stays free: it's the hook the profile card
             // already reveals. Only the deeper cuts seal.
             Text(heroSettled ? clutch.closeRecord : "0–0")
-                .font(.system(size: 44, weight: .bold, design: .rounded))
+                .font(.system(size: clutchHeroSize, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(Theme.accent)
                 .contentTransition(.numericText())

@@ -1,6 +1,15 @@
 {
-  "originHash" : "0c81188dc593813709f2ef027c201a00ce923d451715a914f6a13ce681fcbbaf",
+  "originHash" : "e05f1746e8ca38a29a07730b129499f50a2b823b67c21447309d191a9979fb72",
   "pins" : [
+    {
+      "identity" : "nuke",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/kean/Nuke",
+      "state" : {
+        "revision" : "63a8fcbd6621340a2410bc3e9575ac97058615f4",
+        "version" : "13.0.6"
+      }
+    },
     {
       "identity" : "phonenumberkit",
       "kind" : "remoteSourceControl",

@@ -7,6 +7,10 @@ import SwiftUI
 enum Legal {
     static let termsURL = "https://pickleball-ai-web.vercel.app/terms"
     static let privacyURL = "https://pickleball-ai-web.vercel.app/privacy"
+    /// Published contact address for reporting concerns (App Store Review
+    /// Guideline 1.2), also referenced in the Terms' "Contact" section.
+    static let supportEmail = "drewmanley16@gmail.com"
+    static let supportMailtoURL = "mailto:\(supportEmail)"
 }
 
 /// Shared app links used in more than one screen.
@@ -772,7 +776,7 @@ struct ConfigNeededView: View {
             Text("Connect Supabase")
                 .font(.title2.weight(.bold))
                 .foregroundStyle(Theme.textPrimary)
-            Text("Copy PickleballAI/Supabase.example.plist to Supabase.plist and fill in your SUPABASE_URL and SUPABASE_ANON_KEY, then run supabase/schema.sql in the SQL editor.")
+            Text(message)
                 .font(.subheadline)
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -780,5 +784,13 @@ struct ConfigNeededView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.background.ignoresSafeArea())
+    }
+
+    private var message: String {
+        #if DEBUG
+        "Copy PickleballAI/Supabase.example.plist to Supabase.plist and fill in your SUPABASE_URL and SUPABASE_ANON_KEY, then run supabase/schema.sql in the SQL editor."
+        #else
+        "Something went wrong. Please try again later, or contact us at drewmanley16@gmail.com if this keeps happening."
+        #endif
     }
 }

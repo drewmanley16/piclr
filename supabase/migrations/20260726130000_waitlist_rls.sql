@@ -6,8 +6,10 @@
 -- the waitlist-notify edge function) may read.
 
 alter table public.waitlist enable row level security;
+
 revoke all on public.waitlist from anon, authenticated;
 grant insert on public.waitlist to anon, authenticated;
+
 create policy "anon can join waitlist"
     on public.waitlist
     for insert

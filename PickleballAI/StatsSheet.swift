@@ -97,17 +97,20 @@ private struct FormatRecordCard: View {
 private struct RecordHero: View {
     let stats: SessionStats
 
+    @ScaledMetric(relativeTo: .largeTitle) private var recordSize: CGFloat = 44
+    @ScaledMetric(relativeTo: .largeTitle) private var dashSize: CGFloat = 32
+
     var body: some View {
         VStack(spacing: 16) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text("\(stats.wins)")
-                    .font(.system(size: 44, weight: .bold, design: .rounded))
+                    .font(.system(size: recordSize, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.accent)
                 Text("–")
-                    .font(.system(size: 32, weight: .light))
+                    .font(.system(size: dashSize, weight: .light))
                     .foregroundStyle(Theme.textTertiary)
                 Text("\(stats.losses)")
-                    .font(.system(size: 44, weight: .bold, design: .rounded))
+                    .font(.system(size: recordSize, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.textPrimary)
             }
             Text("MATCH RECORD")

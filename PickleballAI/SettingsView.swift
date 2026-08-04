@@ -105,9 +105,42 @@ struct SettingsSheet: View {
                     subtitle: "Terms of Use, Privacy Policy") {
                 SettingsLegalView()
             }
+            Divider().overlay(Theme.hairline)
+            contactRow
         }
         .padding(.horizontal, 16)
         .cardStyle(padding: 0)
+    }
+
+    /// Published contact address for reporting concerns, distinct from the
+    /// in-feed Report flow (App Store Review Guideline 1.2).
+    private var contactRow: some View {
+        Link(destination: URL(string: Legal.supportMailtoURL)!) {
+            HStack(spacing: 12) {
+                Image(systemName: "envelope")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: 26)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Contact & Support")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text(Legal.supportEmail)
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "arrow.up.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.textTertiary)
+            }
+            .padding(.vertical, 12)
+        }
+        .accessibilityLabel("Contact and support, \(Legal.supportEmail)")
     }
 
     private func menuRow<Destination: View>(

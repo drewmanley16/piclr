@@ -21,6 +21,15 @@ BUNDLE_ID="com.pickleball.ai"
 : "${ASC_KEY_ID:?Set ASC_KEY_ID to your App Store Connect API key id}"
 : "${ASC_ISSUER_ID:?Set ASC_ISSUER_ID to your App Store Connect issuer id}"
 
+# Config guard: without a real Supabase.plist, Release builds fall back to a
+# placeholder URL and the app shows ConfigNeededView instead of working —
+# refuse to archive rather than ship that to App Review.
+if [ ! -f PickleballAI/Supabase.plist ] || ! grep -q "SUPABASE_URL" PickleballAI/Supabase.plist; then
+  echo "ERROR: PickleballAI/Supabase.plist is missing or incomplete." >&2
+  echo "Copy Supabase.example.plist -> Supabase.plist and fill in SUPABASE_URL/SUPABASE_ANON_KEY, then re-run." >&2
+  exit 1
+fi
+
 # Monetization guard: if subscriptionsEnabled is true, Release builds show
 # the real paywall (see FeatureFlags.monetizationEnabled) and archiving
 # without RevenueCat.plist would ship purchases that always fail — refuse.
