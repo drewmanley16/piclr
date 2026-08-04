@@ -49,7 +49,12 @@ enum ContactsImporter {
     }
 
     /// Normalizes a valid local or international phone number to E.164.
-    static func normalizePhone(_ value: String) -> String? {
-        PhoneNumberFormatting.e164(value)
+    ///
+    /// Address-book entries saved without a country code have to be read as
+    /// *some* country; `region` says which, defaulting to the same US the auth
+    /// field opens on rather than to whatever region the device happens to be
+    /// set to.
+    static func normalizePhone(_ value: String, region: String = PhoneNumberFormatting.defaultRegion) -> String? {
+        PhoneNumberFormatting.e164(value, region: region)
     }
 }

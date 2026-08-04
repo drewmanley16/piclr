@@ -131,28 +131,50 @@ extension AppStore {
     ///
     /// The one backend string we do pass through is an edge function's `error`
     /// field: those are written by us, for this purpose.
+    ///
+    /// Anything we can't map to copy of our own gets the generic message plus a
+    /// reference code — see `internalFailure(_:)`.
     private func friendly(_ error: Error) -> String {
-        Self.errorLogger.error("\(String(describing: error), privacy: .public)")
+        if let expected = Self.expectedMessage(for: error) {
+            Self.errorLogger.error("\(String(describing: error), privacy: .public)")
+            return expected
+        }
+        return internalFailure(error)
+    }
 
+    /// Copy we've written ourselves for failures the user can actually act on.
+    /// Returns nil for everything else, which is the signal that the error is
+    /// ours to diagnose rather than theirs to fix.
+    private static func expectedMessage(for error: Error) -> String? {
         if let functionsError = error as? FunctionsError {
-            switch functionsError {
-            case .httpError(_, let data):
-                if
-                    let payload = try? JSONDecoder().decode(EdgeFunctionErrorPayload.self, from: data),
-                    !payload.error.isEmpty
-                {
-                    return payload.error
-                }
-                return Self.genericFailureMessage
-            case .relayError:
-                return Self.genericFailureMessage
+            guard case .httpError(_, let data) = functionsError else { return nil }
+            guard
+                let payload = try? JSONDecoder().decode(EdgeFunctionErrorPayload.self, from: data),
+                !payload.error.isEmpty
+            else { return nil }
+            return payload.error
+        }
+
+        // Auth errors are matched on `errorCode`, never on `message`. GoTrue
+        // mixes copy written for end users ("Invalid login credentials") with
+        // provider text written for us — an SMS failure arrives as the raw
+        // Twilio complaint, vendor name and support URL included, and App
+        // Review once read one of those off our own sign-in screen.
+        if let authError = error as? AuthError {
+            switch authError.errorCode {
+            case .invalidCredentials, .otpExpired:
+                return "That code is expired or incorrect. Request a new one."
+            case .overSMSSendRateLimit, .overRequestRateLimit:
+                return "Too many attempts. Try again in a few minutes."
+            case .validationFailed:
+                return "Check the number and try again."
+            case .phoneExists:
+                return "That number is already signed up. Request a code to sign in."
+            default:
+                return nil
             }
         }
-        // Auth messages ("Invalid login credentials", "Token has expired") are
-        // written for end users and are the whole point of the sign-in screen.
-        if let authError = error as? AuthError {
-            return authError.localizedDescription
-        }
+
         if let urlError = error as? URLError {
             switch urlError.code {
             case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed:
@@ -160,10 +182,65 @@ extension AppStore {
             case .timedOut:
                 return "That took too long. Try again."
             default:
-                return Self.genericFailureMessage
+                return nil
             }
         }
-        return Self.genericFailureMessage
+
+        return nil
+    }
+
+    /// The generic message, tagged with a short reference code.
+    ///
+    /// The code is the whole point: it's on screen, in the log line, and on the
+    /// `error_shown` analytics event, so a user reporting "it said something
+    /// went wrong, ref A1B2C3D4" is enough to find the actual failure in
+    /// PostHog — including Supabase's `sb-request-id`, which their auth and API
+    /// logs are keyed by. The user gets a code that means nothing on its own;
+    /// we get everything.
+    private func internalFailure(_ error: Error) -> String {
+        let reference = String(UUID().uuidString.prefix(8))
+        let requestID = Self.requestID(from: error)
+        let diagnostics = Self.diagnostics(for: error)
+        let detail = String(describing: error)
+
+        Self.errorLogger.error("""
+            ref \(reference, privacy: .public) \
+            [\(diagnostics.domain, privacy: .public)/\(diagnostics.code ?? "-", privacy: .public)] \
+            request \(requestID ?? "-", privacy: .public): \(detail, privacy: .public)
+            """)
+
+        Analytics.captureError(
+            reference: reference,
+            domain: diagnostics.domain,
+            code: diagnostics.code,
+            detail: detail,
+            requestID: requestID
+        )
+
+        return "\(Self.genericFailureMessage) (ref \(reference))"
+    }
+
+    /// Supabase stamps `sb-request-id` on every response and logs the same value
+    /// server-side, so carrying it into telemetry turns a user-reported failure
+    /// into a single log lookup. Only auth errors expose the response object;
+    /// everything else reports nil rather than guessing.
+    private static func requestID(from error: Error) -> String? {
+        guard case .api(_, _, _, let response)? = error as? AuthError else { return nil }
+        return response.value(forHTTPHeaderField: "sb-request-id")
+    }
+
+    private static func diagnostics(for error: Error) -> (domain: String, code: String?) {
+        if let authError = error as? AuthError {
+            return ("auth", authError.errorCode.rawValue)
+        }
+        if let functionsError = error as? FunctionsError {
+            guard case .httpError(let code, _) = functionsError else { return ("functions", "relay") }
+            return ("functions", String(code))
+        }
+        if let urlError = error as? URLError {
+            return ("network", String(urlError.code.rawValue))
+        }
+        return (String(describing: type(of: error)), nil)
     }
 
     static let genericFailureMessage = "Something went wrong. Please try again."

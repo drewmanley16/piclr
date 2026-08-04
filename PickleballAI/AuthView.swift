@@ -64,6 +64,7 @@ struct AuthView: View {
     @State private var step: Step
     @State private var didInitialize = false
     @State private var phone = ""
+    @State private var phoneRegion = PhoneNumberFormatting.defaultRegion
     @State private var verifiedPhone = ""
     @State private var code = ""
     @State private var firstName = ""
@@ -170,19 +171,21 @@ struct AuthView: View {
 
     private var phoneStep: some View {
         VStack(alignment: .leading, spacing: 16) {
-            AuthField(
-                placeholder: PhoneNumberFormatting.examplePlaceholder,
-                text: $phone,
-                keyboard: .phonePad,
-                autocapitalize: false,
-                textContentType: .telephoneNumber
-            )
-            .onChange(of: phone) { _, newValue in
-                let formatted = Self.formattedPhoneInput(newValue)
-                if formatted != phone {
-                    phone = formatted
+            PhoneNumberField(region: $phoneRegion, text: $phone)
+                .onChange(of: phone) { _, newValue in
+                    // A typed "+1"/"+44" names the country outright, so let it
+                    // move the picker rather than leaving the two disagreeing.
+                    if let typedRegion = PhoneNumberFormatting.explicitRegion(in: newValue, fallback: phoneRegion) {
+                        phoneRegion = typedRegion
+                    }
+                    let formatted = PhoneNumberFormatting.formatPartial(newValue, region: phoneRegion)
+                    if formatted != phone {
+                        phone = formatted
+                    }
                 }
-            }
+                .onChange(of: phoneRegion) { _, newRegion in
+                    phone = PhoneNumberFormatting.formatPartial(phone, region: newRegion)
+                }
 
             errorText
 
@@ -201,16 +204,14 @@ struct AuthView: View {
         }
     }
 
-    private static func formattedPhoneInput(_ raw: String) -> String {
-        PhoneNumberFormatting.formatPartial(raw)
-    }
-
     private var codeStep: some View {
         VStack(alignment: .leading, spacing: 16) {
             OTPCodeField(code: $code)
 
             HStack {
-                Text(PhoneNumberFormatting.formatPartial(verifiedPhone))
+                // `verifiedPhone` is already E.164, so its leading "+" carries the
+                // country and the region argument is only a fallback.
+                Text(PhoneNumberFormatting.formatPartial(verifiedPhone, region: phoneRegion))
                     .font(.caption)
                     .foregroundStyle(Theme.textTertiary)
                 Spacer()
@@ -648,7 +649,7 @@ struct AuthView: View {
     }
 
     private var normalizedPhone: String? {
-        ContactsImporter.normalizePhone(phone)
+        ContactsImporter.normalizePhone(phone, region: phoneRegion)
     }
 
     private var codeDigits: String {
