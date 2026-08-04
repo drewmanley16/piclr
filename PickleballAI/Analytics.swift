@@ -58,6 +58,11 @@ enum Analytics {
         /// property. Declared here so the name has a single home; don't duplicate.
         case inviteLinkShared = "invite_link_shared"
 
+        // Reliability
+        /// A failure we showed the user a deliberately generic message for. The
+        /// detail they didn't see rides along here.
+        case errorShown = "error_shown"
+
         // Account lifecycle
         case accountDeleted = "account_deleted"
         case pushNotificationsEnabled = "push_notifications_enabled"
@@ -85,6 +90,11 @@ enum Analytics {
         static let activityCount = "activity_count"
         static let hasNote = "has_note"
         static let milestoneID = "milestone_id"
+        static let errorReference = "error_reference"
+        static let errorDomain = "error_domain"
+        static let errorCode = "error_code"
+        static let errorDetail = "error_detail"
+        static let requestID = "request_id"
     }
 
     // MARK: - Capture
@@ -105,6 +115,31 @@ enum Analytics {
             properties: properties,
             userProperties: setUserProperties
         )
+    }
+
+    /// Record a failure the user was shown a generic message for.
+    ///
+    /// `reference` is the short code printed on screen, so a screenshot is
+    /// enough to find the real error here. `requestID` is Supabase's
+    /// `sb-request-id`, which is the same id their auth/API logs are keyed by —
+    /// with it, triage goes from a user description to the exact server-side
+    /// request. Neither is shown in enough detail to leak anything: the raw
+    /// provider text stays in `detail`, which never reaches the UI.
+    static func captureError(
+        reference: String,
+        domain: String,
+        code: String?,
+        detail: String,
+        requestID: String?
+    ) {
+        var properties: [String: Any] = [
+            Property.errorReference: reference,
+            Property.errorDomain: domain,
+            Property.errorDetail: detail
+        ]
+        if let code { properties[Property.errorCode] = code }
+        if let requestID { properties[Property.requestID] = requestID }
+        capture(.errorShown, properties)
     }
 
     /// Fire an event at most once per identified user per device. `reset()`
