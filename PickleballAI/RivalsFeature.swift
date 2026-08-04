@@ -161,9 +161,7 @@ struct RivalsSheet: View {
 
     private var heatingUpSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label("Heating up", systemImage: "flame.fill")
-                .font(.headline)
-                .foregroundStyle(Theme.textPrimary)
+            SectionHeader(title: "Heating up", systemImage: "flame.fill")
             VStack(spacing: 0) {
                 ForEach(Array(heatingUp.enumerated()), id: \.element.id) { index, rivalry in
                     if index > 0 { Divider().overlay(Theme.hairline).padding(.leading, 52) }
@@ -179,9 +177,7 @@ struct RivalsSheet: View {
 
     private var allRivalriesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("All rivalries")
-                .font(.headline)
-                .foregroundStyle(Theme.textPrimary)
+            SectionHeader(title: "All rivalries")
             VStack(spacing: 0) {
                 ForEach(Array(rivalries.enumerated()), id: \.element.id) { index, rivalry in
                     if index > 0 { Divider().overlay(Theme.hairline).padding(.leading, 56) }
