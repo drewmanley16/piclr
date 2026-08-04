@@ -61,6 +61,15 @@ final class AppStore {
     var searchResults: [Profile] = []
     var requestedFollowIds: Set<UUID> = []
     var gear: [GearItem] = []
+    /// The signed-in user's private weight log, newest first. Owner-only under
+    /// RLS — no other user's entries are ever loaded (see AppStore+Weight).
+    var weightEntries: [WeightEntry] = []
+    /// Display unit for every weight surface. Pounds stay canonical on the wire.
+    var weightUnit: WeightUnit = .pounds
+    var weightGoalPounds: Double?
+    /// Mirrors `isInitialMySessionsLoading` for the weight sheet, which can be
+    /// opened before the background fan-out has reached the log.
+    var isInitialWeightLoading = false
     var likedSessionIds: Set<UUID> = []
     var optimisticLikeCounts: [UUID: Int] = [:]
     var likedCommentIds: Set<UUID> = []
@@ -138,6 +147,7 @@ final class AppStore {
 
     static let pushLogger = Logger(subsystem: "com.pickleball.ai", category: "Push")
     static let feedLogger = Logger(subsystem: "com.pickleball.ai", category: "FeedPerf")
+    static let errorLogger = Logger(subsystem: "com.pickleball.ai", category: "Errors")
 
     // MARK: - Lifecycle
 

@@ -17,15 +17,15 @@ struct Profile: Identifiable, Codable, Hashable {
     var onboardingCompletedAt: String?
     var paddle: String?
     var preferredSide: String?
-    var heightInches: Double?
-    var weightPounds: Double?
-    var shoeSize: Double?
     var birthday: String?
     /// Public Pro flag (from `profiles.is_pro`), safe to render on any user.
     var isPro: Bool
     var weeklyGoal: Int?
     var streakRemindersEnabled: Bool?
     var isPrivate: Bool?
+    /// Owner switch for the gear locker (from `profiles.gear_visible`). Nil on
+    /// narrow selects that omit the column; treat nil as visible.
+    var gearVisible: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id, username
@@ -41,14 +41,12 @@ struct Profile: Identifiable, Codable, Hashable {
         case onboardingCompletedAt = "onboarding_completed_at"
         case paddle
         case preferredSide = "preferred_side"
-        case heightInches = "height_inches"
-        case weightPounds = "weight_pounds"
-        case shoeSize = "shoe_size"
         case birthday
         case isPro = "is_pro"
         case weeklyGoal = "weekly_goal"
         case streakRemindersEnabled = "streak_reminders_enabled"
         case isPrivate = "is_private"
+        case gearVisible = "gear_visible"
     }
 
     init(from decoder: Decoder) throws {
@@ -67,14 +65,13 @@ struct Profile: Identifiable, Codable, Hashable {
         onboardingCompletedAt = try c.decodeIfPresent(String.self, forKey: .onboardingCompletedAt)
         paddle = try c.decodeIfPresent(String.self, forKey: .paddle)
         preferredSide = try c.decodeIfPresent(String.self, forKey: .preferredSide)
-        heightInches = try c.decodeIfPresent(Double.self, forKey: .heightInches)
-        weightPounds = try c.decodeIfPresent(Double.self, forKey: .weightPounds)
-        shoeSize = try c.decodeIfPresent(Double.self, forKey: .shoeSize)
         birthday = try c.decodeIfPresent(String.self, forKey: .birthday)
         // Tolerate narrow selects that omit the column (defaults to non-Pro).
         isPro = try c.decodeIfPresent(Bool.self, forKey: .isPro) ?? false
         weeklyGoal = try c.decodeIfPresent(Int.self, forKey: .weeklyGoal)
         streakRemindersEnabled = try c.decodeIfPresent(Bool.self, forKey: .streakRemindersEnabled)
+        isPrivate = try c.decodeIfPresent(Bool.self, forKey: .isPrivate)
+        gearVisible = try c.decodeIfPresent(Bool.self, forKey: .gearVisible)
     }
 
     var initials: String {
@@ -113,13 +110,11 @@ struct Profile: Identifiable, Codable, Hashable {
         onboardingCompletedAt = nil
         paddle = nil
         preferredSide = nil
-        heightInches = nil
-        weightPounds = nil
-        shoeSize = nil
         birthday = nil
         weeklyGoal = nil
         streakRemindersEnabled = nil
         isPrivate = nil
+        gearVisible = nil
     }
 }
 
@@ -229,6 +224,10 @@ struct PublicProfile {
     let followerCount: Int
     let followingCount: Int
     var sessions: [FeedSession]
+    /// The subject's gear locker. Empty when they've hidden it — `gear_read`
+    /// RLS does the filtering, so an empty array is the only signal the client
+    /// needs (and the only one it can trust).
+    var gear: [GearItem] = []
 
     /// Whether sessions and follower/following lists are visible to the
     /// signed-in user. Public accounts (or self/accepted-follow) are always
@@ -301,17 +300,5 @@ struct GoalPrefsUpdate: Encodable {
     enum CodingKeys: String, CodingKey {
         case weeklyGoal = "weekly_goal"
         case streakRemindersEnabled = "streak_reminders_enabled"
-    }
-}
-
-struct MeasuresUpdate: Encodable {
-    let heightInches: Double?
-    let weightPounds: Double?
-    let shoeSize: Double?
-
-    enum CodingKeys: String, CodingKey {
-        case heightInches = "height_inches"
-        case weightPounds = "weight_pounds"
-        case shoeSize = "shoe_size"
     }
 }

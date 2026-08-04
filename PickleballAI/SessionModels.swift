@@ -24,6 +24,18 @@ enum DateFormatting {
     static func parse(_ s: String) -> Date {
         isoFractional.date(from: s) ?? iso.date(from: s) ?? Date()
     }
+
+    /// Postgres `date` ⇄ `Date` at **local** midnight (`weight_entries.
+    /// recorded_on`). A bare calendar day carries no zone; parsing it with an
+    /// ISO-8601 parser lands it at 00:00Z, which is the previous day for
+    /// anyone west of Greenwich — a weigh-in would then chart a day early.
+    static let postgresDate: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = .current
+        return f
+    }()
 }
 
 // MARK: - Session read models

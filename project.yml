@@ -17,6 +17,9 @@ packages:
   PostHog:
     url: https://github.com/PostHog/posthog-ios
     from: "3.66.0"
+  Nuke:
+    url: https://github.com/kean/Nuke
+    from: "13.0.0"
 settings:
   base:
     MARKETING_VERSION: "1.0"
@@ -64,6 +67,12 @@ targets:
         product: RevenueCat
       - package: PostHog
         product: PostHog
+      # App target only — Shared/ (compiled into the watch app) stays
+      # dependency-free, and neither the widget nor the watch loads remote images.
+      - package: Nuke
+        product: Nuke
+      - package: Nuke
+        product: NukeUI
       - target: PickleballAIWidget
       - target: PickleballAIWatch
     settings:

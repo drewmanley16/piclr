@@ -43,6 +43,10 @@ struct ProfileView: View {
                         // better ad — the standalone banner alongside it is redundant noise.
                         if subscriptions.showsLockedFeatures && !playInsights.isReady { proBanner }
                         if completion < 1 && !dismissedCompletion { completionBanner }
+                        GearShowcaseRow(
+                            items: store.gear,
+                            isHidden: profile?.gearVisible == false
+                        ) { activeSheet = .gear }
                         recordCard
                         rivalsCard
                         insightsCard
@@ -90,7 +94,7 @@ struct ProfileView: View {
                 switch sheet {
                 case .stats: StatsSheet()
                 case .gear: GearSheet()
-                case .measures: MeasuresSheet()
+                case .weight: WeightSheet()
                 case .rivals: RivalsSheet()
                 case .insights: InsightsSheet()
                 case .weeklyWrap: WeeklyWrapSheet()
@@ -297,8 +301,8 @@ struct ProfileView: View {
     // MARK: Completion banner
 
     /// Only the fields that actually shape the product (court, side, rating,
-    /// photo) count toward "finished" — measures are optional extras and were
-    /// nagging users forever over their shoe size.
+    /// photo) count toward "finished" — weight is an optional extra and was
+    /// nagging users forever.
     private var completion: Double {
         guard let p = profile else { return 1 }
         let checks = [
@@ -366,7 +370,7 @@ struct ProfileView: View {
         let weeks = stats.weeklyStreak
         if weeks > 0 {
             HStack(spacing: 3) {
-                Image(systemName: "circle.hexagongrid.fill")
+                Image(systemName: "bolt.fill")
                     .font(.body.weight(.bold))
                 Text("\(weeks)")
                     .font(.headline.weight(.heavy))
@@ -771,7 +775,7 @@ struct ProfileView: View {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
             DashboardTile(icon: "trophy.fill", label: "Leaderboard") { activeSheet = .leaderboard }
             DashboardTile(icon: "bag.fill", label: "Gear") { activeSheet = .gear }
-            DashboardTile(icon: "figure.stand", label: "Measures") { activeSheet = .measures }
+            DashboardTile(icon: "scalemass.fill", label: "Weight") { activeSheet = .weight }
         }
     }
 
@@ -1001,7 +1005,7 @@ struct CustomRangeSheet: View {
 }
 
 enum ProfileSheet: String, Identifiable {
-    case stats, gear, measures, rivals, leaderboard, insights, weeklyWrap, goals, milestones
+    case stats, gear, weight, rivals, leaderboard, insights, weeklyWrap, goals, milestones
     case editProfile
     var id: String { rawValue }
 }
