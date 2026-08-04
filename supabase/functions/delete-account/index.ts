@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
   }
 
   const folder = userData.user.id.toLowerCase();
-  for (const bucket of ["avatars", "post-photos"]) {
+  for (const bucket of ["avatars", "post-photos", "gear-photos"]) {
     const cleanupError = await emptyUserFolder(admin, bucket, folder);
     if (cleanupError) {
       console.error(`Failed to empty ${bucket}/${folder}:`, cleanupError);
