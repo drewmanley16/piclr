@@ -100,7 +100,7 @@ struct ProfileView: View {
                 case .weeklyWrap: WeeklyWrapSheet()
                 case .goals: GoalsSheet(sessionsThisWeek: sessionsThisWeek, weeklyStreak: stats.weeklyStreak)
                 case .leaderboard: LeaderboardSheet()
-                case .milestones: MilestonesSheet()
+                case .milestones: MilestonesSheet(stats: stats)
                 case .editProfile: EditProfileSheet()
                 }
             }
@@ -521,7 +521,8 @@ struct ProfileView: View {
     /// Achievement shelf. Free for everyone.
     private var milestonesCard: some View {
         MilestonesCard(
-            unlockedCount: store.milestoneUnlocks.count,
+            earnedCount: Milestone.earnedIDs(for: stats, unlocked: store.milestoneUnlocks).count,
+            nextUp: Milestone.closest(for: stats, unlocked: store.milestoneUnlocks),
             onOpen: { activeSheet = .milestones }
         )
     }
