@@ -99,7 +99,7 @@ struct OtherProfileView: View {
                     }
                 } else if isLoading {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Sessions").font(.headline).foregroundStyle(Theme.textPrimary)
+                        SectionHeader(title: "Sessions")
                         FeedCardSkeleton()
                         FeedCardSkeleton()
                     }
@@ -297,7 +297,7 @@ struct OtherProfileView: View {
 
     private func sessionsSection(_ sessions: [FeedSession]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Sessions").font(.headline).foregroundStyle(Theme.textPrimary)
+            SectionHeader(title: "Sessions")
             if sessions.isEmpty {
                 Text("No sessions yet.")
                     .font(.subheadline)

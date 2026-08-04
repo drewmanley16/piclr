@@ -687,14 +687,27 @@ struct SkeletonList: View {
 
 struct SectionHeader: View {
     var title: String
-    var actionTitle: String?
-    var action: (() -> Void)?
+    // Defaulted so the common title-only case reads `SectionHeader(title: "…")`
+    // rather than forcing every call site to pass two nils — the friction that
+    // kept this component at one adopter while ~13 copies were hand-rolled.
+    var actionTitle: String? = nil
+    var action: (() -> Void)? = nil
+    /// Optional leading SF Symbol, rendered as a `Label`. Only the "Heating up"
+    /// rivalries section uses it today; without it that section couldn't adopt
+    /// this component at all.
+    var systemImage: String? = nil
 
     var body: some View {
         HStack {
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(Theme.textPrimary)
+            Group {
+                if let systemImage {
+                    Label(title, systemImage: systemImage)
+                } else {
+                    Text(title)
+                }
+            }
+            .font(.headline)
+            .foregroundStyle(Theme.textPrimary)
             Spacer()
             if let actionTitle, let action {
                 Button(actionTitle, action: action)
