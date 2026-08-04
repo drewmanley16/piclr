@@ -315,9 +315,7 @@ struct FindFriendsSheet: View {
 
         if !store.contactMatches.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
-                Text("From contacts")
-                    .font(.headline)
-                    .foregroundStyle(Theme.textPrimary)
+                SectionHeader(title: "From contacts")
                 ForEach(store.contactMatches) { match in
                     FriendCandidateRow(profile: match.profile, navigable: true)
                 }

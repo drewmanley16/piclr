@@ -66,9 +66,7 @@ struct RivalryInsightsSheet: View {
 
     private var timelineCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Recent meetings")
-                .font(.headline)
-                .foregroundStyle(Theme.textPrimary)
+            SectionHeader(title: "Recent meetings")
             HStack(spacing: 6) {
                 ForEach(Array(timelineGames.enumerated()), id: \.element.id) { _, game in
                     Circle()

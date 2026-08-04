@@ -274,9 +274,7 @@ struct WorkoutView: View {
 
     private func activeInvitesSection(_ invites: [SessionInvite]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Upcoming invites")
-                .font(.headline)
-                .foregroundStyle(Theme.textPrimary)
+            SectionHeader(title: "Upcoming invites")
             ForEach(invites) { invite in
                 InviteCard(invite: invite)
             }
@@ -287,9 +285,7 @@ struct WorkoutView: View {
 
     private var recentSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Recent")
-                .font(.headline)
-                .foregroundStyle(Theme.textPrimary)
+            SectionHeader(title: "Recent")
             if store.isInitialMySessionsLoading && store.mySessions.isEmpty {
                 // Only while empty, so a pull-to-refresh doesn't replace the
                 // sessions already on screen with ghosts.

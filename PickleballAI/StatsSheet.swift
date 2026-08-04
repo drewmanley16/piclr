@@ -62,9 +62,7 @@ private struct MatchFormatBreakdown: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("By format")
-                .font(.headline)
-                .foregroundStyle(Theme.textPrimary)
+            SectionHeader(title: "By format")
             HStack(spacing: 12) {
                 FormatRecordCard(record: singles, systemImage: "person.fill")
                 FormatRecordCard(record: doubles, systemImage: "person.2.fill")
@@ -156,9 +154,7 @@ private struct RecordSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(Theme.textPrimary)
+            SectionHeader(title: title)
             VStack(spacing: 0) {
                 ForEach(Array(records.enumerated()), id: \.element.id) { index, record in
                     if index > 0 {
