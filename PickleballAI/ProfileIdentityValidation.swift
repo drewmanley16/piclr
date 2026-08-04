@@ -213,7 +213,7 @@ struct IdentityInputField<Field: Hashable>: View {
     }
 
     private var prompt: Text {
-        Text(placeholder).foregroundColor(Theme.textTertiary)
+        Text(placeholder).foregroundStyle(Theme.textTertiary)
     }
 
     private var isInvalid: Bool {

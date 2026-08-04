@@ -44,7 +44,7 @@ struct GameOverView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.vertical, 10)
-                .background(Color.white.opacity(0.12))
+                .background(WatchTheme.surface)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .disabled(store.workoutIsFinishing)
 

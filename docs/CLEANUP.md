@@ -96,17 +96,34 @@ The design system covers *identity* well (`ProfileAvatar`, `IdentityRow`, `Profi
 
 Do these **before** the Tier 2/3 refactors so CI catches breakage.
 
-- [ ] **XcodeGen drift check** — `xcodegen generate && git diff --exit-code`. Currently in sync, but nothing enforces it despite `CLAUDE.md` opening with "do not hand-edit the `.xcodeproj`." **S**
-- [ ] **Add a build job to CI** — it's lint-only today; a PR that breaks compilation is only caught locally. The command is already in `CLAUDE.md`'s fallback section. **M**
+> **Open problem: Actions has never actually run here.** Zero workflow runs
+> ever recorded, across every workflow and both runner OSes — verified with a
+> throwaway `ubuntu-latest` job, so it isn't macOS-specific. Repo-level Actions
+> permissions are set to "Allow all actions", so that isn't the cause either.
+> The cause is still undiagnosed; the repo's Actions tab shows a banner naming
+> the reason when runs are blocked. **`ci.yml` is committed and correct but
+> unproven** — until a run goes green, `scripts/lint.sh` run by hand is the
+> only thing enforcing any of these checks.
+>
+> Cost note for when it does run: the repo is private on a free account, where
+> all runners share one 2,000-minute pool and macOS bills at 10× — roughly 200
+> macOS minutes/month. A full build per PR will eat that quickly. Moving `lint`
+> to `ubuntu-latest` (1×), adding a `paths` filter so docs-only PRs skip the
+> build, and dropping the `push: main` trigger would cut a typical PR from
+> ~130–200 billed minutes to well under 50. Public repos get unlimited minutes,
+> which would make the whole question moot.
+
+- [x] **XcodeGen drift check** — `project-drift` job in `ci.yml`, and check 3 in `scripts/lint.sh`. The CI job must `cp` the gitignored `Supabase.plist`/`RevenueCat.plist` from their `.example` files first: the committed `.xcodeproj` references both (4 refs each), so regenerating without them drops the references and the diff fails for the wrong reason. Not an issue locally, where both exist — and locally `generate` is idempotent, so it rewrites nothing when in sync and fixes the drift for you when there is any. **S**
+- [x] **Add a build job to CI** — `build` job in `ci.yml`. The app target depends on `PickleballAIWidget` and `PickleballAIWatch`, so one `xcodebuild` on the app scheme compiles all three. Uses `generic/platform=iOS Simulator` so a new runner image can't break it. Deliberately *not* added to `scripts/lint.sh`: a clean build is minutes long and would make the pre-push script too slow to actually run. **M**
 - [ ] **Run the 5 existing pgTAP tests** in `supabase/tests/database/` — they currently run nowhere. Add a migration-ordering check while you're there. **M**
-- [ ] **Pin SwiftLint's version** — `brew install swiftlint` is unpinned, which erodes the "verified zero violations on the day it lands" guarantee in `.swiftlint.yml`. **S**
-- [ ] **Lint `PickleballAIWatch` and `Shared/`** — both currently unlinted (`.swiftlint.yml` `included:` covers only app + widget). Add a grep asserting `Shared/` stays dependency-free. **S**
-- [ ] **Trigger CI on push to `main`**, not just `pull_request`. **S**
-- [ ] **New lint rules locking in currently-100%-clean behavior** — raw `PostHogSDK.shared.capture`, raw `UI*FeedbackGenerator`, view-layer networking. Cheap now, expensive to restore after drift. **S**
-- [ ] **Tighten the `hardcoded_color` rule** from `\.foregroundColor\(\.` to `\.foregroundColor\(` after migrating the 6 remaining deprecated call sites to `.foregroundStyle(`. **S**
+- [x] **Pin SwiftLint's version** — `.swiftlint-version` (0.65.0) is the single source of truth; CI installs exactly it from the GitHub release and asserts the match, `scripts/lint.sh` warns locally on mismatch. **S**
+- [x] **Lint `PickleballAIWatch` and `Shared/`** — both added to `included:` (97 → 107 files). Required extracting `WatchTheme.surface`/`.scrim` for 5 raw `Color.white/black.opacity(…)` call sites. The `Shared/` dependency-free assertion lives in `scripts/lint.sh`, not SwiftLint. **S**
+- [x] **Trigger CI on push to `main`**, not just `pull_request` — a direct push or a bad merge was previously never checked. **S**
+- [x] **New lint rules locking in currently-100%-clean behavior** — `raw_analytics`, `raw_haptics`, `view_layer_networking`. Each verified to fire against a deliberate probe, then verified clean. **S**
+- [x] **Tighten the `hardcoded_color` rule** — now bans `.foregroundColor(` outright (not just `.foregroundColor(.`), after migrating the last 6 call sites to `.foregroundStyle(`. **S**
 - [ ] **Extract shared `WCSession` transport into `Shared/`** — `WatchConnectivityManager.swift` (136 lines) and `WatchConnectivityClient.swift` (128) are ~80% identical: same `sendScore`, same pending-command queue, same delegate pass-throughs. Differences are only the phone's `@MainActor`/`@Published` bookkeeping. Needs paired-simulator verification. **M**
-- [ ] **Delete `scripts/ci-setup-cert.sh`** — provisions GitHub secrets for a TestFlight Actions pipeline that doesn't exist and is referenced nowhere. **S**
-- [ ] **Have `lint.yml` call `scripts/lint.sh`** instead of duplicating its body — two copies of the same command that can silently diverge. **S**
+- [x] **Delete `scripts/ci-setup-cert.sh`** — provisioned GitHub secrets for a TestFlight Actions pipeline that doesn't exist and was referenced nowhere. **S**
+- [x] **Have `lint.yml` call `scripts/lint.sh`** — done; `lint.yml` is now `ci.yml` with three jobs and the lint job shells out to the script, so local and CI can't diverge. Worth knowing: SwiftLint wasn't installed on this machine, so `scripts/lint.sh` had been silently no-opping — it now prints an explicit ok line per check so a skipped check can't look like a passing one. **S**
 - [ ] **Doc drift:** `CLAUDE.md` omits `AppStore+Weight.swift` from the extension list and still describes `AppStore` as `ObservableObject`; `BACKEND.md` omits `report-notify` and wrongly says clients can't read `entitlements` (`entitlements_select_own` grants it); `PUSH_SETUP.md`'s open checklist is likely stale; `InviteSharing.swift` is an `AppStore` extension that breaks the `AppStore+Topic.swift` naming convention. **S**
 
 ---
