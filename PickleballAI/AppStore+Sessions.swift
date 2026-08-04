@@ -470,9 +470,11 @@ extension AppStore {
     }
 
     /// Diffs milestone state before/after a session post and unlocks (server-side,
-    /// idempotently) any newly-crossed thresholds. Best-effort — a missed unlock
-    /// just means the badge appears next time this diff runs, same trust level
-    /// as `updateGoalPrefs`.
+    /// idempotently) any newly-crossed thresholds — the celebratory path, which
+    /// also fires the "you unlocked X" notification. Best-effort: a failed call
+    /// is *not* retried by a later diff (the threshold is satisfied on both sides
+    /// by then), so `reconcileMilestoneUnlocks` sweeps up anything lost here on
+    /// the next shelf load.
     private func unlockNewlyCrossedMilestones(previouslySatisfied: Set<String>, playerID: UUID) async {
         let after = Milestone.satisfiedIDs(for: SessionStats(sessions: mySessions, playerID: playerID))
         let newlyUnlocked = after.subtracting(previouslySatisfied)

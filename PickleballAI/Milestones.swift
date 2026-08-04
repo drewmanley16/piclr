@@ -22,21 +22,13 @@ struct Milestone: Identifiable, Hashable {
     static let catalog: [Milestone] = tracks.flatMap(\.milestones)
 
     /// The four progression tracks, in display order. Each sheet section is one
-    /// track so a free user can see the next rung sitting one step past the
-    /// starter badge they own.
+    /// track, so the next rung always sits one step past the last one earned.
     static let tracks: [(title: String, milestones: [Milestone])] = [
         ("Matches", matchMilestones),
         ("Weekly streak", weeklyStreakMilestones),
         ("Win streak", winStreakMilestones),
         ("Rivalries", rivalryMilestones)
     ]
-
-    /// The free starter set: the first rung of each track. Free users can earn
-    /// and keep these four, so every player samples every badge type — and the
-    /// next rung of each track sits one step away behind Pro.
-    static let freeIDs: Set<String> = ["matches_1", "weekly_streak_4", "win_streak_3", "first_rivalry_win"]
-
-    var isFree: Bool { Milestone.freeIDs.contains(id) }
 
     private static let matchMilestones: [Milestone] = [1, 10, 50, 100, 250].map {
         Milestone(id: "matches_\($0)", title: "\($0) match\($0 == 1 ? "" : "es") played",
@@ -76,13 +68,10 @@ struct Milestone: Identifiable, Hashable {
     }
 }
 
-/// Profile entry point for the Milestones shelf. Everyone taps into the list;
-/// free users see the starter badges live and the rest sealed behind Pro.
+/// Profile entry point for the Milestones shelf. Free for everyone — the card
+/// is a progress readout, not a teaser.
 struct MilestonesCard: View {
     let unlockedCount: Int
-    let locked: Bool
-    /// Badges already earned but sealed behind Pro (free users only).
-    var earnedLockedCount: Int = 0
     var onOpen: () -> Void = {}
 
     var body: some View {
@@ -91,16 +80,12 @@ struct MilestonesCard: View {
             onOpen()
         } label: {
             VStack(alignment: .leading, spacing: 14) {
-                StatBoardHeader(title: "Milestones", locked: locked)
+                StatBoardHeader(title: "Milestones")
                 CourtLineRule()
                 HStack(spacing: 0) {
                     StatSegment(value: "\(unlockedCount)", label: "Earned", size: 22,
                                 valueColor: unlockedCount > 0 ? Theme.accent : Theme.textPrimary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    if earnedLockedCount > 0 {
-                        StatSegment(value: "\(earnedLockedCount)", label: "Locked", size: 22)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
                     StatSegment(value: "\(Milestone.catalog.count)", label: "Total", size: 22)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -111,17 +96,11 @@ struct MilestonesCard: View {
     }
 }
 
-/// The full achievement list, doubling as its own teaser for free users: the
-/// starter badges render live, Pro badges show sealed — with an "Earned" chip
-/// on ones the player has already crossed but can't claim yet.
+/// The full achievement list, one section per track. Every badge is earnable by
+/// every player — a row is either yours or the next thing to chase.
 struct MilestonesSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppStore.self) private var store
-    @EnvironmentObject private var subscriptions: SubscriptionStore
-    @State private var loaded = false
-
-    private var locked: Bool { subscriptions.showsLockedFeatures }
-    private var earnedLockedCount: Int { store.milestoneUnlocks.subtracting(Milestone.freeIDs).count }
 
     var body: some View {
         ProfileNavigationStack {
@@ -135,8 +114,7 @@ struct MilestonesSheet: View {
                                     if index > 0 { CourtLineRule().padding(.leading, 66) }
                                     MilestoneRow(
                                         milestone: milestone,
-                                        unlocked: store.milestoneUnlocks.contains(milestone.id),
-                                        sealed: locked && !milestone.isFree
+                                        unlocked: store.milestoneUnlocks.contains(milestone.id)
                                     )
                                 }
                             }
@@ -147,43 +125,18 @@ struct MilestonesSheet: View {
                 .padding(16)
             }
             .background(Theme.background.ignoresSafeArea())
-            // Pinned, not in the scroll: the list runs long and the unlock
-            // moment shouldn't live below the fold.
-            .safeAreaInset(edge: .bottom) {
-                if locked {
-                    ProTeaserUnlockBar(
-                        context: .milestones,
-                        title: "Unlock all \(Milestone.catalog.count) milestones",
-                        caption: earnedLockedCount > 0
-                            ? "\(earnedLockedCount) badge\(earnedLockedCount == 1 ? " you've already earned is" : "s you've already earned are") waiting."
-                            : nil
-                    )
-                    .padding(.horizontal, 16)
-                    .padding(.top, 10)
-                    .background(Theme.background)
-                }
-            }
             .navigationTitle("Milestones")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
-            .task {
-                await store.loadMilestoneUnlocks()
-                loaded = true
-            }
+            .task { await store.loadMilestoneUnlocks() }
             .refreshable { await store.loadMilestoneUnlocks() }
         }
-        .trackProTeaser(.milestones, locked: locked)
     }
 }
 
 private struct MilestoneRow: View {
     let milestone: Milestone
     let unlocked: Bool
-    /// Behind Pro for this (free) viewer. An earned-but-sealed badge shows an
-    /// "Earned" chip instead of its checkmark — yours, just locked.
-    var sealed = false
-
-    private var showsUnlocked: Bool { unlocked && !sealed }
 
     var body: some View {
         HStack(spacing: 14) {
@@ -192,28 +145,15 @@ private struct MilestoneRow: View {
             Text(milestone.rung)
                 .font(.system(size: 18, weight: .bold))
                 .monospacedDigit()
-                .foregroundStyle(showsUnlocked ? Theme.accent : Theme.textTertiary)
+                .foregroundStyle(unlocked ? Theme.accent : Theme.textTertiary)
                 .frame(width: 44, alignment: .leading)
             Text(milestone.rowLabel)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(showsUnlocked ? Theme.textPrimary : Theme.textSecondary)
+                .foregroundStyle(unlocked ? Theme.textPrimary : Theme.textSecondary)
             Spacer()
-            if showsUnlocked {
+            if unlocked {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(Theme.accent)
-            } else if sealed && unlocked {
-                HStack(spacing: 4) {
-                    Image(systemName: "lock.fill").font(.system(size: 9, weight: .bold))
-                    Text("EARNED").font(.caption2.weight(.heavy))
-                }
-                .foregroundStyle(Theme.accent)
-                .padding(.horizontal, 8)
-                .frame(height: 22)
-                .background(Theme.accentSoft, in: Capsule())
-            } else if sealed {
-                Image(systemName: "lock.fill")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Theme.textTertiary)
             }
         }
         .padding(.horizontal, 8)
