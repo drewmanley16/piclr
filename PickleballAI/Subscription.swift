@@ -407,7 +407,6 @@ enum PaywallContext: Identifiable, Hashable {
     case rivalryInsights
     case insights
     case weeklyWrap
-    case goals
     case unlimitedHistory
     case milestones
     case leaderboard
@@ -418,7 +417,6 @@ enum PaywallContext: Identifiable, Hashable {
         case .rivalryInsights:  return "rivalry"
         case .insights:         return "insights"
         case .weeklyWrap:       return "weekly_wrap"
-        case .goals:            return "goals"
         case .unlimitedHistory: return "history"
         case .milestones:       return "milestones"
         case .leaderboard:      return "leaderboard"
@@ -431,7 +429,6 @@ enum PaywallContext: Identifiable, Hashable {
         case .rivalryInsights:  return "See the full rivalry breakdown"
         case .insights:         return "Unlock your play insights"
         case .weeklyWrap:       return "Unlock your weekly wrap"
-        case .goals:            return "Set goals and protect your streak"
         case .unlimitedHistory: return "Unlock your full history"
         case .milestones:       return "Unlock your milestone shelf"
         case .leaderboard:      return "See who's hottest this month"

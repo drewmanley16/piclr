@@ -529,17 +529,13 @@ struct ProfileView: View {
         }
     }
 
-    /// Pro weekly-goal + streak-save card.
-    @ViewBuilder
+    /// Weekly-goal + streak-save card. Free for everyone.
     private var goalsCard: some View {
-        if subscriptions.showsLockedFeatures || subscriptions.showsProStatus {
-            GoalsCard(
-                sessionsThisWeek: sessionsThisWeek,
-                weeklyStreak: stats.weeklyStreak,
-                locked: subscriptions.showsLockedFeatures,
-                onOpen: { activeSheet = .goals }
-            )
-        }
+        GoalsCard(
+            sessionsThisWeek: sessionsThisWeek,
+            weeklyStreak: stats.weeklyStreak,
+            onOpen: { activeSheet = .goals }
+        )
     }
 
     /// Sessions logged in the current (Monday-based) week — for the goal card.

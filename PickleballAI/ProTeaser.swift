@@ -139,11 +139,12 @@ struct StatSegment: View {
     }
 }
 
-/// Header row shared by the Pro stat-board cards on the profile: `.headline`
+/// Header row shared by the stat-board cards on the profile: `.headline`
 /// title like every other card, PRO badge when locked, chevron affordance.
+/// Free cards (Goals) take the default and just get the title + chevron.
 struct StatBoardHeader: View {
     let title: String
-    let locked: Bool
+    var locked = false
 
     var body: some View {
         HStack(spacing: 8) {
