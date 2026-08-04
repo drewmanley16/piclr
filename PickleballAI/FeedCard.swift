@@ -369,7 +369,7 @@ struct FeedCard: View {
         if isMultiActivity {
             let record = SessionRecord(activities: displayActivities)
             if record.hasMatches {
-                append(Text(record.text).fontWeight(.bold).foregroundColor(record.color))
+                append(Text(record.text).fontWeight(.bold).foregroundStyle(record.color))
             }
         }
         return line
@@ -522,10 +522,10 @@ struct InlineCommentRow: View {
         (
             Text(comment.authorName)
                 .font(.subheadline.weight(.semibold))
-                .foregroundColor(Theme.textPrimary)
+                .foregroundStyle(Theme.textPrimary)
             + Text("  \(comment.body)")
                 .font(.subheadline)
-                .foregroundColor(Theme.textSecondary)
+                .foregroundStyle(Theme.textSecondary)
         )
         .lineLimit(2)
         .frame(maxWidth: .infinity, alignment: .leading)

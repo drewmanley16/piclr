@@ -57,7 +57,7 @@ struct AuthField: View {
     }
 
     private var prompt: Text {
-        Text(placeholder).foregroundColor(Theme.textTertiary)
+        Text(placeholder).foregroundStyle(Theme.textTertiary)
     }
 }
 
