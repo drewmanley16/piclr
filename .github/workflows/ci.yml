@@ -1,0 +1,112 @@
+name: CI
+
+# Runs on PRs and on pushes to main. Before, this was `on: pull_request` only,
+# so a direct push to main — or a merge that silently broke the build — was
+# never checked.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Tripwires
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned rather than `brew install swiftlint`. The custom rules in
+      # .swiftlint.yml are verified to have zero violations on the day each
+      # lands; an unpinned linter can change regex semantics under us and turn
+      # that guarantee into noise.
+      - name: Install pinned SwiftLint
+        run: |
+          set -euo pipefail
+          version=$(cat .swiftlint-version)
+          curl -fsSL -o swiftlint.zip \
+            "https://github.com/realm/SwiftLint/releases/download/${version}/portable_swiftlint.zip"
+          unzip -q swiftlint.zip -d "$RUNNER_TEMP/swiftlint"
+          echo "$RUNNER_TEMP/swiftlint" >> "$GITHUB_PATH"
+
+      - name: Verify pinned version
+        run: |
+          set -euo pipefail
+          test "$(swiftlint version)" = "$(cat .swiftlint-version)"
+
+      # Call the script rather than duplicating `swiftlint --strict` here, so
+      # local and CI runs can't diverge. The script also enforces that Shared/
+      # stays dependency-free.
+      - name: Run tripwires
+        run: scripts/lint.sh
+
+  project-drift:
+    name: XcodeGen drift
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      # PickleballAI.xcodeproj is generated from project.yml, and CLAUDE.md opens
+      # with "do not hand-edit the .xcodeproj" — but nothing enforced it. The
+      # gitignored config plists are referenced by the generated project, so
+      # they must exist before generating or the regenerated project drops them
+      # and this check fails for the wrong reason.
+      - name: Materialize gitignored config plists
+        run: |
+          set -euo pipefail
+          cp PickleballAI/Supabase.example.plist PickleballAI/Supabase.plist
+          cp PickleballAI/RevenueCat.example.plist PickleballAI/RevenueCat.plist
+
+      - name: Regenerate and diff
+        run: |
+          set -euo pipefail
+          xcodegen generate
+          if ! git diff --exit-code -- PickleballAI.xcodeproj; then
+            echo "::error::PickleballAI.xcodeproj is out of sync with project.yml."
+            echo "::error::Run 'xcodegen generate' and commit the result."
+            exit 1
+          fi
+
+  build:
+    name: Build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen and xcbeautify
+        run: brew install xcodegen xcbeautify
+
+      # Supabase.plist is required — without it the app builds but boots into a
+      # "config needed" screen. The example values are fine for a compile-only
+      # check; nothing here talks to the network.
+      - name: Materialize gitignored config plists
+        run: |
+          set -euo pipefail
+          cp PickleballAI/Supabase.example.plist PickleballAI/Supabase.plist
+          cp PickleballAI/RevenueCat.example.plist PickleballAI/RevenueCat.plist
+
+      - name: Generate project
+        run: xcodegen generate
+
+      # The app target depends on both PickleballAIWidget and PickleballAIWatch
+      # (project.yml), so this single build compiles all three targets.
+      #
+      # `generic/platform=iOS Simulator` rather than a named device + OS, so the
+      # job doesn't break every time the runner image ships a new Xcode with a
+      # different simulator set. There is no test target — a green build here is
+      # what was previously only ever checked on someone's laptop.
+      - name: Build all targets
+        run: |
+          set -euo pipefail
+          xcodebuild build \
+            -project PickleballAI.xcodeproj \
+            -scheme PickleballAI \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify --renderer github-actions

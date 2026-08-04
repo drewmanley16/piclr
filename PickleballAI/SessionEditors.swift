@@ -217,7 +217,7 @@ private struct ScoreColumn: View {
                 .tracking(1)
                 .foregroundStyle(winning ? Theme.accent : Theme.textTertiary)
 
-            TextField("", text: $text, prompt: Text("\(score)").foregroundColor(numberColor))
+            TextField("", text: $text, prompt: Text("\(score)").foregroundStyle(numberColor))
                 .keyboardType(.numberPad)
                 .multilineTextAlignment(.center)
                 .font(Theme.scoreboard(56))

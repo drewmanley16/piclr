@@ -34,7 +34,7 @@ struct GameSetupView: View {
                             }
                             .buttonStyle(.plain)
                             .padding(.vertical, 8)
-                            .background(store.game.target == value ? WatchTheme.lime : Color.white.opacity(0.12))
+                            .background(store.game.target == value ? WatchTheme.lime : WatchTheme.surface)
                             .foregroundStyle(store.game.target == value ? .black : .white)
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
@@ -56,7 +56,7 @@ struct GameSetupView: View {
                 .buttonStyle(.plain)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
-                .background(Color.white.opacity(0.12))
+                .background(WatchTheme.surface)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
 
                 Button {

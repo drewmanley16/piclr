@@ -54,7 +54,7 @@ struct ScoreView: View {
                         .foregroundStyle(side == .us ? .black : .white)
                     if isServing {
                         Circle()
-                            .fill(side == .us ? Color.black.opacity(0.6) : WatchTheme.lime)
+                            .fill(side == .us ? WatchTheme.scrim : WatchTheme.lime)
                             .frame(width: 6, height: 6)
                     }
                 }
@@ -73,7 +73,7 @@ struct ScoreView: View {
         }
         .padding(.horizontal, 12)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(side == .us ? tint : Color.white.opacity(0.12))
+        .background(side == .us ? tint : WatchTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)

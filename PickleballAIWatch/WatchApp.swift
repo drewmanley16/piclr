@@ -44,6 +44,12 @@ enum WatchTheme {
     static let dimText = Color.white.opacity(0.5)
     static let usTint = lime
     static let themTint = Color.white.opacity(0.85)
+    /// Unselected chip / button fill. Was written inline as
+    /// `Color.white.opacity(0.12)` at four call sites before the lint rules
+    /// started covering this target.
+    static let surface = Color.white.opacity(0.12)
+    /// Scrim behind the serving indicator on the "us" side.
+    static let scrim = Color.black.opacity(0.6)
 }
 
 struct WatchWorkoutMetricsView: View {

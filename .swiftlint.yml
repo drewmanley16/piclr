@@ -9,6 +9,8 @@
 included:
   - PickleballAI
   - PickleballAIWidget
+  - PickleballAIWatch
+  - Shared
 
 # Run our custom rules and nothing else.
 only_rules:
@@ -24,11 +26,17 @@ custom_rules:
   hardcoded_color:
     name: "Hardcoded color"
     # (?<!UI) skips UIColor.white/.black (appearance proxies are unavoidable).
-    # DesignSystem.swift defines the Theme tokens; PickleballAIWidget.swift is
-    # the widget's own token file (it can't import the app's Theme).
-    regex: '(?<!UI)Color\(red:|(?<!UI)Color\.white|(?<!UI)Color\.black|\.foregroundColor\(\.'
-    message: "Use Theme tokens."
-    excluded: '.*(DesignSystem|PickleballAIWidget)\.swift'
+    # Token-defining files are excluded because they're where the raw values
+    # legitimately live: DesignSystem.swift (app Theme), PickleballAIWidget.swift
+    # (the widget can't import Theme), WatchApp.swift (WatchTheme, same reason).
+    #
+    # `.foregroundColor(` is matched in full rather than only `.foregroundColor(.`
+    # — the deprecated modifier is banned outright now that the last 6 call sites
+    # have moved to `.foregroundStyle(`, so this catches Theme tokens passed to
+    # the deprecated API too.
+    regex: '(?<!UI)Color\(red:|(?<!UI)Color\.white|(?<!UI)Color\.black|\.foregroundColor\('
+    message: "Use Theme tokens, and .foregroundStyle( over the deprecated .foregroundColor(."
+    excluded: '.*(DesignSystem|PickleballAIWidget|WatchApp)\.swift'
     severity: error
 
   inline_dateformatter:
@@ -38,6 +46,38 @@ custom_rules:
     regex: '(DateFormatter|ISO8601DateFormatter)\(\)'
     message: "Create formatters as static let, not per-call."
     excluded: '.*(SessionModels|WorkoutCalendarCard|SettingsProfileView)\.swift'
+    severity: error
+
+  raw_analytics:
+    name: "Raw PostHog call"
+    # Analytics.swift is the only file that may touch the SDK; everything else
+    # goes through the `Analytics` façade so events stay a typed enum rather
+    # than ad-hoc string literals. Zero violations outside Analytics.swift today.
+    regex: 'PostHogSDK\.shared'
+    message: "Route analytics through Analytics, not PostHogSDK directly."
+    excluded: '.*Analytics\.swift'
+    severity: error
+
+  raw_haptics:
+    name: "Raw feedback generator"
+    # Haptics.swift owns the generators; call sites use Haptics.tap()/success()
+    # so the app can mute or restyle feedback in one place. Zero violations
+    # outside Haptics.swift today.
+    regex: 'UI(Impact|Notification|Selection)FeedbackGenerator'
+    message: "Use Haptics, not UI*FeedbackGenerator directly."
+    excluded: '.*Haptics\.swift'
+    severity: error
+
+  view_layer_networking:
+    name: "Networking in the view layer"
+    # CLEANUP.md verified that zero view files issue PostgREST/RPC/edge/storage
+    # calls — all of it lives behind AppStore. This keeps it that way. Excluded
+    # files are the data layer itself plus the two non-AppStore holdouts:
+    # PickleballAIApp (app entry, session bootstrap) and InviteSharing (an
+    # AppStore extension that breaks the AppStore+Topic.swift naming).
+    regex: 'supabase\.(from|rpc|functions|storage|auth|channel)\b'
+    message: "Backend calls belong on an AppStore extension, not in a view."
+    excluded: '.*(AppStore.*|SupabaseService|MediaHydrator|RealtimeSubscription|Subscription|InviteSharing|PickleballAIApp)\.swift'
     severity: error
 
   manual_profile_nav:
