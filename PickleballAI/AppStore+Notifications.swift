@@ -71,8 +71,45 @@ extension AppStore {
                 .execute()
                 .value
             milestoneUnlocks = Set(rows.map(\.milestoneId))
+            await reconcileMilestoneUnlocks(playerID: uid)
         } catch {
             reportError(error)
+        }
+    }
+
+    /// Records any threshold this player's stats already satisfy but that never
+    /// made it into `milestone_unlocks` — thresholds crossed before the shelf
+    /// existed, or an `unlock_milestone` call that failed. The post-session diff
+    /// in `unlockNewlyCrossedMilestones` can't recover either case: once a
+    /// threshold is satisfied it lands in *both* sides of every later diff, so a
+    /// badge missed once is missed forever without this sweep.
+    ///
+    /// Writes the rows directly rather than through `unlock_milestone`, so a
+    /// player backfilling ten old badges at once doesn't get ten notifications
+    /// for matches they played weeks ago. The live diff still owns the
+    /// celebratory path for thresholds crossed in the moment.
+    private func reconcileMilestoneUnlocks(playerID: UUID) async {
+        let satisfied = Milestone.satisfiedIDs(for: SessionStats(sessions: mySessions, playerID: playerID))
+        let missing = satisfied.subtracting(milestoneUnlocks)
+        guard !missing.isEmpty else { return }
+        struct UnlockInsert: Encodable {
+            let profileId: UUID
+            let milestoneId: String
+            enum CodingKeys: String, CodingKey {
+                case profileId = "profile_id"
+                case milestoneId = "milestone_id"
+            }
+        }
+        do {
+            try await supabase
+                .from("milestone_unlocks")
+                .upsert(missing.map { UnlockInsert(profileId: playerID, milestoneId: $0) },
+                        onConflict: "profile_id,milestone_id")
+                .execute()
+            milestoneUnlocks.formUnion(missing)
+        } catch {
+            // Non-fatal: the shelf still renders what did load, and the next
+            // load retries the sweep.
         }
     }
 

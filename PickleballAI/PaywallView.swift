@@ -190,8 +190,6 @@ private struct ProFeature {
                    detail: "Full head-to-head trends and who's heating up."),
         ProFeature(contextID: "weekly_wrap", icon: "sparkles", title: "Weekly wrap",
                    detail: "Your record, streak, and hottest rival, recapped and shareable every week."),
-        ProFeature(contextID: "milestones", icon: "medal.fill", title: "All 14 milestones",
-                   detail: "Claim every badge you earn, from first match to a 52-week streak."),
         ProFeature(contextID: "history", icon: "infinity", title: "Unlimited history",
                    detail: "Every session and stat, all the way back."),
         ProFeature(contextID: "leaderboard", icon: "trophy.fill", title: "Leaderboard filters",

@@ -408,7 +408,6 @@ enum PaywallContext: Identifiable, Hashable {
     case insights
     case weeklyWrap
     case unlimitedHistory
-    case milestones
     case leaderboard
 
     var id: String {
@@ -418,7 +417,6 @@ enum PaywallContext: Identifiable, Hashable {
         case .insights:         return "insights"
         case .weeklyWrap:       return "weekly_wrap"
         case .unlimitedHistory: return "history"
-        case .milestones:       return "milestones"
         case .leaderboard:      return "leaderboard"
         }
     }
@@ -430,7 +428,6 @@ enum PaywallContext: Identifiable, Hashable {
         case .insights:         return "Unlock your play insights"
         case .weeklyWrap:       return "Unlock your weekly wrap"
         case .unlimitedHistory: return "Unlock your full history"
-        case .milestones:       return "Unlock your milestone shelf"
         case .leaderboard:      return "See who's hottest this month"
         }
     }

@@ -100,7 +100,7 @@ struct ProfileView: View {
                 case .weeklyWrap: WeeklyWrapSheet()
                 case .goals: GoalsSheet(sessionsThisWeek: sessionsThisWeek, weeklyStreak: stats.weeklyStreak)
                 case .leaderboard: LeaderboardSheet()
-                case .milestones: MilestonesSheet()
+                case .milestones: MilestonesSheet(stats: stats)
                 case .editProfile: EditProfileSheet()
                 }
             }
@@ -518,21 +518,13 @@ struct ProfileView: View {
         }
     }
 
-    /// Pro achievement shelf — hidden in Release until monetization is on.
-    @ViewBuilder
+    /// Achievement shelf. Free for everyone.
     private var milestonesCard: some View {
-        if subscriptions.showsLockedFeatures || subscriptions.showsProStatus {
-            // Free users "own" only the starter badges; the rest they've earned
-            // count as sealed — the card advertises exactly that split.
-            let locked = subscriptions.showsLockedFeatures
-            let earnedLocked = locked ? store.milestoneUnlocks.subtracting(Milestone.freeIDs).count : 0
-            MilestonesCard(
-                unlockedCount: store.milestoneUnlocks.count - earnedLocked,
-                locked: locked,
-                earnedLockedCount: earnedLocked,
-                onOpen: { activeSheet = .milestones }
-            )
-        }
+        MilestonesCard(
+            earnedCount: Milestone.earnedIDs(for: stats, unlocked: store.milestoneUnlocks).count,
+            nextUp: Milestone.closest(for: stats, unlocked: store.milestoneUnlocks),
+            onOpen: { activeSheet = .milestones }
+        )
     }
 
     /// Weekly-goal + streak-save card. Free for everyone.
