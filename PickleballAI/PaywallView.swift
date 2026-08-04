@@ -194,8 +194,6 @@ private struct ProFeature {
                    detail: "Claim every badge you earn, from first match to a 52-week streak."),
         ProFeature(contextID: "history", icon: "infinity", title: "Unlimited history",
                    detail: "Every session and stat, all the way back."),
-        ProFeature(contextID: "goals", icon: "target", title: "Goals and streak saves",
-                   detail: "Set a weekly target and get nudged before your streak breaks."),
         ProFeature(contextID: "leaderboard", icon: "trophy.fill", title: "Leaderboard filters",
                    detail: "Slice the crew leaderboard by wins, activity, and month."),
         ProFeature(contextID: nil, icon: "square.and.arrow.up", title: "Shareable cards",
