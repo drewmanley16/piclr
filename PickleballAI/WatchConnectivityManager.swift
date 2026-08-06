@@ -18,7 +18,6 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
 
     /// Invoked on the main actor for every inbound message from the watch.
     var onMessage: ((WatchSyncMessage) -> Void)?
-    var onConnectionChange: ((_ activated: Bool, _ reachable: Bool) -> Void)?
 
     @Published private(set) var isActivated = false
     @Published private(set) var isReachable = false
@@ -83,11 +82,8 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
 
     private func connectionDidChange() {
         let activated = session.activationState == .activated
-        let reachable = activated && session.isReachable
-        let changed = activated != isActivated || reachable != isReachable
         isActivated = activated
-        isReachable = reachable
-        if changed { onConnectionChange?(activated, reachable) }
+        isReachable = activated && session.isReachable
     }
 
     // MARK: Inbound

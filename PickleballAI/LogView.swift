@@ -12,8 +12,6 @@ struct WorkoutView: View {
     @State private var showLiveSession = false
     @State private var quickEditor: ActivityEditorRoute?
     @State private var showInviteComposer = false
-    @State private var showHealthMetricsConsent = false
-    @AppStorage(HealthMetricsSharing.defaultsKey) private var shareHealthMetrics = false
     @State private var quickLogDuration = AppStore.defaultQuickLogDurationMinutes
     @State private var quickLogSessionID = UUID()
 
@@ -95,18 +93,6 @@ struct WorkoutView: View {
                 EmptyView()
             }
         }
-        .alert("Share Apple Watch metrics?", isPresented: $showHealthMetricsConsent) {
-            Button("Share & Start") {
-                shareHealthMetrics = true
-                beginLiveSession(trackOnWatch: true)
-            }
-            Button("Start Without Metrics") {
-                beginLiveSession(trackOnWatch: false)
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Average heart rate, maximum heart rate, and active calories will appear publicly on sessions you post.")
-        }
     }
 
     /// Posts a one-tap log. Reports the outcome so the editor stays open on
@@ -128,15 +114,7 @@ struct WorkoutView: View {
     }
 
     private func startLive() {
-        if shareHealthMetrics {
-            beginLiveSession(trackOnWatch: true)
-        } else {
-            showHealthMetricsConsent = true
-        }
-    }
-
-    private func beginLiveSession(trackOnWatch: Bool) {
-        store.startLiveSession(trackOnWatch: trackOnWatch)
+        store.startLiveSession()
         showLiveSession = true
     }
 

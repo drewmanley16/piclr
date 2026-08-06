@@ -4,7 +4,6 @@ import SwiftUI
 /// WC link for the whole app lifetime.
 @main
 struct PickleballAIWatchApp: App {
-    @WKExtensionDelegateAdaptor(WatchExtensionDelegate.self) private var extensionDelegate
     @StateObject private var store = WatchGameStore()
 
     var body: some Scene {
@@ -50,25 +49,4 @@ enum WatchTheme {
     static let surface = Color.white.opacity(0.12)
     /// Scrim behind the serving indicator on the "us" side.
     static let scrim = Color.black.opacity(0.6)
-}
-
-struct WatchWorkoutMetricsView: View {
-    @EnvironmentObject var store: WatchGameStore
-
-    var body: some View {
-        if store.workoutIsActive || store.currentHeartRateBPM != nil || store.activeCaloriesKcal != nil {
-            HStack(spacing: 8) {
-                Label(store.currentHeartRateBPM.map(String.init) ?? "--", systemImage: "heart.fill")
-                    .foregroundStyle(.red)
-                if let average = store.averageHeartRateBPM {
-                    Text("avg \(average)")
-                        .foregroundStyle(.white.opacity(0.72))
-                }
-                Label(store.activeCaloriesKcal.map(String.init) ?? "0", systemImage: "flame.fill")
-                    .foregroundStyle(.orange)
-            }
-            .font(.caption2.weight(.semibold).monospacedDigit())
-            .accessibilityElement(children: .combine)
-        }
-    }
 }

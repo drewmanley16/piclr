@@ -5,7 +5,6 @@ import SwiftUI
 struct SettingsPreferencesView: View {
     @Environment(AppStore.self) private var store
     @AppStorage("notificationsEnabled") private var notifications = true
-    @AppStorage(HealthMetricsSharing.defaultsKey) private var shareHealthMetrics = false
     @State private var showBlockedAccounts = false
     @State private var privateAccount = false
     @State private var isSavingPrivacy = false
@@ -54,19 +53,6 @@ struct SettingsPreferencesView: View {
                         }
                     }
                 }
-
-                Divider().overlay(Theme.hairline)
-
-                Toggle(isOn: $shareHealthMetrics) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Label("Share Watch metrics", systemImage: "heart.text.square")
-                            .foregroundStyle(Theme.textPrimary)
-                        Text("Include heart rate and active calories on public sessions")
-                            .font(.caption)
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                }
-                .tint(Theme.accent)
 
                 Divider().overlay(Theme.hairline)
 
