@@ -200,17 +200,10 @@ struct FeedCard: View {
             if let weeks = session.postStreakWeek, weeks >= 2 {
                 StreakBadge(weeks: weeks)
             }
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(session.postDisplayTitle)
-                    .font(.headline)
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(1)
-                if session.hasPostWorkoutMetrics {
-                    Spacer(minLength: 8)
-                    InlineHealthMetrics(session: session)
-                        .fixedSize()
-                }
-            }
+            Text(session.postDisplayTitle)
+                .font(.headline)
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
             if let subtitle = metaSubtitleText {
                 subtitle
                     .font(.caption.monospacedDigit())
@@ -442,76 +435,6 @@ struct FeedCard: View {
 
     private var alreadyReposted: Bool {
         store.mySessions.contains { $0.repostedFrom == session.id && $0.posted }
-    }
-}
-
-/// Compact watch biometrics that trail the session title: a heart-rate chip
-/// (avg, or avg–max range) and an active-calorie chip. Quiet + monochrome so
-/// the lime score stays the hero. The wide `HealthMetricStrip` below is kept
-/// for the standalone share card, where the extra room is welcome.
-struct InlineHealthMetrics: View {
-    let session: FeedSession
-
-    var body: some View {
-        HStack(spacing: 10) {
-            if let avg = session.postAverageHeartRateBPM {
-                chip("heart.fill", "\(avg)", unit: "avg", tint: .red)
-            }
-            if let cal = session.postActiveCaloriesKcal {
-                chip("flame.fill", "\(cal)", unit: "cal", tint: .orange)
-            }
-        }
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(Theme.textSecondary)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityLabel)
-    }
-
-    private func chip(_ symbol: String, _ value: String, unit: String, tint: Color) -> some View {
-        HStack(spacing: 3) {
-            Image(systemName: symbol)
-                .font(.caption2)
-                .foregroundStyle(tint)
-            Text(value)
-                .monospacedDigit()
-            Text(unit)
-                .font(.caption2)
-                .foregroundStyle(Theme.textTertiary)
-        }
-    }
-
-    private var accessibilityLabel: String {
-        var parts: [String] = []
-        if let avg = session.postAverageHeartRateBPM { parts.append("Average heart rate \(avg) bpm") }
-        if let cal = session.postActiveCaloriesKcal { parts.append("\(cal) active calories") }
-        return parts.joined(separator: ", ")
-    }
-}
-
-struct HealthMetricStrip: View {
-    let session: FeedSession
-
-    var body: some View {
-        HStack(spacing: 0) {
-            metric(value: session.postAverageHeartRateBPM, label: "AVG HR", suffix: "bpm")
-            metric(value: session.postMaximumHeartRateBPM, label: "MAX HR", suffix: "bpm")
-            metric(value: session.postActiveCaloriesKcal, label: "ACTIVE", suffix: "cal")
-        }
-        .padding(.vertical, 10)
-        .background(Theme.surfaceElevated, in: RoundedRectangle(cornerRadius: Theme.radiusControl, style: .continuous))
-        .accessibilityElement(children: .combine)
-    }
-
-    private func metric(value: Int?, label: String, suffix: String) -> some View {
-        VStack(spacing: 2) {
-            Text(value.map { "\($0) \(suffix)" } ?? "-")
-                .font(.subheadline.weight(.bold).monospacedDigit())
-                .foregroundStyle(Theme.textPrimary)
-            Text(label)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(Theme.textTertiary)
-        }
-        .frame(maxWidth: .infinity)
     }
 }
 

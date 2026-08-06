@@ -58,140 +58,18 @@ extension AppStore {
         draft.activities.removeAll { $0.isLegacyPractice }
         if draft.createID == nil { draft.createID = UUID() }
         activeDraft = draft
-        if draft.expectsWatchMetrics == true, draft.workoutMetrics == nil {
-            watchWorkoutStatus = .disconnected
-        }
     }
 
-    func startLiveSession(trackOnWatch: Bool = true) {
-        liveWorkoutMetrics = nil
+    func startLiveSession() {
         if activeDraft == nil { activeDraft = SessionDraft() }
-        activeDraft?.expectsWatchMetrics = trackOnWatch
-        guard trackOnWatch else {
-            watchWorkoutStatus = .idle
-            return
-        }
-
-        watchWorkoutStatus = .starting
+        // The watch app scores independently; keeping the link warm means a
+        // game started on the wrist reaches this draft without a cold start.
         WatchConnectivityManager.shared.activate()
-        AppleWatchWorkoutLauncher.shared.startWorkout { [weak self] result in
-            guard let self, self.activeDraft?.expectsWatchMetrics == true else { return }
-            switch result {
-            case .success:
-                // HealthKit accepted the launch request. The Watch will move us
-                // to tracking when collection actually begins.
-                if self.activeDraft?.watchWorkoutStartedAt == nil {
-                    self.watchWorkoutStatus = .starting
-                }
-                let draftStartedAt = self.activeDraft?.startedAt
-                Task { @MainActor [weak self] in
-                    try? await Task.sleep(for: .seconds(12))
-                    guard let self,
-                          self.activeDraft?.startedAt == draftStartedAt,
-                          self.activeDraft?.expectsWatchMetrics == true,
-                          self.activeDraft?.watchWorkoutStartedAt == nil,
-                          self.liveWorkoutMetrics == nil else { return }
-                    self.watchWorkoutStatus = .failed(
-                        "Apple Watch did not confirm tracking. Open the Watch app and check Health permissions."
-                    )
-                }
-            case .failure(let error):
-                self.watchWorkoutStatus = .failed(error.localizedDescription)
-            }
-        }
-    }
-
-    func requestLiveWorkoutMetrics() {
-        guard activeDraft?.expectsWatchMetrics == true, activeDraft?.workoutMetrics == nil else { return }
-        WatchConnectivityManager.shared.activate()
-        if activeDraft?.watchWorkoutStartedAt != nil {
-            watchWorkoutStatus = WatchConnectivityManager.shared.isReachable
-                ? (liveWorkoutMetrics?.heartRateBPM == nil ? .waitingForHeartRate : .tracking)
-                : .disconnected
-        }
-        WatchConnectivityManager.shared.sendCommand(.requestLiveWorkoutMetrics)
-    }
-
-    func appDidBecomeActive() {
-        guard activeDraft?.expectsWatchMetrics == true, activeDraft?.workoutMetrics == nil else { return }
-        requestLiveWorkoutMetrics()
     }
 
     func discardLiveSession() {
-        if activeDraft?.expectsWatchMetrics == true {
-            WatchConnectivityManager.shared.sendCommand(.discardWorkout)
-        }
-        liveWorkoutMetrics = nil
-        shouldPostWhenWatchFinishes = false
+        WatchConnectivityManager.shared.sendCommand(.discardSession)
         activeDraft = nil
-    }
-
-    /// Why finalizing would probably come back empty, or nil when the Watch is
-    /// in a state that can still deliver. Checked *before* posting so the user is
-    /// asked up front rather than after sitting through the finalization window —
-    /// which, in both of these states, is time spent waiting for nothing.
-    var watchMetricsGap: WatchMetricsGap? {
-        guard activeDraft?.expectsWatchMetrics == true, activeDraft?.workoutMetrics == nil else { return nil }
-        if activeDraft?.watchWorkoutStartedAt == nil { return .neverStarted }
-        return WatchConnectivityManager.shared.isReachable ? nil : .unreachable
-    }
-
-    /// Waits briefly for Apple Watch to finalize HealthKit so its aggregate
-    /// values are part of the same insert. If tracking never started, posts now.
-    func finishAndPostLiveSession() async -> Bool {
-        guard activeDraft != nil else { return false }
-        guard activeDraft?.expectsWatchMetrics == true else {
-            return await postLiveSession()
-        }
-
-        shouldPostWhenWatchFinishes = true
-        isWaitingForWatchFinalization = true
-        abortWatchFinalization = false
-        defer { isWaitingForWatchFinalization = false }
-        watchWorkoutStatus = .finalizing
-        WatchConnectivityManager.shared.sendCommand(.requestFinishWorkout)
-        for _ in 0..<80 {
-            // The user gave up on the Watch and Post now owns the write; bail
-            // without an error so the abort's own post is the only one.
-            if abortWatchFinalization { return false }
-            if let metrics = activeDraft?.workoutMetrics {
-                guard metrics.averageHeartRateBPM != nil else {
-                    watchWorkoutStatus = .failed(
-                        "No heart-rate samples were received. Check Apple Watch Health permissions and wrist detection."
-                    )
-                    errorMessage = "Apple Watch finished without heart-rate data. Retry, or choose Post Without Metrics."
-                    return false
-                }
-                return await postLiveSession()
-            }
-            try? await Task.sleep(for: .milliseconds(250))
-        }
-        if let metrics = activeDraft?.workoutMetrics, metrics.averageHeartRateBPM != nil {
-            return await postLiveSession()
-        }
-        watchWorkoutStatus = WatchConnectivityManager.shared.isReachable ? .finalizing : .disconnected
-        errorMessage = "Apple Watch metrics have not finished syncing. Retry, or choose Post Without Metrics."
-        return false
-    }
-
-    /// Abandons an in-flight finalization wait and posts immediately. Breaking
-    /// the poll first means the waiting call returns false without touching
-    /// `errorMessage`, so giving up never surfaces as a failure.
-    func stopWaitingForWatchAndPost() async -> Bool {
-        abortWatchFinalization = true
-        return await postLiveSessionWithoutMetrics()
-    }
-
-    /// Explicit escape hatch after a failed sync. This is never selected
-    /// implicitly: the user must confirm that the post may omit Watch metrics.
-    func postLiveSessionWithoutMetrics() async -> Bool {
-        guard activeDraft != nil else { return false }
-        activeDraft?.expectsWatchMetrics = false
-        activeDraft?.workoutMetrics = nil
-        shouldPostWhenWatchFinishes = false
-        liveWorkoutMetrics = nil
-        watchWorkoutStatus = .idle
-        return await postLiveSession()
     }
 
     /// Posts the live session and clears it on success.
@@ -347,9 +225,6 @@ extension AppStore {
                 startedAt: DateFormatting.iso.string(from: draft.startedAt),
                 endedAt: DateFormatting.iso.string(from: endedAt),
                 photoPath: photoPath,
-                averageHeartRateBPM: draft.workoutMetrics?.averageHeartRateBPM,
-                maximumHeartRateBPM: draft.workoutMetrics?.maximumHeartRateBPM,
-                activeCaloriesKcal: draft.workoutMetrics?.activeCaloriesKcal,
                 activities: Self.writeActivities(from: activities)
             )
             try await supabase.rpc(

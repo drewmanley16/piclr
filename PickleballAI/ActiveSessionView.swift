@@ -24,9 +24,6 @@ struct ActiveSessionView: View {
     @State private var showCelebration = false
     @State private var celebrationTitle = "Session posted"
     @State private var isSubmitting = false
-    /// Non-nil while asking whether to post without Apple Watch metrics, set at
-    /// the moment Post is tapped rather than after a finalization timeout.
-    @State private var metricsGap: WatchMetricsGap?
 
     init(existingSession: FeedSession? = nil, isLive: Bool = false) {
         self.existingSession = existingSession
@@ -38,9 +35,9 @@ struct ActiveSessionView: View {
 
     /// A live session reads and writes `store.activeDraft` directly rather than
     /// mirroring it into local state. Apple Watch messages mutate that same
-    /// storage while this sheet is open (a finished game becomes an activity,
-    /// HealthKit metrics arrive on finalize), so a local copy would go stale and
-    /// the next keystroke here would write it back over the watch's changes.
+    /// storage while this sheet is open (a finished game becomes an activity),
+    /// so a local copy would go stale and the next keystroke here would write it
+    /// back over the watch's changes.
     private var draft: SessionDraft {
         get { isLive ? (store.activeDraft ?? localDraft) : localDraft }
         nonmutating set {
@@ -81,18 +78,13 @@ struct ActiveSessionView: View {
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(confirmActionTitle) {
-                        // While waiting on the Watch, this button is the way out
-                        // of the wait rather than a second post.
-                        Task { isWaitingOnWatch ? await stopWaitingAndPost() : await save() }
+                    Button(isEditing ? "Save" : "Post") {
+                        Task { await save() }
                     }
                     .disabled(
                         (draft.activities.isEmpty && draft.liveMatch == nil)
                             || store.isBusy
-                            // Waiting keeps Post live: the user chose to wait and
-                            // must be able to change their mind without sitting
-                            // out the whole finalization window.
-                            || (isSubmitting && !isWaitingOnWatch)
+                            || isSubmitting
                     )
                 }
             }
@@ -125,23 +117,6 @@ struct ActiveSessionView: View {
                 }
                 Button("Keep Editing", role: .cancel) {}
             }
-            .confirmationDialog(
-                metricsGap?.title ?? "",
-                isPresented: metricsGapBinding,
-                titleVisibility: .visible
-            ) {
-                Button("Post Without Metrics") {
-                    metricsGap = nil
-                    Task { await postWithoutMetrics() }
-                }
-                Button("Wait for Apple Watch") {
-                    metricsGap = nil
-                    Task { await save(waitForWatch: true) }
-                }
-                Button("Cancel", role: .cancel) { metricsGap = nil }
-            } message: {
-                Text(metricsGap?.message ?? "")
-            }
         }
         .overlay {
             if showCelebration {
@@ -152,10 +127,7 @@ struct ActiveSessionView: View {
         .interactiveDismissDisabled(!isLive && (isEditing || !draft.activities.isEmpty))
         .onAppear {
             store.errorMessage = nil
-            if isLive {
-                if let activeDraft = store.activeDraft { localDraft = activeDraft }
-                store.requestLiveWorkoutMetrics()
-            }
+            if isLive, let activeDraft = store.activeDraft { localDraft = activeDraft }
         }
         .onChange(of: store.activeDraft) { oldValue, newValue in
             guard isLive else { return }
@@ -171,41 +143,10 @@ struct ActiveSessionView: View {
             }
         }
         .alert(isEditing ? "Couldn't save session" : "Couldn't post session", isPresented: postErrorBinding) {
-            if isLive, store.activeDraft?.expectsWatchMetrics == true {
-                Button("Retry Watch Sync") {
-                    store.errorMessage = nil
-                    Task { await save() }
-                }
-                Button("Post Without Metrics", role: .destructive) {
-                    store.errorMessage = nil
-                    Task { await postWithoutMetrics() }
-                }
-            }
             Button("Cancel", role: .cancel) { store.errorMessage = nil }
         } message: {
             Text(store.errorMessage ?? "Please try again.")
         }
-    }
-
-    /// True only while the Watch finalization window is running, which is the one
-    /// state where Post means "stop waiting" instead of "post".
-    private var isWaitingOnWatch: Bool { isLive && store.isWaitingForWatchFinalization }
-
-    private var confirmActionTitle: String {
-        if isWaitingOnWatch { return "Post Now" }
-        return isEditing ? "Save" : "Post"
-    }
-
-    /// The dialog needs its title and message from `metricsGap`, so presentation
-    /// is driven off that same optional rather than a separate flag that could
-    /// drift out of step with it.
-    private var metricsGapBinding: Binding<Bool> {
-        Binding(
-            get: { metricsGap != nil },
-            set: { isPresented in
-                if !isPresented { metricsGap = nil }
-            }
-        )
     }
 
     private var postErrorBinding: Binding<Bool> {
@@ -253,47 +194,6 @@ struct ActiveSessionView: View {
                 .frame(minHeight: 48)
             }
             Divider().overlay(Theme.hairline)
-            if isLive, store.activeDraft?.expectsWatchMetrics == true {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "applewatch.radiowaves.left.and.right")
-                            .foregroundStyle(Theme.accent)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Apple Watch tracking")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Theme.textPrimary)
-                            Text(store.watchWorkoutStatus.message)
-                                .font(.caption)
-                                .foregroundStyle(statusColor)
-                        }
-                        Spacer()
-                    }
-                    HStack(spacing: 0) {
-                        liveMetric(
-                            value: store.liveWorkoutMetrics?.heartRateBPM,
-                            label: "CURRENT",
-                            suffix: "bpm",
-                            color: .red
-                        )
-                        liveMetric(
-                            value: store.liveWorkoutMetrics?.averageHeartRateBPM,
-                            label: "AVG",
-                            suffix: "bpm",
-                            color: Theme.textPrimary
-                        )
-                        liveMetric(
-                            value: store.liveWorkoutMetrics?.activeCaloriesKcal,
-                            label: "ACTIVE",
-                            suffix: "cal",
-                            color: .orange
-                        )
-                    }
-                    .padding(.vertical, 8)
-                    .background(Theme.surfaceElevated, in: RoundedRectangle(cornerRadius: Theme.radiusControl))
-                }
-                .padding(.vertical, 10)
-                Divider().overlay(Theme.hairline)
-            }
             TextField(AppStore.timeOfDayTitle(for: draft.startedAt), text: draftBinding.title)
                 .font(.headline)
                 .frame(minHeight: 44)
@@ -329,26 +229,6 @@ struct ActiveSessionView: View {
                 if draft.photoData != nil { draft.removePhoto = false }
             }
         }
-    }
-
-    private var statusColor: Color {
-        switch store.watchWorkoutStatus {
-        case .failed: return .red
-        case .disconnected: return .orange
-        default: return Theme.textSecondary
-        }
-    }
-
-    private func liveMetric(value: Int?, label: String, suffix: String, color: Color) -> some View {
-        VStack(spacing: 2) {
-            Text(value.map { "\($0) \(suffix)" } ?? "-")
-                .font(.subheadline.weight(.bold).monospacedDigit())
-                .foregroundStyle(color)
-            Text(label)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(Theme.textTertiary)
-        }
-        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
@@ -449,15 +329,8 @@ struct ActiveSessionView: View {
     /// `waitForWatch` is set only by the "Wait for Apple Watch" button on the
     /// gap prompt, so the finalization window is entered deliberately instead of
     /// being the default cost of every post.
-    private func save(waitForWatch: Bool = false) async {
+    private func save() async {
         guard !isSubmitting else { return }
-
-        // Ask before finalizing, not after it times out: in both gap states the
-        // Watch has nothing to hand over right now.
-        if isLive, !waitForWatch, let gap = store.watchMetricsGap {
-            metricsGap = gap
-            return
-        }
 
         isSubmitting = true
         defer { isSubmitting = false }
@@ -473,32 +346,11 @@ struct ActiveSessionView: View {
             // celebration overlay isn't drawn over an emptied-out sheet.
             localDraft = draft
             let posted = isLive
-                ? await store.finishAndPostLiveSession()
+                ? await store.postLiveSession()
                 : await store.postSession(draft)
             guard posted else { return }
             await finishSuccessfulPost(streakBefore: streakBefore)
         }
-    }
-
-    private func postWithoutMetrics() async {
-        guard !isSubmitting else { return }
-        isSubmitting = true
-        defer { isSubmitting = false }
-
-        let streakBefore = SessionStats(sessions: store.mySessions).weeklyStreak
-        localDraft = draft
-        guard await store.postLiveSessionWithoutMetrics() else { return }
-        await finishSuccessfulPost(streakBefore: streakBefore)
-    }
-
-    /// Post tapped during the finalization wait. Deliberately skips the
-    /// `isSubmitting` guard — that flag is held by the waiting `save()` call
-    /// this is meant to cut short, so honouring it would make the button inert.
-    private func stopWaitingAndPost() async {
-        let streakBefore = SessionStats(sessions: store.mySessions).weeklyStreak
-        localDraft = draft
-        guard await store.stopWaitingForWatchAndPost() else { return }
-        await finishSuccessfulPost(streakBefore: streakBefore)
     }
 
     private func finishSuccessfulPost(streakBefore: Int) async {

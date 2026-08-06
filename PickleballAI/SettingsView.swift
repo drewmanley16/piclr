@@ -92,7 +92,7 @@ struct SettingsSheet: View {
     private var menuCard: some View {
         VStack(spacing: 0) {
             menuRow(icon: "slider.horizontal.3", title: "Preferences",
-                    subtitle: "Notifications, Watch, blocked accounts") {
+                    subtitle: "Privacy, notifications, blocked accounts") {
                 SettingsPreferencesView()
             }
             Divider().overlay(Theme.hairline)

@@ -17,6 +17,16 @@ only_rules:
   - custom_rules
 
 custom_rules:
+  healthkit_banned:
+    name: "HealthKit"
+    # App Review rejected the app twice under guideline 2.5.1 for shipping
+    # HKWorkoutSession without primary features requiring fitness data. All
+    # HealthKit usage was removed; reintroducing any of it re-triggers that
+    # rejection, so it fails the build rather than the next submission.
+    regex: 'import HealthKit|\bHK[A-Z]\w*'
+    message: "HealthKit was removed to clear App Review guideline 2.5.1. Do not reintroduce it."
+    severity: error
+
   avatar_nil_url:
     name: "ProfileAvatar(url: nil)"
     regex: 'ProfileAvatar\(url:\s*nil'

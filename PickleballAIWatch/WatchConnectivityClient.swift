@@ -79,16 +79,6 @@ final class WatchConnectivityClient: NSObject {
         commands.forEach { transmit($0, immediately: true) }
     }
 
-    /// Streams a live sensor snapshot only while the iPhone app is reachable.
-    /// Unlike lifecycle commands, samples are not queued for later delivery.
-    func sendLiveWorkoutMetrics(_ metrics: LiveWorkoutMetrics) {
-        guard session.activationState == .activated, session.isReachable else { return }
-        let payload = WatchSyncMessage.command(.liveWorkoutMetrics(metrics)).payload
-        session.sendMessage(payload, replyHandler: nil) { error in
-            Self.logger.debug("sendMessage(live metrics) failed: \(error.localizedDescription, privacy: .public)")
-        }
-    }
-
     // MARK: Inbound plumbing
 
     private func deliver(_ payload: [String: Any]) {

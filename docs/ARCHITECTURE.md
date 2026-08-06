@@ -105,11 +105,16 @@ separate structs. The old `RemoteModels.swift` was split by domain:
   **both** the app and widget targets.
 - The watch is a tethered tap-to-score controller: the phone owns auth,
   Supabase networking, and posting; the watch accumulates points locally
-  (`WatchGameStore`) and syncs `LiveMatchScore` snapshots + live workout
-  metrics (heart rate / calories, via HealthKit) over WatchConnectivity
+  (`WatchGameStore`) and syncs `LiveMatchScore` snapshots over WatchConnectivity
   (`WatchConnectivityManager` on the phone, `WatchConnectivityClient` on the
-  watch, message contract in `Shared/WatchSyncMessage.swift`). Live metrics are
-  transient by design — never persisted or uploaded raw.
+  watch, message contract in `Shared/WatchSyncMessage.swift`).
+- **The app uses no HealthKit.** It was removed in build 132 after App Review
+  rejected the app twice under guideline 2.5.1 (`HKWorkoutSession` without
+  primary features requiring fitness data). Consequences that look like bugs but
+  are not: the watch app has no `workout-processing` background mode, so it only
+  runs while frontmost; and the phone cannot launch the watch app when a live
+  session starts, because `startWatchApp(with:)` is a HealthKit API. A
+  `healthkit_banned` SwiftLint rule fails the build if any of it comes back.
 
 ## Push notifications (client side)
 

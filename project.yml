@@ -23,7 +23,7 @@ packages:
 settings:
   base:
     MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "131"
+    CURRENT_PROJECT_VERSION: "132"
     DEVELOPMENT_TEAM: "X9H68STU8F"
     CODE_SIGN_STYLE: Automatic
 # Explicit scheme (replaces the auto-generated one) so the run action can attach
@@ -119,8 +119,6 @@ targets:
           - UIInterfaceOrientationPortrait
         NSContactsUsageDescription: "pickleball.ai uses your contacts to find friends already using the app. Contacts are matched once and are not stored."
         NSLocationWhenInUseUsageDescription: "pickleball.ai uses your location to find pickleball courts near you when logging a session."
-        NSHealthShareUsageDescription: "pickleball.ai reads workout heart rate and active calories so they can be included with sessions you post."
-        NSHealthUpdateUsageDescription: "pickleball.ai saves pickleball workouts recorded with Apple Watch to Apple Health."
         # Custom scheme backing the Live Activity tap target
         # (SessionActivityAttributes.liveSessionURL → pickleballai://live-session).
         CFBundleURLTypes:
@@ -165,7 +163,6 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.pickleball.ai.watchapp
         PRODUCT_NAME: PickleballAIWatch
-        CODE_SIGN_ENTITLEMENTS: PickleballAIWatch/PickleballAIWatch.entitlements
         TARGETED_DEVICE_FAMILY: "4"
         INFOPLIST_KEY_CFBundleDisplayName: "piclr"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -179,7 +176,3 @@ targets:
         CFBundleIconName: AppIcon
         WKApplication: true
         WKCompanionAppBundleIdentifier: com.pickleball.ai
-        WKBackgroundModes:
-          - workout-processing
-        NSHealthShareUsageDescription: "pickleball.ai reads heart rate and active calories during your pickleball workout."
-        NSHealthUpdateUsageDescription: "pickleball.ai saves your completed pickleball workout to Apple Health."

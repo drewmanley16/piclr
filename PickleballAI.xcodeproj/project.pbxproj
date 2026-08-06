@@ -30,7 +30,6 @@
 		26C5ACC2CD19AEB6C1883F5C /* AppStore+Weight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FD8CC961248B32AFB24133A /* AppStore+Weight.swift */; };
 		2BC5A464046492AC5C8379C4 /* PlayInsights.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E6F8C2B52FA6E47498094F /* PlayInsights.swift */; };
 		2C8385E386ACCE3A125AEADA /* LegalDocuments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32CF1AA306E5F578AA3022F7 /* LegalDocuments.swift */; };
-		2F9A36DC1B8974294F4993AA /* WorkoutMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B33C1504DA3DA204EE4A1046 /* WorkoutMetrics.swift */; };
 		3298B7A018FD4692835255C7 /* ProTeaser.swift in Sources */ = {isa = PBXBuildFile; fileRef = D102C35019EBAFBC8A6123DF /* ProTeaser.swift */; };
 		337E8774FB64CFE5D6978913 /* OnboardingPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D28EC049E2380767AA0A2B6 /* OnboardingPreview.swift */; };
 		33C8ACB4E3D0F1DAE5FC4EEF /* CommentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F6C03EC3ED4D2A8C098B84F /* CommentsView.swift */; };
@@ -38,7 +37,6 @@
 		391FAF94DA78C7840C956A01 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6358D9903D36AD9E9F526C34 /* SettingsView.swift */; };
 		3977B08E8A0CE1938C991F12 /* WatchSyncMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC017A194C54A644C612773C /* WatchSyncMessage.swift */; };
 		3A2C5420A1C5759EFA0BF794 /* RivalryInsights.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53F9DEA7EC6F600A7C9DF92D /* RivalryInsights.swift */; };
-		3B46F82532DA139D31A550D8 /* AppleWatchWorkoutLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40894D3797C7D56547B9FDF2 /* AppleWatchWorkoutLauncher.swift */; };
 		3C079EEC453B813B1EB1752C /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 192E99F8896BE798A879F57E /* PaywallView.swift */; };
 		3D6C3B86141C26738F80B2A1 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BCD8F33D0E442DCBB8E637F /* LeaderboardView.swift */; };
 		3E53197B3ACF8315533AA7C2 /* AppStore+Reposts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19CC43FBB53DAF94FA9E78D3 /* AppStore+Reposts.swift */; };
@@ -112,7 +110,6 @@
 		C5338F649A3DC6D11AE71F0B /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528729889F780FEF8B81D160 /* ProfileView.swift */; };
 		CE7E5F4369D9181C9C659C80 /* StatsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF895DB874A0AA5FBE3CB948 /* StatsSheet.swift */; };
 		CF090BAFE2AE992E3217EBCF /* AppStore+Gear.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99DE6EB174F4713D18400199 /* AppStore+Gear.swift */; };
-		D055B2C456A4F9F242877547 /* WatchWorkoutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC8EB7A24D77C231E0A66684 /* WatchWorkoutManager.swift */; };
 		D3B2376089CD23AAD5FCF84A /* ImageLoading.swift in Sources */ = {isa = PBXBuildFile; fileRef = 875054D05B7E11A291968A10 /* ImageLoading.swift */; };
 		D60B10153096A64D929AE1AC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C8FB91BA2DDF8C003EC30E00 /* Assets.xcassets */; };
 		D7F2EE361D4137FD7E546EB4 /* InviteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9848E60F27125A620DA0B90 /* InviteView.swift */; };
@@ -122,7 +119,6 @@
 		E610A0298FD18084A62FDD82 /* EdgeFunctionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 594C30F607DCAA2E5D2E6245 /* EdgeFunctionModels.swift */; };
 		E95EB337AB3BC80E320E2F32 /* AppStore+Invites.swift in Sources */ = {isa = PBXBuildFile; fileRef = 501DC922351647C18A6F314D /* AppStore+Invites.swift */; };
 		EC9A44B03684D5CC69440BAF /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = C26069378D184E94FCA09925 /* PostHog */; };
-		ED0928C11F1E37B55D6F3A40 /* WorkoutMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B33C1504DA3DA204EE4A1046 /* WorkoutMetrics.swift */; };
 		EFDDBF4113FAE1DADF1C2FD2 /* InviteSharing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29384586246A643B30C868F6 /* InviteSharing.swift */; };
 		F2618610586DB9C3345C94C8 /* Celebration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30A6ECDA3C89862D17F1C81 /* Celebration.swift */; };
 		F84C0C2709EA5C0BCBB1DBBA /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CA98BE610EB60AB332917D5 /* FeatureFlags.swift */; };
@@ -207,7 +203,6 @@
 		32CF1AA306E5F578AA3022F7 /* LegalDocuments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDocuments.swift; sourceTree = "<group>"; };
 		38D466C6F8E7D2FD8E302914 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		3B007A00EBC21777270E6C5C /* CommentMentions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentMentions.swift; sourceTree = "<group>"; };
-		40894D3797C7D56547B9FDF2 /* AppleWatchWorkoutLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleWatchWorkoutLauncher.swift; sourceTree = "<group>"; };
 		417ED5579B58CC67197FFB16 /* AppStore+Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Notifications.swift"; sourceTree = "<group>"; };
 		43A2D10D5764F0D375B1CCE7 /* GameOverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameOverView.swift; sourceTree = "<group>"; };
 		43B84DB1AF26B28199D3B9F9 /* ShareCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCard.swift; sourceTree = "<group>"; };
@@ -258,9 +253,7 @@
 		AC505C83297253D366673275 /* SuggestedAthleteCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedAthleteCard.swift; sourceTree = "<group>"; };
 		AF61E92F5637DA5570EACB1F /* SessionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionModels.swift; sourceTree = "<group>"; };
 		AF6FF037B809FB38076632ED /* RevenueCat.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = RevenueCat.plist; sourceTree = "<group>"; };
-		B054516CE1AEC6327D7AEA04 /* PickleballAIWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PickleballAIWatch.entitlements; sourceTree = "<group>"; };
 		B10025ED05CD5F456B2D1934 /* RivalsFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RivalsFeature.swift; sourceTree = "<group>"; };
-		B33C1504DA3DA204EE4A1046 /* WorkoutMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutMetrics.swift; sourceTree = "<group>"; };
 		B3FA4363BCD03C413DB5D6C4 /* LogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogView.swift; sourceTree = "<group>"; };
 		B6DFAC6F42E204B347470EA4 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		B84E3919C44FA9AD88BF7BBB /* WatchGameStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchGameStore.swift; sourceTree = "<group>"; };
@@ -299,7 +292,6 @@
 		F6BDD0A44254DC8637A543CE /* AppStore+MediaHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+MediaHelpers.swift"; sourceTree = "<group>"; };
 		F90BCB4C6BD7BCDF83062556 /* Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Analytics.swift; sourceTree = "<group>"; };
 		FC7CF99A3E687EB8A86C623F /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
-		FC8EB7A24D77C231E0A66684 /* WatchWorkoutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWorkoutManager.swift; sourceTree = "<group>"; };
 		FE9ED74F6FDDD731FA70EEB6 /* Goals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Goals.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -347,12 +339,10 @@
 				43A2D10D5764F0D375B1CCE7 /* GameOverView.swift */,
 				EBB6EBA59EF0E2D2816F9BF4 /* GameSetupView.swift */,
 				D27DDC2F5BDF963F1B298D8A /* Info.plist */,
-				B054516CE1AEC6327D7AEA04 /* PickleballAIWatch.entitlements */,
 				E51D694E41512C0CE99B1C56 /* ScoreView.swift */,
 				BF5A9FC1A230E468254608EC /* WatchApp.swift */,
 				19C1C7B2904478125FCD743B /* WatchConnectivityClient.swift */,
 				B84E3919C44FA9AD88BF7BBB /* WatchGameStore.swift */,
-				FC8EB7A24D77C231E0A66684 /* WatchWorkoutManager.swift */,
 			);
 			path = PickleballAIWatch;
 			sourceTree = "<group>";
@@ -362,7 +352,6 @@
 			children = (
 				12CAF21561DAF374E9A5348A /* ActiveSessionView.swift */,
 				F90BCB4C6BD7BCDF83062556 /* Analytics.swift */,
-				40894D3797C7D56547B9FDF2 /* AppleWatchWorkoutLauncher.swift */,
 				5D656AFC1851F5D01BC4BB70 /* AppStore.swift */,
 				28C2EBB810FDA81F4A0B4C04 /* AppStore+Auth.swift */,
 				6B79D9A1A8FC0E949BBF88D6 /* AppStore+Comments.swift */,
@@ -474,7 +463,6 @@
 			children = (
 				DC7256BFCBF634E14336E660 /* LiveMatchScore.swift */,
 				BC017A194C54A644C612773C /* WatchSyncMessage.swift */,
-				B33C1504DA3DA204EE4A1046 /* WorkoutMetrics.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -662,7 +650,6 @@
 				BBB0B68BD14F2D4AAD57073A /* AppStore+Sessions.swift in Sources */,
 				26C5ACC2CD19AEB6C1883F5C /* AppStore+Weight.swift in Sources */,
 				C4D639B6FB92C30CB2822077 /* AppStore.swift in Sources */,
-				3B46F82532DA139D31A550D8 /* AppleWatchWorkoutLauncher.swift in Sources */,
 				B7840EC1684B9C2ECA85EAD7 /* AuthComponents.swift in Sources */,
 				95C8A46DA87219F98DD0A143 /* AuthView.swift in Sources */,
 				E3FC19388F40E67148FDF37C /* AvatarCropEditor.swift in Sources */,
@@ -743,7 +730,6 @@
 				AB9E2D81BD2720BFC355E43E /* WeightModels.swift in Sources */,
 				794DFC6C4DD57E94DC0CBAD5 /* WeightSheet.swift in Sources */,
 				496643F409765F3DCE496F80 /* WorkoutCalendarCard.swift in Sources */,
-				2F9A36DC1B8974294F4993AA /* WorkoutMetrics.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -759,8 +745,6 @@
 				A5B81C280730C929CE5A320C /* WatchConnectivityClient.swift in Sources */,
 				B97C89CE9DBAD5ADD73B3181 /* WatchGameStore.swift in Sources */,
 				8B7790688B013C43929D149D /* WatchSyncMessage.swift in Sources */,
-				D055B2C456A4F9F242877547 /* WatchWorkoutManager.swift in Sources */,
-				ED0928C11F1E37B55D6F3A40 /* WorkoutMetrics.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -785,7 +769,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = PickleballAIWatch/PickleballAIWatch.entitlements;
 				INFOPLIST_FILE = PickleballAIWatch/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = piclr;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pickleball.ai.watchapp;
@@ -831,7 +814,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 131;
+				CURRENT_PROJECT_VERSION = 132;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = X9H68STU8F;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -891,7 +874,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 131;
+				CURRENT_PROJECT_VERSION = 132;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = X9H68STU8F;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -928,7 +911,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = PickleballAIWatch/PickleballAIWatch.entitlements;
 				INFOPLIST_FILE = PickleballAIWatch/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = piclr;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pickleball.ai.watchapp;

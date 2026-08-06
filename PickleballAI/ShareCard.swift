@@ -92,10 +92,6 @@ struct SessionShareCard: View {
                 }
             }
 
-            if session.hasPostWorkoutMetrics {
-                HealthMetricStrip(session: session)
-            }
-
             if let location = session.postLocation, !location.isEmpty {
                 Label(location, systemImage: "mappin.and.ellipse")
                     .font(.caption)
