@@ -287,7 +287,10 @@ struct ProfileView: View {
                             .padding(.vertical, 2)
                             .background(Theme.accent, in: Capsule())
                     }
-                    Text("AI recaps, rivalry insights, and more")
+                    // Describes what Pro actually ships. The app has no AI
+                    // feature, so promising "AI recaps" here (and in the IAP
+                    // metadata) is inaccurate — App Review guideline 2.3.1.
+                    Text("Play insights, rivalry breakdowns, and more")
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
                 }
