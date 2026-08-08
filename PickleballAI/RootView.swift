@@ -60,6 +60,14 @@ struct RootView: View {
         .sheet(isPresented: $store.showsPushPrimer) {
             PushPrimerSheet()
         }
+        // Both sheets above hang off this same view, and UIKit drops the second
+        // presentation ("while a presentation is in progress") rather than
+        // queueing it — a paywall tap landing while the push primer is up would
+        // silently do nothing. The paywall is the user's explicit intent, so the
+        // primer yields; it re-presents on the next qualifying launch.
+        .onChange(of: subscriptions.paywallContext) { _, context in
+            if context != nil, store.showsPushPrimer { store.showsPushPrimer = false }
+        }
     }
 
     /// Moves to the Play tab when a Live Activity tap is waiting to be honored;
