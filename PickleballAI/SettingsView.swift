@@ -14,6 +14,13 @@ struct SettingsSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     identityCard
+                    // Above the menu: the one entry point to the subscription
+                    // that doesn't depend on the account having any data. Every
+                    // other paywall trigger hangs off a stat card that needs
+                    // sessions/rivals to exist, which left a fresh account (an
+                    // App Store reviewer's, for one) with no visible way to
+                    // reach the In-App Purchases at all.
+                    if subscriptions.showsLockedFeatures { upgradeRow }
                     menuCard
                     if subscriptions.monetizationEnabled {
                         if subscriptions.isPro {
@@ -178,6 +185,54 @@ struct SettingsSheet: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: Upgrade
+
+    /// "piclr Pro" upsell card for non-subscribers. Deliberately unconditional
+    /// on any account data: Settings is two taps from launch, so this is the one
+    /// path to the subscription that always exists, however empty the account.
+    private var upgradeRow: some View {
+        Button {
+            subscriptions.presentPaywall(.general)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "bolt.fill")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(Theme.background)
+                    .frame(width: 34, height: 34)
+                    .background(Theme.accent, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text("piclr")
+                            .font(.body.weight(.heavy))
+                            .tracking(-0.3)
+                            .foregroundStyle(Theme.textPrimary)
+                        Text("PRO")
+                            .font(.caption2.weight(.heavy))
+                            .foregroundStyle(Theme.background)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Theme.accent, in: Capsule())
+                    }
+                    Text("Insights, rivalry breakdowns, unlimited history")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(2)
+                }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.textTertiary)
+            }
+            .cardStyle(padding: 12)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Upgrade to piclr Pro")
+        .accessibilityHint("Opens subscription plans and pricing")
     }
 
     // MARK: Manage subscription

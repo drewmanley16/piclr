@@ -39,9 +39,12 @@ struct ProfileView: View {
                         SkeletonList(rows: 4)
                     } else {
                         if !store.incomingFollowRequests.isEmpty { followRequestsBanner }
-                        // Once real locked numbers render in the Insights card, it's the
-                        // better ad — the standalone banner alongside it is redundant noise.
-                        if subscriptions.showsLockedFeatures && !playInsights.isReady { proBanner }
+                        // Always shown to non-subscribers, even alongside the
+                        // Insights card. The card is the better ad, but it needs
+                        // four decided matches to render at all — gating the
+                        // banner on it left brand-new accounts with no Pro entry
+                        // point on this screen (App Review guideline 2.1(b)).
+                        if subscriptions.showsLockedFeatures { proBanner }
                         if completion < 1 && !dismissedCompletion { completionBanner }
                         GearShowcaseRow(
                             items: store.gear,
