@@ -93,30 +93,27 @@ resubmitting.
 
 **Blocking / high risk**
 
-- [ ] **App Review Information → Notes: paste the block above.** It was empty on
-      the rejected submission. This is the single highest-value change.
-- [ ] **Guideline 3.1.2 — subscription disclosure in the App Store description.**
-      An app with auto-renewable subscriptions must state, in the description
-      metadata, the subscription title, length, and price, plus links to both
-      the Terms of Use (EULA) and the Privacy Policy. The current description
-      ends with a Terms of Use link only. Append something like:
-
-      > piclr Pro is an auto-renewing subscription: $4.99/month or $29.99/year,
-      > each with a 7-day free trial. Payment is charged to your Apple ID at
-      > confirmation of purchase. It renews automatically unless cancelled at
-      > least 24 hours before the end of the period; manage or cancel in your
-      > Apple ID settings.
-      > Terms of Use: https://pickleball-ai-web.vercel.app/terms
-      > Privacy Policy: https://pickleball-ai-web.vercel.app/privacy
-
+- [x] **App Review Information → Notes** — written 2026-08-08 via the ASC API
+      (see [[app-store-connect-api-access]]). It was empty on the rejected
+      submission; that alone is what a 2.1(b) "Information Needed" asks for.
+- [x] **Guideline 3.1.2 — subscription disclosure in the App Store description.**
+      Applied 2026-08-08. The description previously ended with a Terms of Use
+      link only; it now carries the title, length, price, renewal terms, and
+      both the Terms of Use and Privacy Policy links.
+- [x] **Paid Applications Agreement** — verified Active for all 175 countries,
+      with an active US bank account and W-9 (effective Jul 15 2026).
+- [x] **Build 135 attached** to version 1.0, replacing 134.
 - [ ] **Guideline 2.3.1 — "AI recaps" in the IAP metadata.** The Pro Annual
-      subscription description reads "AI recaps, rivalry insights & full
-      history". The app has no AI feature. Change it to match what ships, e.g.
-      "Play insights, rivalry breakdowns & full history". The in-app copy is
-      already fixed.
-- [ ] **Confirm the Paid Applications Agreement is active** (Business →
-      Agreements). Apple raised it in the rejection. Paid IAPs will not function
-      without it, and no code change can compensate.
+      subscription description still reads "AI recaps, rivalry insights & full
+      history"; the app has no AI feature. **Apple locks this field while the
+      subscription is `IN_REVIEW`** — the API returns
+      `ENTITY_ERROR.ATTRIBUTE.INVALID.UNMODIFIABLE`, and the UI will refuse it
+      too. Change it once the subscription leaves review to:
+
+      > Play insights, rivalry breakdowns & history
+
+      (43 characters; the field caps at 45, so the more natural "…& full
+      history" at 48 does not fit.) The in-app copy is already fixed.
 
 **Worth fixing while you are in there**
 
