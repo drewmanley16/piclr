@@ -82,3 +82,64 @@ Please let us know if anything else would help.
 
 Adjust the Paid Applications Agreement sentence if that agreement is not in fact
 active — see the release checklist in `docs/RELEASE.md`.
+
+---
+
+## App Store Connect changes that still need a human
+
+The code fixes cover the app. These are metadata, and the API key we hold can
+read them but changing them is a deliberate act — do them in the ASC UI before
+resubmitting.
+
+**Blocking / high risk**
+
+- [ ] **App Review Information → Notes: paste the block above.** It was empty on
+      the rejected submission. This is the single highest-value change.
+- [ ] **Guideline 3.1.2 — subscription disclosure in the App Store description.**
+      An app with auto-renewable subscriptions must state, in the description
+      metadata, the subscription title, length, and price, plus links to both
+      the Terms of Use (EULA) and the Privacy Policy. The current description
+      ends with a Terms of Use link only. Append something like:
+
+      > piclr Pro is an auto-renewing subscription: $4.99/month or $29.99/year,
+      > each with a 7-day free trial. Payment is charged to your Apple ID at
+      > confirmation of purchase. It renews automatically unless cancelled at
+      > least 24 hours before the end of the period; manage or cancel in your
+      > Apple ID settings.
+      > Terms of Use: https://pickleball-ai-web.vercel.app/terms
+      > Privacy Policy: https://pickleball-ai-web.vercel.app/privacy
+
+- [ ] **Guideline 2.3.1 — "AI recaps" in the IAP metadata.** The Pro Annual
+      subscription description reads "AI recaps, rivalry insights & full
+      history". The app has no AI feature. Change it to match what ships, e.g.
+      "Play insights, rivalry breakdowns & full history". The in-app copy is
+      already fixed.
+- [ ] **Confirm the Paid Applications Agreement is active** (Business →
+      Agreements). Apple raised it in the rejection. Paid IAPs will not function
+      without it, and no code change can compensate.
+
+**Worth fixing while you are in there**
+
+- [ ] **Support URL points at a Terms page** (`https://piclr.vercel.app/terms`).
+      Guideline 1.5 expects a page with actual support information. Point it at a
+      support page, or at minimum one that publishes the support email that
+      Settings → Contact & Support already uses.
+- [ ] **Two domains in use** — `piclr.vercel.app` for marketing, and
+      `pickleball-ai-web.vercel.app` for Terms and Privacy. Both resolve, but
+      consolidating avoids a reviewer wondering which is the real publisher.
+- [ ] **The description still says "pickleball.ai" throughout** while the app,
+      the App Store name, and the home screen all say "piclr". Not a rejection
+      on its own — the App Store name and `CFBundleDisplayName` do match, which
+      is what guideline 2.3.8 tests — but it reads as stale.
+
+**Verified already in place, no action needed**
+
+- Both subscriptions are attached to the version and sit in `IN_REVIEW`, with
+  localizations, prices, and the required review screenshot present.
+- Build 134 is attached and `VALID`; the resubmission should be build 135+.
+- Account deletion, Report, Block, an affirmative Terms gate at sign-up, and
+  in-app Terms/Privacy documents are all shipping (guidelines 1.2 and 5.1.1(v)).
+- `ITSAppUsesNonExemptEncryption`, portrait-only orientation, iPhone-only device
+  family, and the privacy manifest are all declared.
+- App Store name is "piclr", matching `CFBundleDisplayName`.
+- HealthKit is fully removed, with a lint tripwire preventing its return.
