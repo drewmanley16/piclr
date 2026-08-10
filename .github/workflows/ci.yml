@@ -15,21 +15,30 @@ concurrency:
 jobs:
   lint:
     name: Tripwires
-    runs-on: macos-latest
+    # Ubuntu, not macOS: private repos bill macOS at 10x and Linux at 1x, and
+    # nothing here needs a Mac. Every rule in .swiftlint.yml is a regex
+    # `custom_rules` entry (`only_rules: [custom_rules]`), so there's no
+    # SourceKit dependency — SwiftLint's Linux build runs them identically.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # Pinned rather than `brew install swiftlint`. The custom rules in
+      # Pinned rather than a package manager. The custom rules in
       # .swiftlint.yml are verified to have zero violations on the day each
       # lands; an unpinned linter can change regex semantics under us and turn
       # that guarantee into noise.
+      #
+      # ubuntu-latest runners are x86_64, hence the amd64 asset. The zip holds
+      # `swiftlint` at its root and ships without the execute bit, so chmod is
+      # required.
       - name: Install pinned SwiftLint
         run: |
           set -euo pipefail
           version=$(cat .swiftlint-version)
           curl -fsSL -o swiftlint.zip \
-            "https://github.com/realm/SwiftLint/releases/download/${version}/portable_swiftlint.zip"
+            "https://github.com/realm/SwiftLint/releases/download/${version}/swiftlint_linux_amd64.zip"
           unzip -q swiftlint.zip -d "$RUNNER_TEMP/swiftlint"
+          chmod +x "$RUNNER_TEMP/swiftlint/swiftlint"
           echo "$RUNNER_TEMP/swiftlint" >> "$GITHUB_PATH"
 
       - name: Verify pinned version
@@ -40,6 +49,10 @@ jobs:
       # Call the script rather than duplicating `swiftlint --strict` here, so
       # local and CI runs can't diverge. The script also enforces that Shared/
       # stays dependency-free.
+      #
+      # Its third check (XcodeGen drift) self-skips with a warning when
+      # xcodegen isn't on PATH, which is the case here — the project-drift job
+      # below covers it on a runner that has Xcode.
       - name: Run tripwires
         run: scripts/lint.sh
 
